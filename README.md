@@ -8,7 +8,7 @@ Este es el repositorio del entorno de desarrollo para el frontend del proyecto S
 git clone [https://github.com/yudithNV/Frontend-SmarCampus.git](https://github.com/yudithNV/Frontend-SmarCampus.git)
 ```
 ```sh
-cd Frontend-Sistema-Inscripcion-Cursos
+cd Frontend-SmartCampus
 ```
 ```sh
 npm install
