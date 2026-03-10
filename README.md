@@ -1,5 +1,27 @@
-# Vue 3 + Vite
+# SmartCampus - Frontend 🚀
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Este es el repositorio del entorno de desarrollo para el frontend del proyecto SmartCampus.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Clonar el repositorio 💾
+
+```bash
+git clone [https://github.com/yudithNV/Frontend-SmarCampus.git](https://github.com/yudithNV/Frontend-SmarCampus.git)
+```
+```sh
+cd Frontend-Sistema-Inscripcion-Cursos
+```
+```sh
+npm install
+```
+
+### Compilar el proyecto en un entorno de desarrollo 💻
+
+```sh
+npm run dev
+```
+
+### Build para producción ☁️
+
+```sh
+npm run build
+```
