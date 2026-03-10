@@ -4,7 +4,7 @@ Este es el repositorio del entorno de desarrollo para el frontend del proyecto S
 
 ## Clonar el repositorio 💾
 ```sh
-git clone clone https://github.com/yudithNV/Frontend-SmartCampus.git
+git clone https://github.com/yudithNV/Frontend-SmartCampus.git
 ```
 ```sh
 cd Frontend-SmartCampus
