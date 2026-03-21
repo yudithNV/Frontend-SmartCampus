@@ -1,0 +1,123 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+// Landing
+import Landing from '../views/Landing.vue'
+
+// Auth
+import Login from '../views/Login.vue'
+
+// Admin
+import AdminLayout from '../views/Admin/AdminLayout.vue'
+import AdminDashboard from '../views/Admin/AdminDashboard.vue'
+import AdminUsers from '../views/Admin/AdminUsers.vue'
+import AdminSettings from '../views/Admin/AdminSettings.vue'
+
+// Estudiante
+import StudentLayout from '../views/Student/StudentLayout.vue'
+import StudentDashboard from '../views/Student/StudentDashboard.vue'
+
+// Publicador
+import PublisherLayout from '../views/Publisher/PublisherLayout.vue'
+import PublisherDashboard from '../views/Publisher/PublisherDashboard.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Landing',
+    component: Landing
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+
+  // Admin Routes
+  {
+    path: '/admin',
+    component: AdminLayout,
+    redirect: '/admin/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: AdminDashboard
+      },
+      {
+        path: 'usuarios',
+        name: 'AdminUsers',
+        component: AdminUsers
+      },
+      {
+        path: 'configuracion',
+        name: 'AdminSettings',
+        component: AdminSettings
+      }
+    ]
+  },
+
+  // Estudiante Routes
+  {
+    path: '/estudiante',
+    component: StudentLayout,
+    redirect: '/estudiante/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'StudentDashboard',
+        component: StudentDashboard
+      },
+      {
+        path: 'reservar',
+        name: 'StudentReserve',
+        component: { template: '<div class="placeholder"><h2>Reservar</h2><p>Próximamente...</p></div>' }
+      },
+      {
+        path: 'buscar-material',
+        name: 'StudentSearchMaterial',
+        component: { template: '<div class="placeholder"><h2>Buscar Material</h2><p>Próximamente...</p></div>' }
+      },
+      {
+        path: 'historial',
+        name: 'StudentHistory',
+        component: { template: '<div class="placeholder"><h2>Historial</h2><p>Próximamente...</p></div>' }
+      }
+    ]
+  },
+
+  // Publicador Routes
+  {
+    path: '/publicador',
+    component: PublisherLayout,
+    redirect: '/publicador/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'PublisherDashboard',
+        component: PublisherDashboard
+      },
+      {
+        path: 'crear-noticia',
+        name: 'PublisherCreateNews',
+        component: { template: '<div class="placeholder"><h2>Crear Noticia</h2><p>Próximamente...</p></div>' }
+      },
+      {
+        path: 'mis-noticias',
+        name: 'PublisherMyNews',
+        component: { template: '<div class="placeholder"><h2>Mis Noticias</h2><p>Próximamente...</p></div>' }
+      },
+      {
+        path: 'eventos',
+        name: 'PublisherEvents',
+        component: { template: '<div class="placeholder"><h2>Eventos</h2><p>Próximamente...</p></div>' }
+      }
+    ]
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router

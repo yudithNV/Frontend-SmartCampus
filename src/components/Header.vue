@@ -12,13 +12,20 @@
         <a href="#" class="nav-link">EVENTOS</a>
         <a href="#" class="nav-link">UNIVERSIDAD</a>
         <a href="#" class="nav-link">CONTACTOS</a>
-        <button class="btn-login">Iniciar sesión</button>
+        <button @click="goToLogin" class="btn-login">Iniciar sesión</button>
       </nav>
     </div>
   </header>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goToLogin = () => {
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -87,7 +94,9 @@
 }
 
 .btn-login:hover {
-  background: #FFD200;
+  background: #FFC500;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 210, 0, 0.3);
 }
 
 @media (max-width: 768px) {
