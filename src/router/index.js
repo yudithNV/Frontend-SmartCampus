@@ -19,6 +19,8 @@ import StudentDashboard from '../views/Student/StudentDashboard.vue'
 // Publicador
 import PublisherLayout from '../views/Publisher/PublisherLayout.vue'
 import PublisherDashboard from '../views/Publisher/PublisherDashboard.vue'
+import PublisherCreateNews from '../views/Publisher/CreateNews.vue'
+import PublisherMyNews from '../views/Publisher/MisNoticias.vue'
 
 const routes = [
   {
@@ -99,12 +101,12 @@ const routes = [
       {
         path: 'crear-noticia',
         name: 'PublisherCreateNews',
-        component: { template: '<div class="placeholder"><h2>Crear Noticia</h2><p>Próximamente...</p></div>' }
+        component: PublisherCreateNews
       },
       {
         path: 'mis-noticias',
         name: 'PublisherMyNews',
-        component: { template: '<div class="placeholder"><h2>Mis Noticias</h2><p>Próximamente...</p></div>' }
+        component: PublisherMyNews
       },
       {
         path: 'eventos',
