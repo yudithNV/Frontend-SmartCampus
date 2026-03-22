@@ -21,7 +21,7 @@ import PublisherLayout from '../views/Publisher/PublisherLayout.vue'
 import PublisherDashboard from '../views/Publisher/PublisherDashboard.vue'
 import PublisherCreateNews from '../views/Publisher/CreateNews.vue'
 import PublisherMyNews from '../views/Publisher/MisNoticias.vue'
-
+import PublisherEditNews from '../views/Publisher/EditNews.vue'
 const routes = [
   {
     path: '/',
@@ -107,6 +107,12 @@ const routes = [
         path: 'mis-noticias',
         name: 'PublisherMyNews',
         component: PublisherMyNews
+      },
+      {
+        path: 'editar-noticia/:id',
+        name: 'PublisherEditNews',
+        component: PublisherEditNews,
+        props: true
       },
       {
         path: 'eventos',
