@@ -98,6 +98,10 @@
         <span class="stat-label">Publicadores</span>
         <span class="stat-number">{{ contarPublicadores }}</span>
       </div>
+      <div class="stat-card">
+        <span class="stat-label">Administradores</span>
+        <span class="stat-number">{{ contarAdministradores }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -143,7 +147,8 @@ const loadUsers = async () => {
       nombre: user.fullName,
       email: user.email,
       iniciales: getInitials(user.fullName),
-      rol: user.role === 'ESTUDIANTE' ? 'Estudiante' : 'Publicador',
+      rol: user.role === 'ESTUDIANTE' ? 'Estudiante' :
+           user.role === 'PUBLICADOR' ? 'Publicador' : 'Administrador',
       carrera: user.career?.name || 'N/A',
       estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
       fecha: new Date(user.createdAt).toLocaleDateString('es-ES')
@@ -163,6 +168,10 @@ const contarEstudiantes = computed(() => {
 
 const contarPublicadores = computed(() => {
   return usuarios.value.filter(u => u.rol === 'Publicador').length
+})
+
+const contarAdministradores = computed(() => {
+  return usuarios.value.filter(u => u.rol === 'Administrador').length
 })
 
 const handleCreateUser = async (formData) => {
@@ -201,14 +210,14 @@ const handleCreateUser = async (formData) => {
 
     const response = await adminUserService.create(payload)
 
+    // Cerrar modal inmediatamente
+    showModal.value = false
+
     // Mostrar mensaje de éxito
     showToast('success', '✅ Usuario creado exitosamente', `El usuario ${formData.nombre} ha sido registrado correctamente.`)
 
-    // Recargar la lista de usuarios
-    await loadUsers()
-
-    // Cerrar modal
-    showModal.value = false
+    // Recargar la lista de usuarios en segundo plano
+    loadUsers()
   } catch (err) {
     console.error('Error al crear usuario:', err)
 
@@ -419,6 +428,11 @@ onMounted(() => {
 .badge-publicador {
   background: #fef3c7;
   color: #92400e;
+}
+
+.badge-administrador {
+  background: #f3e8ff;
+  color: #6b21a8;
 }
 
 /* Status */

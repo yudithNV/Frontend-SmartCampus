@@ -32,12 +32,28 @@
         <span>Mis Noticias</span>
       </router-link>
       <router-link
-        to="/publicador/eventos"
+        to="/publicador/crear-evento"
         class="menu-item"
-        :class="{ active: $route.path.includes('eventos') }"
+        :class="{ active: $route.path.includes('crear-evento') }"
+      >
+        <span class="icon">🎉</span>
+        <span>Crear Evento</span>
+      </router-link>
+      <router-link
+        to="/publicador/mis-eventos"
+        class="menu-item"
+        :class="{ active: $route.path.includes('mis-eventos') }"
       >
         <span class="icon">📅</span>
-        <span>Eventos</span>
+        <span>Mis Eventos</span>
+      </router-link>
+      <router-link
+        to="/publicador/sugerencias-reclamos"
+        class="menu-item"
+        :class="{ active: $route.path.includes('sugerencias-reclamos') }"
+      >
+        <span class="icon">💬</span>
+        <span>Sugerencias y Reclamos</span>
       </router-link>
     </nav>
 

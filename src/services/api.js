@@ -92,3 +92,9 @@ export const reservationService = {
   cancel: (id) =>
     apiRequest(`/reservations/${id}/cancel`, 'POST')
 }
+
+// Servicios de Carreras
+export const careerService = {
+  getAll: () =>
+    apiRequest('/careers', 'GET')
+}

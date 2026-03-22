@@ -48,11 +48,9 @@
           <label>Carrera</label>
           <select v-model.number="formData.careerId" class="form-select" required>
             <option value="">Selecciona una carrera</option>
-            <option :value="1">Ingeniería de Sistemas</option>
-            <option :value="2">Derecho</option>
-            <option :value="3">Administración de Empresas</option>
-            <option :value="4">Medicina</option>
-            <option :value="5">Psicología</option>
+            <option v-for="career in careers" :key="career.id" :value="career.id">
+              {{ career.name }}
+            </option>
           </select>
         </div>
 
@@ -83,7 +81,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { careerService } from '../../services/api.js'
 
 defineProps({
   isOpen: {
@@ -100,6 +99,20 @@ const formData = ref({
   tipo: '',
   careerId: null,
   contrasena: ''
+})
+
+const careers = ref([])
+
+const fetchCareers = async () => {
+  try {
+    careers.value = await careerService.getAll()
+  } catch (error) {
+    console.error('Error al cargar carreras:', error)
+  }
+}
+
+onMounted(() => {
+  fetchCareers()
 })
 
 const closeModal = () => {
