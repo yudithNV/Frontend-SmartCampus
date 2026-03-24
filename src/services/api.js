@@ -4,14 +4,19 @@ const API_BASE_URL = 'http://localhost:8081/api'
 // Función genérica para hacer peticiones
 async function apiRequest(endpoint, method = 'GET', data = null) {
   try {
+    const token = localStorage.getItem('ucb_token')
+
     const options = {
       method,
       headers: {
         'Content-Type': 'application/json',
-        // Aquí irían tokens de autenticación cuando sea necesario
-        // 'Authorization': `Bearer ${token}`
       },
       mode: 'cors'
+    }
+
+    // Agregar token de autenticación si existe
+    if (token) {
+      options.headers['Authorization'] = `Bearer ${token}`
     }
 
     if (data) {
@@ -81,6 +86,27 @@ export const newsService = {
     apiRequest(`/news/${id}`, 'DELETE')
 }
 
+// Servicios de Eventos
+export const eventService = {
+  getAll: () =>
+    apiRequest('/events', 'GET'),
+
+  getMy: () =>
+    apiRequest('/events/my', 'GET'),
+
+  getById: (id) =>
+    apiRequest(`/events/${id}`, 'GET'),
+
+  create: (data) =>
+    apiRequest('/events', 'POST', data),
+
+  update: (id, data) =>
+    apiRequest(`/events/${id}`, 'PUT', data),
+
+  delete: (id) =>
+    apiRequest(`/events/${id}`, 'DELETE')
+}
+
 // Servicios de Reservas
 export const reservationService = {
   getAll: () =>
@@ -97,4 +123,10 @@ export const reservationService = {
 export const careerService = {
   getAll: () =>
     apiRequest('/careers', 'GET')
+}
+
+// Servicios de Categorías
+export const categoryService = {
+  getAll: () =>
+    apiRequest('/categories', 'GET')
 }

@@ -22,6 +22,9 @@ import PublisherDashboard from '../views/Publisher/PublisherDashboard.vue'
 import PublisherCreateNews from '../views/Publisher/CreateNews.vue'
 import PublisherMyNews from '../views/Publisher/MisNoticias.vue'
 import PublisherEditNews from '../views/Publisher/EditNews.vue'
+import PublisherCreateEvent from '../views/Publisher/CrearEvento.vue'
+import PublisherMyEvents from '../views/Publisher/MisEventos.vue'
+import PublisherEditEvent from '../views/Publisher/EditEvento.vue'
 const routes = [
   {
     path: '/',
@@ -115,9 +118,20 @@ const routes = [
         props: true
       },
       {
-        path: 'eventos',
-        name: 'PublisherEvents',
-        component: { template: '<div class="placeholder"><h2>Eventos</h2><p>Próximamente...</p></div>' }
+        path: 'crear-evento',
+        name: 'PublisherCreateEvent',
+        component: PublisherCreateEvent
+      },
+      {
+        path: 'mis-eventos',
+        name: 'PublisherMyEvents',
+        component: PublisherMyEvents
+      },
+      {
+        path: 'editar-evento/:id',
+        name: 'PublisherEditEvent',
+        component: PublisherEditEvent,
+        props: true
       }
     ]
   }

@@ -1,5 +1,5 @@
 <template>
-  <div class="crear-evento-page">
+  <div class="edit-event-page">
 
     <!-- Toast -->
     <Transition name="toast-slide">
@@ -7,7 +7,7 @@
         <span class="toast-icon-wrap">
           <svg v-if="toast.type==='success'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <svg v-else-if="toast.type==='error'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
         </span>
         <div class="toast-body">
           <strong>{{ toast.title }}</strong>
@@ -19,375 +19,405 @@
       </div>
     </Transition>
 
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-left">
-        <div class="header-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <div>
-          <h1>Crear Evento</h1>
-          <p>Organiza y publica eventos para la comunidad UCB</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button class="btn-toggle-preview" @click="togglePreview">
-          <svg v-if="showPreview" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          {{ showPreview ? 'Editar' : 'Vista Previa' }}
-        </button>
-        <button class="btn-secondary" @click="saveDraft" :disabled="saving">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Guardar Borrador
-        </button>
-        <button class="btn-primary" @click="submitEvent" :disabled="saving || !isValid">
-          <template v-if="!saving">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Publicar Evento
-          </template>
-          <template v-else>
-            <span class="spinner-sm"></span>
-            Publicando...
-          </template>
-        </button>
-      </div>
+    <!-- Loading state -->
+    <div v-if="loadingEvent" class="loading-full">
+      <div class="loading-spinner"></div>
+      <p>Cargando evento...</p>
     </div>
 
-    <!-- Editor layout -->
-    <div class="editor-layout">
+    <!-- Error state -->
+    <div v-else-if="loadError" class="error-full">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <h3>Error al cargar</h3>
+      <p>{{ loadError }}</p>
+      <button class="btn-retry" @click="loadEventData">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Reintentar
+      </button>
+    </div>
 
-      <!-- EDITOR COLUMN -->
-      <div class="editor-column" v-show="!showPreview || isWide">
-        <form @submit.prevent="submitEvent" class="event-form">
-
-      <!-- Título -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">01</span>
-          <label>Título del Evento <span class="req">*</span></label>
-          <span class="char-count">{{ form.title.length }}/255</span>
+    <!-- Main Content -->
+    <div v-else>
+      <!-- Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <button class="btn-back" @click="$router.push('/publicador/mis-eventos')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="header-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div>
+            <h1>Editar Evento</h1>
+            <p>Modifica los detalles del evento</p>
+          </div>
         </div>
-        <input
-          v-model="form.title"
-          type="text"
-          class="title-input"
-          placeholder="Ej: Feria de Ciencias UCB 2026"
-          maxlength="255"
-        />
-      </div>
-
-      <!-- Categoría -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">02</span>
-          <label>Categoría <span class="req">*</span></label>
-        </div>
-        <div class="category-grid">
-          <button
-            type="button"
-            v-for="cat in categories"
-            :key="cat.id"
-            class="cat-btn"
-            :class="{ active: form.categoryId === cat.id }"
-            @click="form.categoryId = cat.id"
-            :style="{ '--cat-color': cat.color }"
-          >
-            <span class="cat-color-dot" :style="{ background: cat.color }"></span>
-            <span>{{ cat.name }}</span>
+        <div class="header-actions">
+          <button class="btn-toggle-preview" @click="togglePreview">
+            <svg v-if="showPreview" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ showPreview ? 'Editar' : 'Vista Previa' }}
+          </button>
+          <button class="btn-secondary" @click="saveDraft" :disabled="saving">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Guardar Borrador
+          </button>
+          <button class="btn-primary" @click="updateEvent" :disabled="saving || !isValid">
+            <template v-if="!saving">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Guardar Cambios
+            </template>
+            <template v-else>
+              <span class="spinner-sm"></span>
+              Guardando...
+            </template>
           </button>
         </div>
       </div>
 
-      <!-- Descripción -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">03</span>
-          <label>Descripción <span class="req">*</span></label>
-          <span class="char-count">{{ form.description.length }} car.</span>
-        </div>
-        <textarea
-          v-model="form.description"
-          class="description-textarea"
-          placeholder="Describe los detalles del evento..."
-          rows="8"
-        ></textarea>
-      </div>
+      <!-- Editor layout -->
+      <div class="editor-layout">
 
-      <!-- Tipo de Evento -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">04</span>
-          <label>Tipo de Evento <span class="req">*</span></label>
-        </div>
-        <div class="select-wrap">
-          <select v-model="form.eventType" class="form-select" :disabled="!form.categoryId">
-            <option value="">{{ !form.categoryId ? 'Primero selecciona una categoría' : 'Selecciona el tipo de evento' }}</option>
-            <option v-for="type in availableEventTypes" :key="type" :value="type">
-              {{ type }}
-            </option>
-          </select>
-          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-      </div>
+        <!-- EDITOR COLUMN -->
+        <div class="editor-column" v-show="!showPreview || isWide">
+          <form @submit.prevent="updateEvent" class="event-form">
 
-      <!-- Fecha y Hora de Inicio -->
-      <div class="field-row">
+        <!-- Título -->
         <div class="field-block">
           <div class="field-label">
-            <span class="field-num">05</span>
-            <label>Fecha <span class="req">*</span></label>
+            <span class="field-num">01</span>
+            <label>Título del Evento <span class="req">*</span></label>
+            <span class="char-count" :class="{ warning: form.title.length > 220, danger: form.title.length > 255 }">
+              {{ form.title.length }}/255
+            </span>
           </div>
-          <input v-model="form.eventDate" type="date" class="form-input" />
+          <input
+            v-model="form.title"
+            type="text"
+            class="title-input"
+            placeholder="Ej: Feria de Ciencias UCB 2026"
+            maxlength="255"
+          />
         </div>
+
+        <!-- Categoría -->
         <div class="field-block">
           <div class="field-label">
-            <span class="field-num">06</span>
-            <label>Hora de Inicio <span class="req">*</span></label>
+            <span class="field-num">02</span>
+            <label>Categoría <span class="req">*</span></label>
           </div>
-          <input v-model="form.eventTime" type="time" class="form-input" />
-        </div>
-      </div>
-
-      <!-- Fecha y Hora de Fin -->
-      <div class="field-row">
-        <div class="field-block">
-          <div class="field-label">
-            <span class="field-num">07</span>
-            <label>Fecha de Fin</label>
-            <span class="optional-tag">Opcional</span>
-          </div>
-          <input v-model="form.endDate" type="date" class="form-input" />
-        </div>
-        <div class="field-block">
-          <div class="field-label">
-            <span class="field-num">08</span>
-            <label>Hora de Fin</label>
-            <span class="optional-tag">Opcional</span>
-          </div>
-          <input v-model="form.endTime" type="time" class="form-input" />
-        </div>
-      </div>
-
-      <!-- Ubicación -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">09</span>
-          <label>Ubicación <span class="req">*</span></label>
-        </div>
-        <input
-          v-model="form.location"
-          type="text"
-          class="form-input"
-          placeholder="Ej: Auditorio Principal, Campus Obrajes"
-        />
-      </div>
-
-      <!-- Imagen de Portada -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">10</span>
-          <label>Imagen de Portada</label>
-          <span class="optional-tag">Opcional</span>
-        </div>
-
-        <div class="upload-tabs">
-          <button type="button" class="upload-tab" :class="{ active: coverMode === 'url' }" @click="switchCoverMode('url')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-            Desde URL
-          </button>
-          <button type="button" class="upload-tab" :class="{ active: coverMode === 'file' }" @click="switchCoverMode('file')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Subir desde dispositivo
-          </button>
-        </div>
-
-        <!-- URL mode -->
-        <template v-if="coverMode === 'url'">
-          <div class="input-icon-wrap">
-            <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <input
-              v-model="form.coverUrl"
-              type="url"
-              class="form-input with-icon"
-              placeholder="https://ejemplo.com/evento.jpg"
-              @input="updateCoverPreview"
-            />
-            <button v-if="form.coverUrl" type="button" class="input-clear" @click="clearCover">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <div class="category-grid">
+            <button
+              type="button"
+              v-for="cat in categories"
+              :key="cat.id"
+              class="cat-btn"
+              :class="{ active: form.categoryId === cat.id }"
+              @click="form.categoryId = cat.id"
+              :style="{ '--cat-color': cat.color }"
+            >
+              <span class="cat-color-dot" :style="{ background: cat.color }"></span>
+              <span>{{ cat.name }}</span>
             </button>
           </div>
-          <Transition name="fade">
-            <div class="cover-preview-url" v-if="coverPreviewUrl">
-              <img :src="coverPreviewUrl" alt="Vista previa" @error="coverPreviewUrl=''" />
-              <button type="button" class="cover-remove" @click="clearCover">
+        </div>
+
+        <!-- Descripción -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">03</span>
+            <label>Descripción <span class="req">*</span></label>
+            <span class="char-count">{{ form.description.length }} car.</span>
+          </div>
+          <textarea
+            v-model="form.description"
+            class="description-textarea"
+            placeholder="Describe los detalles del evento..."
+            rows="8"
+          ></textarea>
+        </div>
+
+        <!-- Tipo de Evento -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">04</span>
+            <label>Tipo de Evento <span class="req">*</span></label>
+          </div>
+          <div class="select-wrap">
+            <select v-model="form.eventType" class="form-select" :disabled="!form.categoryId">
+              <option value="">{{ !form.categoryId ? 'Primero selecciona una categoría' : 'Selecciona el tipo de evento' }}</option>
+              <option v-for="type in availableEventTypes" :key="type" :value="type">
+                {{ type }}
+              </option>
+            </select>
+            <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+
+        <!-- Fecha y Hora de Inicio -->
+        <div class="field-row">
+          <div class="field-block">
+            <div class="field-label">
+              <span class="field-num">05</span>
+              <label>Fecha <span class="req">*</span></label>
+            </div>
+            <input v-model="form.eventDate" type="date" class="form-input" />
+          </div>
+          <div class="field-block">
+            <div class="field-label">
+              <span class="field-num">06</span>
+              <label>Hora de Inicio <span class="req">*</span></label>
+            </div>
+            <input v-model="form.eventTime" type="time" class="form-input" />
+          </div>
+        </div>
+
+        <!-- Fecha y Hora de Fin -->
+        <div class="field-row">
+          <div class="field-block">
+            <div class="field-label">
+              <span class="field-num">07</span>
+              <label>Fecha de Fin</label>
+              <span class="optional-tag">Opcional</span>
+            </div>
+            <input v-model="form.endDate" type="date" class="form-input" />
+          </div>
+          <div class="field-block">
+            <div class="field-label">
+              <span class="field-num">08</span>
+              <label>Hora de Fin</label>
+              <span class="optional-tag">Opcional</span>
+            </div>
+            <input v-model="form.endTime" type="time" class="form-input" />
+          </div>
+        </div>
+
+        <!-- Ubicación -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">09</span>
+            <label>Ubicación <span class="req">*</span></label>
+          </div>
+          <input
+            v-model="form.location"
+            type="text"
+            class="form-input"
+            placeholder="Ej: Auditorio Principal, Campus Obrajes"
+          />
+        </div>
+
+        <!-- Imagen de Portada -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">10</span>
+            <label>Imagen de Portada</label>
+            <span class="optional-tag">Opcional</span>
+          </div>
+
+          <div class="upload-tabs">
+            <button type="button" class="upload-tab" :class="{ active: coverMode === 'url' }" @click="switchCoverMode('url')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              Desde URL
+            </button>
+            <button type="button" class="upload-tab" :class="{ active: coverMode === 'file' }" @click="switchCoverMode('file')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Subir desde dispositivo
+            </button>
+          </div>
+
+          <!-- URL mode -->
+          <template v-if="coverMode === 'url'">
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <input
+                v-model="form.coverUrl"
+                type="url"
+                class="form-input with-icon"
+                placeholder="https://ejemplo.com/evento.jpg"
+                @input="updateCoverPreview"
+              />
+              <button v-if="form.coverUrl" type="button" class="input-clear" @click="clearCover">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-          </Transition>
-        </template>
-
-        <!-- File mode -->
-        <template v-else>
-          <input ref="coverFileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden-input" @change="onCoverFileChange" />
-          <div class="file-drop-zone" :class="{ dragging: coverDragging }"
-            @dragover.prevent="coverDragging = true"
-            @dragleave="coverDragging = false"
-            @drop.prevent="onCoverDrop"
-            @click="!coverPreviewUrl && $refs.coverFileInput.click()">
-            <div v-if="!coverPreviewUrl" class="drop-content">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <p>Arrastra una imagen aquí o <span class="drop-link">haz clic para seleccionar</span></p>
-              <small>JPG, PNG, WEBP, GIF — máx. 5MB</small>
-            </div>
-            <div v-else class="drop-preview-wrap">
-              <img :src="coverPreviewUrl" alt="Preview" class="drop-preview-img" />
-              <div class="drop-preview-overlay">
-                <span class="drop-preview-name">{{ coverFileName }}</span>
-                <button type="button" class="cover-remove-btn" @click.stop="clearCover">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Quitar
+            <Transition name="fade">
+              <div class="cover-preview-url" v-if="coverPreviewUrl">
+                <img :src="coverPreviewUrl" alt="Vista previa" @error="coverPreviewUrl=''" />
+                <button type="button" class="cover-remove" @click="clearCover">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="pending-badge">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Se subirá al publicar
+            </Transition>
+          </template>
+
+          <!-- File mode -->
+          <template v-else>
+            <input ref="coverFileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden-input" @change="onCoverFileChange" />
+            <div class="file-drop-zone" :class="{ dragging: coverDragging }"
+              @dragover.prevent="coverDragging = true"
+              @dragleave="coverDragging = false"
+              @drop.prevent="onCoverDrop"
+              @click="!coverPreviewUrl && $refs.coverFileInput.click()">
+              <div v-if="!coverPreviewUrl" class="drop-content">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p>Arrastra una imagen aquí o <span class="drop-link">haz clic para seleccionar</span></p>
+                <small>JPG, PNG, WEBP, GIF — máx. 5MB</small>
+              </div>
+              <div v-else class="drop-preview-wrap">
+                <img :src="coverPreviewUrl" alt="Preview" class="drop-preview-img" />
+                <div class="drop-preview-overlay">
+                  <span class="drop-preview-name">{{ coverFileName }}</span>
+                  <button type="button" class="cover-remove-btn" @click.stop="clearCover">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Quitar
+                  </button>
+                </div>
+                <div class="pending-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Se subirá al publicar
+                </div>
               </div>
             </div>
+          </template>
+        </div>
+
+        <!-- Dirigido a -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">11</span>
+            <label>Dirigido a</label>
           </div>
-        </template>
-      </div>
+          <div class="select-wrap">
+            <select v-model="form.careerId" class="form-select">
+              <option :value="null">Toda la comunidad UCB</option>
+              <option v-for="career in careers" :key="career.id" :value="career.id">
+                {{ career.name }}
+              </option>
+            </select>
+            <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
 
-      <!-- Dirigido a -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">11</span>
-          <label>Dirigido a</label>
+        <!-- Capacidad Máxima -->
+        <div class="field-block">
+          <div class="field-label">
+            <span class="field-num">12</span>
+            <label>Capacidad Máxima</label>
+            <span class="optional-tag">Opcional</span>
+          </div>
+          <div class="input-icon-wrap">
+            <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <input
+              v-model.number="form.maxCapacity"
+              type="number"
+              class="form-input with-icon"
+              placeholder="100"
+              min="1"
+              max="10000"
+            />
+          </div>
+          <small class="field-help">Máximo número de asistentes permitidos</small>
         </div>
-        <div class="select-wrap">
-          <select v-model="form.careerId" class="form-select">
-            <option :value="null">Toda la comunidad UCB</option>
-            <option v-for="career in careers" :key="career.id" :value="career.id">
-              {{ career.name }}
-            </option>
-          </select>
-          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-      </div>
 
-      <!-- Capacidad Máxima -->
-      <div class="field-block">
-        <div class="field-label">
-          <span class="field-num">12</span>
-          <label>Capacidad Máxima</label>
-          <span class="optional-tag">Opcional</span>
-        </div>
-        <div class="input-icon-wrap">
-          <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <input
-            v-model.number="form.maxCapacity"
-            type="number"
-            class="form-input with-icon"
-            placeholder="100"
-            min="1"
-            max="10000"
-          />
-        </div>
-        <small class="field-help">Máximo número de asistentes permitidos</small>
-      </div>
-
-      <!-- Published toggle -->
-      <div class="field-block publish-block">
-        <div class="toggle-row">
-          <div class="toggle-left">
-            <div class="toggle-icon" :class="form.published ? 'icon-pub' : 'icon-draft'">
-              <svg v-if="form.published" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <!-- Published toggle -->
+        <div class="field-block publish-block">
+          <div class="toggle-row">
+            <div class="toggle-left">
+              <div class="toggle-icon" :class="form.published ? 'icon-pub' : 'icon-draft'">
+                <svg v-if="form.published" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </div>
+              <div>
+                <span class="toggle-title">{{ form.published ? 'Evento publicado' : 'Evento en borrador' }}</span>
+                <span class="toggle-desc">{{ form.published ? 'El evento es visible para todos los usuarios.' : 'Solo tú puedes ver este evento hasta que lo publiques.' }}</span>
+              </div>
             </div>
-            <div>
-              <span class="toggle-title">{{ form.published ? 'Publicar inmediatamente' : 'Guardar como borrador' }}</span>
-              <span class="toggle-desc">{{ form.published ? 'El evento será visible para todos los usuarios.' : 'Solo tú podrás ver este evento hasta que lo publiques.' }}</span>
+            <button type="button" class="toggle-switch" :class="{ on: form.published }" @click="form.published = !form.published">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- PREVIEW COLUMN -->
+    <div class="preview-column" v-show="showPreview || isWide">
+      <div class="preview-header">
+        <span class="preview-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Vista Previa
+        </span>
+        <span class="preview-badge">Evento</span>
+      </div>
+
+      <div class="preview-card">
+        <div class="preview-cover-wrap">
+          <img v-if="form.coverUrl" :src="form.coverUrl" alt="Cover" class="preview-img" @error="() => {}" />
+          <div v-else class="preview-cover-empty">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <small>Sin imagen de portada</small>
+          </div>
+        </div>
+        <div class="preview-content">
+          <div class="preview-meta-row">
+            <span class="meta-cat">📅 {{ form.eventType || 'Evento' }}</span>
+          </div>
+          <h2 class="preview-title">{{ form.title || 'Título del evento...' }}</h2>
+
+          <div class="preview-event-details">
+            <div class="event-detail-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>{{ formatEventDate(form.eventDate) }}</span>
+            </div>
+            <div class="event-detail-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>{{ formatEventTimeRange(form.eventTime, form.endTime) }}</span>
+            </div>
+            <div class="event-detail-item" v-if="form.endDate && form.endDate !== form.eventDate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><calendar xmlns="http://www.w3.org/2000/svg"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+              <span>Hasta {{ formatEventDate(form.endDate) }}</span>
+            </div>
+            <div class="event-detail-item" v-if="form.location">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>{{ form.location }}</span>
+            </div>
+            <div class="event-detail-item" v-if="form.maxCapacity">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              <span>Máx. {{ form.maxCapacity }} asistentes</span>
             </div>
           </div>
-          <button type="button" class="toggle-switch" :class="{ on: form.published }" @click="form.published = !form.published">
-            <span class="toggle-knob"></span>
-          </button>
+
+          <div class="preview-body">
+            <p v-if="!form.description" class="preview-empty">La descripción aparecerá aquí...</p>
+            <p v-else>{{ form.description }}</p>
+          </div>
         </div>
       </div>
 
-    </form>
-  </div>
-
-  <!-- PREVIEW COLUMN -->
-  <div class="preview-column" v-show="showPreview || isWide">
-    <div class="preview-header">
-      <span class="preview-label">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        Vista Previa
-      </span>
-      <span class="preview-badge">Evento</span>
-    </div>
-
-    <div class="preview-card">
-      <div class="preview-cover-wrap">
-        <img v-if="form.coverUrl" :src="form.coverUrl" alt="Cover" class="preview-img" @error="() => {}" />
-        <div v-else class="preview-cover-empty">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <small>Sin imagen de portada</small>
-        </div>
+      <div class="preview-status" :class="form.published ? 'status-pub' : 'status-draft'">
+        <svg v-if="form.published" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
+        {{ form.published ? 'Se publicará al enviar' : 'Se guardará como borrador' }}
       </div>
-      <div class="preview-content">
-        <div class="preview-meta-row">
-          <span class="meta-cat">📅 {{ form.eventType || 'Evento' }}</span>
-        </div>
-        <h2 class="preview-title">{{ form.title || 'Título del evento...' }}</h2>
-
-        <div class="preview-event-details">
-          <div class="event-detail-item">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>{{ formatEventDate(form.eventDate) }}</span>
-          </div>
-          <div class="event-detail-item">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>{{ formatEventTimeRange(form.eventTime, form.endTime) }}</span>
-          </div>
-          <div class="event-detail-item" v-if="form.endDate && form.endDate !== form.eventDate">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><calendar xmlns="http://www.w3.org/2000/svg"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
-            <span>Hasta {{ formatEventDate(form.endDate) }}</span>
-          </div>
-          <div class="event-detail-item" v-if="form.location">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>{{ form.location }}</span>
-          </div>
-          <div class="event-detail-item" v-if="form.maxCapacity">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            <span>Máx. {{ form.maxCapacity }} asistentes</span>
-          </div>
-        </div>
-
-        <div class="preview-body">
-          <p v-if="!form.description" class="preview-empty">La descripción aparecerá aquí...</p>
-          <p v-else>{{ form.description }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="preview-status" :class="form.published ? 'status-pub' : 'status-draft'">
-      <svg v-if="form.published" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
-      {{ form.published ? 'Se publicará al enviar' : 'Se guardará como borrador' }}
     </div>
   </div>
-</div>
-</div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { careerService, categoryService } from '../../services/api.js'
 
 const router = useRouter()
+const route = useRoute()
+const eventId = computed(() => route.params.id)
+
 const saving = ref(false)
+const loadingEvent = ref(true)
+const loadError = ref('')
 const careers = ref([])
 const categories = ref([])
 const showPreview = ref(false)
@@ -416,6 +446,10 @@ const form = reactive({
   maxCapacity: null,
   published: true
 })
+
+// Original data to track changes
+const originalData = ref({})
+const originalUpdatedAt = ref(new Date())
 
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
 
@@ -475,24 +509,6 @@ function formatEventTimeRange(startTime, endTime) {
   return `${startTime} - ${endTime}`
 }
 
-// Cover image functions
-function switchCoverMode(mode) {
-  coverMode.value = mode
-  clearCover()
-}
-
-function updateCoverPreview() {
-  coverPreviewUrl.value = (form.coverUrl && form.coverUrl.startsWith('http')) ? form.coverUrl : ''
-}
-
-function clearCover() {
-  form.coverUrl = ''
-  coverPreviewUrl.value = ''
-  coverFileName.value = ''
-  coverFileObj.value = null
-  if (coverFileInput.value) coverFileInput.value.value = ''
-}
-
 // Helper function to format data for backend
 function formatEventDataForBackend() {
   // Crear fecha y hora de inicio en formato ISO
@@ -522,6 +538,24 @@ function formatEventDataForBackend() {
     maxCapacity: form.maxCapacity || null,
     eventType: form.eventType
   }
+}
+
+// Cover image functions
+function switchCoverMode(mode) {
+  coverMode.value = mode
+  clearCover()
+}
+
+function updateCoverPreview() {
+  coverPreviewUrl.value = (form.coverUrl && form.coverUrl.startsWith('http')) ? form.coverUrl : ''
+}
+
+function clearCover() {
+  form.coverUrl = ''
+  coverPreviewUrl.value = ''
+  coverFileName.value = ''
+  coverFileObj.value = null
+  if (coverFileInput.value) coverFileInput.value.value = ''
 }
 
 function onCoverFileChange(e) {
@@ -576,7 +610,44 @@ async function loadCategories() {
   }
 }
 
-async function submitEvent() {
+async function loadEventData() {
+  loadingEvent.value = true
+  loadError.value = ''
+
+  try {
+    // TODO: Conectar con el API de eventos cuando esté listo
+    // const event = await eventService.getById(eventId.value)
+
+    // Datos de ejemplo mientras se conecta con el API
+    const mockEvent = {
+      id: eventId.value,
+      title: 'Feria de Ciencias UCB 2026',
+      description: 'Gran evento de exhibición de proyectos científicos de todas las carreras.',
+      categoryId: 1, // Académico por defecto
+      eventType: 'CONFERENCIA',
+      eventDate: '2026-05-15',
+      eventTime: '09:00',
+      endDate: '2026-05-15',
+      endTime: '17:00',
+      location: 'Auditorio Principal, Campus Obrajes',
+      coverUrl: 'https://example.com/event.jpg',
+      careerId: null,
+      maxCapacity: 150,
+      published: true,
+      updatedAt: new Date()
+    }
+
+    Object.assign(form, mockEvent)
+    originalData.value = { ...mockEvent }
+    originalUpdatedAt.value = mockEvent.updatedAt
+    loadingEvent.value = false
+  } catch (err) {
+    loadError.value = err.message || 'No se pudo cargar el evento'
+    loadingEvent.value = false
+  }
+}
+
+async function updateEvent() {
   if (!isValid.value) {
     showToastMsg('warning', 'Campos incompletos', 'Por favor completa todos los campos obligatorios.')
     return
@@ -585,15 +656,15 @@ async function submitEvent() {
   saving.value = true
   try {
     const eventData = formatEventDataForBackend()
-    console.log('Datos del evento para enviar:', eventData)
+    console.log('Datos del evento para actualizar:', eventData)
 
     // TODO: Conectar con el API de eventos cuando esté listo
-    // await eventService.create(eventData)
+    // await eventService.update(eventId.value, eventData)
 
-    showToastMsg('success', 'Evento guardado', form.published ? 'El evento fue publicado correctamente.' : 'El borrador fue guardado.')
+    showToastMsg('success', 'Evento actualizado', 'Los cambios fueron guardados correctamente.')
     setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
   } catch (err) {
-    showToastMsg('error', 'Error al publicar', 'No se pudo guardar el evento.')
+    showToastMsg('error', 'Error al actualizar', err.message || 'No se pudieron guardar los cambios.')
   } finally {
     saving.value = false
   }
@@ -604,7 +675,10 @@ async function saveDraft() {
     showToastMsg('warning', 'Sin contenido', 'Escribe algo antes de guardar.')
     return
   }
+
+  form.published = false
   saving.value = true
+
   try {
     // TODO: Conectar con el API de eventos cuando esté listo
     showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado correctamente.')
@@ -618,6 +692,7 @@ async function saveDraft() {
 onMounted(() => {
   loadCareers()
   loadCategories()
+  loadEventData()
 
   // Detectar cambios de tamaño de ventana
   const handleResize = () => {
@@ -635,7 +710,7 @@ onMounted(() => {
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.crear-evento-page {
+.edit-event-page {
   font-family: 'Inter', sans-serif;
   color: #1e293b;
   padding-bottom: 3rem;
@@ -671,12 +746,41 @@ onMounted(() => {
 .toast-slide-enter-active, .toast-slide-leave-active { transition: all 0.28s ease; }
 .toast-slide-enter-from, .toast-slide-leave-to { opacity: 0; transform: translateX(28px); }
 
+/* Loading & Error States */
+.loading-full, .error-full {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 400px; gap: 1rem;
+}
+.loading-spinner {
+  width: 40px; height: 40px; border: 3px solid #e2e8f0;
+  border-top-color: #1a3a52; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-full p, .error-full p { color: #64748b; font-size: 0.9rem; }
+.error-full h3 { color: #1e293b; margin-top: 0.5rem; }
+.btn-retry {
+  margin-top: 1rem; padding: 0.6rem 1.2rem; background: #1a3a52;
+  color: #FFD200; border: none; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 0.5rem;
+  transition: all 0.2s;
+}
+.btn-retry:hover { background: #0f2438; transform: translateY(-1px); }
+
 /* Header */
 .page-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 2rem; padding-bottom: 1.4rem; border-bottom: 1px solid #f1f5f9;
 }
 .header-left { display: flex; align-items: center; gap: 1rem; }
+.btn-back {
+  width: 36px; height: 36px; background: #f8fafc;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; color: #475569;
+}
+.btn-back:hover { background: #1a3a52; color: #fff; border-color: #1a3a52; }
 .header-icon {
   width: 46px; height: 46px; background: #FFD200;
   border-radius: 12px; display: flex; align-items: center; justify-content: center;
@@ -721,7 +825,6 @@ onMounted(() => {
   border: 2px solid rgba(255,210,0,0.3); border-top-color: #FFD200;
   border-radius: 50%; animation: spin 0.6s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Form */
 .event-form { display: flex; flex-direction: column; gap: 1rem; }
@@ -753,6 +856,8 @@ onMounted(() => {
   color: #94a3b8; padding: 2px 8px; border-radius: 20px; font-weight: 500;
 }
 .char-count { margin-left: auto; font-size: 0.71rem; color: #94a3b8; }
+.char-count.warning { color: #f59e0b; }
+.char-count.danger { color: #ef4444; font-weight: 600; }
 
 /* Category Grid */
 .category-grid {
@@ -967,6 +1072,29 @@ onMounted(() => {
 }
 .cover-remove:hover {
   background: #dc2626;
+}
+
+.input-clear {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.15s;
+}
+.input-clear:hover {
+  background: #fee2e2;
+  border-color: #feca57;
+  color: #dc2626;
 }
 
 .fade-enter-active, .fade-leave-active {

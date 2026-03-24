@@ -65,12 +65,12 @@
       </button>
       <button class="stat-pill stat-pub" :class="{ active: activeFilter === 'published' }" @click="activeFilter = 'published'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="stat-num">{{ events.filter(e => e.published).length }}</span>
+        <span class="stat-num">{{ events.filter(e => e.isActive).length }}</span>
         <span class="stat-txt">Publicados</span>
       </button>
       <button class="stat-pill stat-draft" :class="{ active: activeFilter === 'draft' }" @click="activeFilter = 'draft'">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span class="stat-num">{{ events.filter(e => !e.published).length }}</span>
+        <span class="stat-num">{{ events.filter(e => !e.isActive).length }}</span>
         <span class="stat-txt">Borradores</span>
       </button>
     </div>
@@ -144,30 +144,30 @@
 
     <!-- GRID VIEW -->
     <div v-else-if="viewMode === 'grid'" class="events-grid">
-      <article v-for="item in filteredEvents" :key="item.id" class="event-card" :class="{ 'is-draft': !item.published }">
+      <article v-for="item in filteredEvents" :key="item.id" class="event-card" :class="{ 'is-draft': !item.isActive }">
 
         <!-- Image -->
         <div class="card-img-wrap">
-          <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" class="card-img" />
+          <img v-if="item.posterUrl" :src="item.posterUrl" :alt="item.name" class="card-img" />
           <div v-else class="card-img-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
           <div class="card-overlay-top">
-            <span class="badge-status" :class="item.published ? 'status-pub' : 'status-draft'">
+            <span class="badge-status" :class="item.isActive ? 'status-pub' : 'status-draft'">
               <span class="status-dot"></span>
-              {{ item.published ? 'Publicado' : 'Borrador' }}
+              {{ item.isActive ? 'Publicado' : 'Borrador' }}
             </span>
           </div>
-          <div class="draft-stamp" v-if="!item.published">BORRADOR</div>
+          <div class="draft-stamp" v-if="!item.isActive">BORRADOR</div>
         </div>
 
         <!-- Content -->
         <div class="card-content">
           <div class="card-date-wrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>{{ formatEventDate(item.eventDate, item.eventTime) }}</span>
+            <span>{{ formatEventDate(item.startDatetime) }}</span>
           </div>
-          <h3 class="card-title">{{ item.title }}</h3>
+          <h3 class="card-title">{{ item.name }}</h3>
           <p class="card-excerpt">{{ excerpt(item.description) }}</p>
           <div class="card-location">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -177,10 +177,10 @@
 
         <!-- Actions -->
         <div class="card-actions">
-          <button class="action-btn btn-edit">
+          <router-link :to="`/publicador/editar-evento/${item.id}`" class="action-btn btn-edit">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
-          </button>
+          </router-link>
           <button class="action-btn btn-delete" @click="askDelete(item)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
             Eliminar
@@ -191,30 +191,30 @@
 
     <!-- LIST VIEW -->
     <div v-else class="events-list">
-      <div v-for="item in filteredEvents" :key="item.id" class="list-row" :class="{ 'is-draft': !item.published }">
+      <div v-for="item in filteredEvents" :key="item.id" class="list-row" :class="{ 'is-draft': !item.isActive }">
         <div class="list-img">
-          <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" />
+          <img v-if="item.posterUrl" :src="item.posterUrl" :alt="item.name" />
           <div v-else class="list-img-placeholder">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
         </div>
         <div class="list-content">
           <div class="list-badges">
-            <span class="badge-status small" :class="item.published ? 'status-pub' : 'status-draft'">
-              <span class="status-dot"></span>{{ item.published ? 'Publicado' : 'Borrador' }}
+            <span class="badge-status small" :class="item.isActive ? 'status-pub' : 'status-draft'">
+              <span class="status-dot"></span>{{ item.isActive ? 'Publicado' : 'Borrador' }}
             </span>
           </div>
-          <h3 class="list-title">{{ item.title }}</h3>
+          <h3 class="list-title">{{ item.name }}</h3>
           <p class="list-excerpt">{{ excerpt(item.description) }}</p>
           <div class="list-meta">
-            <time>{{ formatEventDate(item.eventDate, item.eventTime) }}</time>
+            <time>{{ formatEventDate(item.startDatetime) }}</time>
             <span> · {{ item.location }}</span>
           </div>
         </div>
         <div class="list-actions">
-          <button class="icon-btn" title="Editar">
+          <router-link :to="`/publicador/editar-evento/${item.id}`" class="icon-btn" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
+          </router-link>
           <button class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           </button>
@@ -227,6 +227,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { eventService } from '../../services/api.js'
 
 const events = ref([])
 const loading = ref(false)
@@ -245,24 +246,25 @@ function excerpt(text) {
   return plain.length > 110 ? plain.substring(0, 110) + '...' : plain
 }
 
-function formatEventDate(date, time) {
-  if (!date) return ''
-  const d = new Date(date)
-  const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-  return time ? `${dateStr} · ${time}` : dateStr
+function formatEventDate(startDatetime) {
+  if (!startDatetime) return 'Fecha por definir'
+  const date = new Date(startDatetime)
+  const dateStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  return `${dateStr} · ${timeStr}`
 }
 
 const filteredEvents = computed(() => {
   let list = [...events.value]
-  if (activeFilter.value === 'published') list = list.filter(e => e.published)
-  if (activeFilter.value === 'draft') list = list.filter(e => !e.published)
+  if (activeFilter.value === 'published') list = list.filter(e => e.isActive)
+  if (activeFilter.value === 'draft') list = list.filter(e => !e.isActive)
   if (search.value.trim()) {
     const q = search.value.toLowerCase()
-    list = list.filter(e => e.title?.toLowerCase().includes(q))
+    list = list.filter(e => e.name?.toLowerCase().includes(q))
   }
   if (sortBy.value === 'newest') list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   if (sortBy.value === 'oldest') list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-  if (sortBy.value === 'date') list.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
+  if (sortBy.value === 'date') list.sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime))
   return list
 })
 
@@ -278,9 +280,10 @@ async function loadEvents() {
   loading.value = true
   error.value = ''
   try {
-    // TODO: Conectar con API de eventos
-    events.value = []
+    const response = await eventService.getMy()
+    events.value = response || []
   } catch (err) {
+    console.error('Error al cargar eventos:', err)
     error.value = 'No se pudo conectar con el servidor.'
   } finally {
     loading.value = false
@@ -288,18 +291,19 @@ async function loadEvents() {
 }
 
 function askDelete(item) {
-  Object.assign(deleteModal, { show: true, id: item.id, title: item.title, loading: false })
+  Object.assign(deleteModal, { show: true, id: item.id, title: item.name, loading: false })
 }
 
 async function confirmDelete() {
   deleteModal.loading = true
   try {
-    // TODO: Conectar con API de eventos
+    await eventService.delete(deleteModal.id)
     const title = deleteModal.title
     events.value = events.value.filter(e => e.id !== deleteModal.id)
     deleteModal.show = false
     showToast('success', 'Eliminado', `"${title}" fue eliminado correctamente.`)
-  } catch {
+  } catch (err) {
+    console.error('Error al eliminar evento:', err)
     showToast('error', 'Error', 'No se pudo eliminar el evento.')
   } finally {
     deleteModal.loading = false
