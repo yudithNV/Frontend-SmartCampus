@@ -199,6 +199,13 @@
             </div>
             <div class="fb-meta-row">
               <time class="fb-time">{{ formatDateRelative(item.createdAt) }}</time>
+              <template v-if="item.updatedAt && item.updatedAt !== item.createdAt">
+                <span class="fb-dot">·</span>
+                <span class="fb-edited-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Ultima actualización: {{ formatDateFull(item.updatedAt) }}
+                </span>
+              </template>
               <span class="fb-dot">·</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
               <span class="fb-audience">{{ item.careerId ? getCareerName(String(item.careerId)) : 'Toda la comunidad' }}</span>
@@ -327,8 +334,11 @@
           </div>
         </div>
         <div class="card-content">
-          <div class="card-meta-row">
-            <time class="card-date">{{ formatDate(item.createdAt) }}</time>
+        <div class="card-meta-row">
+          <time class="card-date">{{ formatDate(item.createdAt) }}</time>
+          <span v-if="item.updatedAt && item.updatedAt !== item.createdAt" class="card-edited">
+             Ultima actualización: {{ formatDateFull(item.updatedAt) }}
+          </span>
             <span v-if="item.careerId" class="card-career">{{ getCareerName(String(item.careerId)) }}</span>
           </div>
           <h3 class="card-title">{{ item.title }}</h3>
@@ -364,7 +374,12 @@
           </div>
           <h3 class="list-title">{{ item.title }}</h3>
           <p class="list-excerpt">{{ excerpt(item.body) }}</p>
-          <div class="list-meta"><time>{{ formatDate(item.createdAt) }}</time></div>
+          <div class="list-meta">
+            <time>{{ formatDate(item.createdAt) }}</time>
+            <template v-if="item.updatedAt && item.updatedAt !== item.createdAt">
+              <span class="list-edited">· Ultima actualización: {{ formatDateFull(item.updatedAt) }}</span>
+            </template>
+          </div>
         </div>
         <div class="list-actions">
           <router-link :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar">
@@ -437,7 +452,10 @@ function excerpt(text) {
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
 function formatDateRelative(dateStr) {
@@ -450,9 +468,19 @@ function formatDateRelative(dateStr) {
   if (mins < 60)  return `Hace ${mins} min`
   if (hours < 24) return `Hace ${hours}h`
   if (days < 7)   return `Hace ${days} días`
-  return formatDate(dateStr)
+  return new Date(dateStr).toLocaleDateString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
+function formatDateFull(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
+}
 // Body over 350 chars needs truncation
 function needsTruncation(body) {
   return body && body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g, '').length > 350
@@ -604,6 +632,22 @@ onMounted(async () => {
 
 .mis-noticias { font-family: 'Inter', sans-serif; color: #1e293b; padding-bottom: 3rem; }
 
+.fb-edited-badge {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.72rem; font-weight: 600; color: #7c3aed;
+  background: #f5f3ff; padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap;   /* ← ESTO es lo clave */
+}
+
+.card-edited {
+  font-size: 0.67rem; color: #7c3aed; font-weight: 500;
+  background: #f5f3ff; padding: 2px 7px; border-radius: 10px;
+}
+
+.list-edited {
+  font-size: 0.7rem; color: #7c3aed; font-weight: 500;
+  margin-left: 0.3rem;
+}
 /* ── Toast ── */
 .toast { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1.1rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05); border-left: 3px solid; min-width: 300px; max-width: 400px; }
 .toast-success { border-left-color: #22c55e; }
@@ -746,7 +790,7 @@ onMounted(async () => {
   display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
 }
 .fb-author-role { font-size: 0.78rem; font-weight: 400; color: #64748b; }
-.fb-meta-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
+.fb-meta-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; row-gap: 0.2rem; }
 .fb-time { font-size: 0.74rem; color: #94a3b8; }
 .fb-dot { font-size: 0.7rem; color: #cbd5e1; }
 .fb-audience { font-size: 0.74rem; color: #94a3b8; }

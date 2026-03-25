@@ -487,7 +487,10 @@ function getCategoryLabel(val) { return categories.find(c => c.value === val)?.l
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  return new Date(dateStr).toLocaleDateString('es-ES', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
 function renderBody(text) {
@@ -703,9 +706,10 @@ async function submitNews() {
   if (!validateForm()) return
   saving.value = true
   try {
-    await sendToApi()
+    const saved = await sendToApi()
     hasChanges.value = false
-    originalUpdatedAt.value = new Date().toISOString()
+    originalUpdatedAt.value = saved.updatedAt || new Date().toISOString()
+ 
     showToastMsg('success', 'Cambios guardados', form.published
       ? 'La noticia fue actualizada y publicada correctamente.'
       : 'Los cambios fueron guardados como borrador.')
@@ -726,10 +730,10 @@ async function saveDraft() {
   }
   saving.value = true
   try {
-    await sendToApi()
+    const saved = await sendToApi()
     hasChanges.value = false
-    originalUpdatedAt.value = new Date().toISOString()
-    showToastMsg('success', 'Cambios guardados', 'Última actualización: ' + formatDate(new Date().toISOString()))
+    originalUpdatedAt.value = saved.updatedAt || new Date().toISOString()
+    showToastMsg('success', 'Cambios guardados', 'Última actualización: ' + formatDate(saved.updatedAt))
   } catch (err) {
     showToastMsg('error', 'Error', err.message)
   } finally {
