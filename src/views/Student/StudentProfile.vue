@@ -4,21 +4,12 @@
     <!-- ── CARD PRINCIPAL ─────────────────────────────────────────────────── -->
     <div class="profile-card">
 
-      <!-- Avatar + nombre -->
+      <!-- Avatar + nombre — siempre visible -->
       <div class="profile-hero">
-        <div class="avatar-wrapper">
-          <div class="avatar" :style="avatarStyle">
-            <img v-if="form.avatarUrl" :src="form.avatarUrl" alt="Avatar" class="avatar-img" @error="onAvatarError" />
-            <span v-else class="avatar-initials">{{ initials }}</span>
-          </div>
-          <button class="avatar-edit-btn" @click="showAvatarInput = !showAvatarInput" title="Cambiar foto">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
+        <div class="avatar">
+          <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="Avatar" class="avatar-img" @error="onAvatarError" />
+          <span v-else class="avatar-initials">{{ initials }}</span>
         </div>
-
         <div class="profile-hero__info">
           <h2 class="profile-name">{{ profile.fullName || 'Estudiante' }}</h2>
           <p class="profile-email">{{ profile.email }}</p>
@@ -26,29 +17,75 @@
         </div>
       </div>
 
-      <!-- Input URL avatar (toggle) -->
-      <Transition name="slide-down">
-        <div v-if="showAvatarInput" class="avatar-url-row">
-          <input
-            v-model="form.avatarUrl"
-            type="url"
-            class="form-input"
-            placeholder="https://... (URL de tu foto)"
-          />
-          <button class="btn-secondary" @click="showAvatarInput = false">Cerrar</button>
-        </div>
-      </Transition>
-
       <div class="profile-divider"></div>
 
-      <!-- ── FORMULARIO ──────────────────────────────────────────────────── -->
-      <form class="profile-form" @submit.prevent="handleSave">
+      <!-- ════════════════════════════════════════════════════════════════
+           MODO VISTA — solo lectura
+           ════════════════════════════════════════════════════════════════ -->
+      <div v-if="!editMode" class="profile-view">
 
         <div class="form-section">
           <h3 class="form-section__title">Datos personales</h3>
-
           <div class="form-grid">
-            <!-- Nombre completo -->
+            <div class="view-field view-field--full">
+              <span class="view-label">Nombre completo</span>
+              <span class="view-value">{{ profile.fullName || '—' }}</span>
+            </div>
+            <div class="view-field">
+              <span class="view-label">Teléfono de contacto</span>
+              <span class="view-value">{{ profile.phone || '—' }}</span>
+            </div>
+            <div class="view-field">
+              <span class="view-label">
+                Carrera
+                <span class="view-label__hint">— asignada por administración</span>
+              </span>
+              <span class="view-value">{{ careerName }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section__title">Sobre mí</h3>
+          <div class="view-field">
+            <span class="view-label">Biografía / descripción corta</span>
+            <span class="view-value view-value--bio">{{ profile.bio || '—' }}</span>
+          </div>
+        </div>
+
+        <!-- Botón Editar datos -->
+        <div class="form-actions">
+          <button class="btn-primary" @click="startEdit">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Editar datos
+          </button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════
+           MODO EDICIÓN — formulario activo
+           ════════════════════════════════════════════════════════════════ -->
+      <form v-else class="profile-form" @submit.prevent="handleSave">
+
+        <div class="form-section">
+          <h3 class="form-section__title">Foto de perfil</h3>
+          <div class="form-group">
+            <label class="form-label">URL de imagen</label>
+            <input
+              v-model="form.avatarUrl"
+              type="url"
+              class="form-input"
+              placeholder="https://... (URL de tu foto)"
+            />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section__title">Datos personales</h3>
+          <div class="form-grid">
             <div class="form-group form-group--full">
               <label class="form-label">Nombre completo</label>
               <input
@@ -59,8 +96,6 @@
                 maxlength="120"
               />
             </div>
-
-            <!-- Teléfono -->
             <div class="form-group">
               <label class="form-label">Teléfono de contacto</label>
               <input
@@ -71,8 +106,6 @@
                 maxlength="20"
               />
             </div>
-
-            <!-- Carrera (solo lectura — la asigna el admin) -->
             <div class="form-group">
               <label class="form-label">
                 Carrera
@@ -103,12 +136,11 @@
           </div>
         </div>
 
-        <!-- ── FOOTER DEL FORM ────────────────────────────────────────────── -->
         <div class="form-actions">
-          <button type="button" class="btn-secondary" @click="resetForm" :disabled="saving">
-            Descartar cambios
+          <button type="button" class="btn-secondary" @click="cancelEdit" :disabled="saving">
+            Cancelar
           </button>
-          <button type="submit" class="btn-primary" :disabled="saving || !isDirty">
+          <button type="submit" class="btn-primary" :disabled="saving">
             <svg v-if="saving" class="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
@@ -119,7 +151,7 @@
       </form>
     </div>
 
-    <!-- ── CARD INFO DE CUENTA (solo lectura) ────────────────────────────── -->
+    <!-- ── CARD INFO DE CUENTA (siempre solo lectura) ─────────────────────── -->
     <div class="account-card">
       <h3 class="account-card__title">Información de cuenta</h3>
       <div class="account-fields">
@@ -133,7 +165,10 @@
         </div>
         <div class="account-field">
           <span class="account-field__label">Estado de cuenta</span>
-          <span class="account-field__value account-field__value--status" :class="profile.status === 'ACTIVO' ? 'status--active' : 'status--inactive'">
+          <span
+            class="account-field__value account-field__value--status"
+            :class="profile.status === 'ACTIVO' ? 'status--active' : 'status--inactive'"
+          >
             {{ profile.status || '—' }}
           </span>
         </div>
@@ -159,40 +194,35 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { userService, careerService } from '../../services/api.js'
 
 // ─── Estado ───────────────────────────────────────────────────────────────────
-const profile = ref({})   // datos originales del servidor
-const careers = ref([])   // lista de carreras para mostrar nombre
+const profile  = ref({})
+const careers  = ref([])
+const editMode = ref(false)   // false = vista | true = edición
+const saving   = ref(false)
+const loading  = ref(true)
 
-const form = ref({
-  fullName: '',
-  phone: '',
-  bio: '',
-  avatarUrl: '',
-})
-
-const saving = ref(false)
-const loading = ref(true)
-const showAvatarInput = ref(false)
-const avatarError = ref(false)
-
+const form = ref({ fullName: '', phone: '', bio: '', avatarUrl: '' })
 const toast = ref({ show: false, type: 'success', message: '' })
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const initials = computed(() => {
-  const name = form.value.fullName || profile.value.fullName || ''
+  const name = profile.value.fullName || ''
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'E'
 })
 
+/** Muestra la URL del perfil guardado (no la del form) para el avatar del hero */
+const displayAvatarUrl = computed(() => profile.value.avatarUrl || '')
+
 const avatarStyle = computed(() => ({
-  background: form.value.avatarUrl ? 'transparent' : '#1a3a52',
+  background: displayAvatarUrl.value ? 'transparent' : '#1a3a52',
 }))
 
 const roleLabel = computed(() => {
-  const roles = { ESTUDIANTE: 'Estudiante', PUBLICADOR: 'Publicador', ADMIN: 'Administrador' }
-  return roles[profile.value.role] || profile.value.role || 'Estudiante'
+  const map = { ESTUDIANTE: 'Estudiante', PUBLICADOR: 'Publicador', ADMIN: 'Administrador' }
+  return map[profile.value.role] || profile.value.role || 'Estudiante'
 })
 
 const careerName = computed(() => {
@@ -206,16 +236,6 @@ const memberSince = computed(() => {
   return new Date(profile.value.createdAt).toLocaleDateString('es-BO', {
     year: 'numeric', month: 'long', day: 'numeric'
   })
-})
-
-/** Detecta si el formulario tiene cambios respecto al perfil original */
-const isDirty = computed(() => {
-  return (
-    form.value.fullName  !== (profile.value.fullName  || '') ||
-    form.value.phone     !== (profile.value.phone     || '') ||
-    form.value.bio       !== (profile.value.bio       || '') ||
-    form.value.avatarUrl !== (profile.value.avatarUrl || '')
-  )
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -234,25 +254,25 @@ function showToast(message, type = 'success') {
 }
 
 function onAvatarError() {
-  avatarError.value = true
-  form.value.avatarUrl = ''
+  profile.value = { ...profile.value, avatarUrl: '' }
 }
 
-function resetForm() {
-  fillForm(profile.value)
-  showAvatarInput.value = false
+// ─── Modo edición ─────────────────────────────────────────────────────────────
+function startEdit() {
+  fillForm(profile.value)   // carga los datos actuales en el form
+  editMode.value = true
 }
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
+function cancelEdit() {
+  editMode.value = false
+}
 
-/** Carga el perfil desde GET /api/profile */
+// ─── Carga de datos ───────────────────────────────────────────────────────────
 async function loadProfile() {
   loading.value = true
   try {
     const data = await userService.getProfile()
-    // El backend de ProfileController devuelve el User directamente (sin ApiResponse wrapper)
     profile.value = data
-    fillForm(data)
   } catch (err) {
     showToast('No se pudo cargar el perfil', 'error')
     console.error('[StudentProfile] loadProfile:', err)
@@ -261,19 +281,15 @@ async function loadProfile() {
   }
 }
 
-/** Carga lista de carreras para mostrar el nombre */
 async function loadCareers() {
   try {
     const res = await careerService.getAll()
     careers.value = res.data ?? res
-  } catch {
-    // No crítico si falla
-  }
+  } catch { /* no crítico */ }
 }
 
-/** Guarda los cambios con PUT /api/profile */
+// ─── Guardar cambios ──────────────────────────────────────────────────────────
 async function handleSave() {
-  if (!isDirty.value) return
   saving.value = true
   try {
     const updated = await userService.updateProfile({
@@ -282,10 +298,9 @@ async function handleSave() {
       bio:       form.value.bio       || null,
       avatarUrl: form.value.avatarUrl || null,
     })
-    // El backend devuelve el User actualizado directamente
-    profile.value = updated
-    fillForm(updated)
-    showToast('Perfil actualizado correctamente ✓')
+    profile.value = updated      // refresca los datos mostrados en vista
+    editMode.value = false        // vuelve al modo vista con datos actualizados
+    showToast('Cambios guardados correctamente')
   } catch (err) {
     showToast(err.message || 'Error al guardar los cambios', 'error')
     console.error('[StudentProfile] handleSave:', err)
@@ -309,7 +324,7 @@ onMounted(async () => {
   max-width: 760px;
 }
 
-/* ── Cards base ──────────────────────────────────────────────────────────── */
+/* ── Cards ───────────────────────────────────────────────────────────────── */
 .profile-card,
 .account-card {
   background: #ffffff;
@@ -318,7 +333,7 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-/* ── Hero del perfil ─────────────────────────────────────────────────────── */
+/* ── Hero ────────────────────────────────────────────────────────────────── */
 .profile-hero {
   display: flex;
   align-items: center;
@@ -326,20 +341,17 @@ onMounted(async () => {
   padding: 1.75rem 2rem;
 }
 
-.avatar-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
 .avatar {
   width: 80px;
   height: 80px;
   border-radius: 50%;
+  background: #1a3a52;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 3px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .avatar-img {
@@ -354,27 +366,7 @@ onMounted(async () => {
   color: #FFD200;
 }
 
-.avatar-edit-btn {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 26px;
-  height: 26px;
-  background: #1a3a52;
-  border: 2px solid white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  transition: background 0.15s;
-}
-.avatar-edit-btn:hover { background: #2e7d9f; }
-
-.profile-hero__info {
-  flex: 1;
-}
+.profile-hero__info { flex: 1; }
 
 .profile-name {
   font-size: 1.3rem;
@@ -401,21 +393,11 @@ onMounted(async () => {
   border-radius: 20px;
 }
 
-/* ── Avatar URL input ────────────────────────────────────────────────────── */
-.avatar-url-row {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0 2rem 1rem;
-  align-items: center;
-}
-
 /* ── Divider ─────────────────────────────────────────────────────────────── */
-.profile-divider {
-  height: 1px;
-  background: #f1f5f9;
-}
+.profile-divider { height: 1px; background: #f1f5f9; }
 
-/* ── Formulario ──────────────────────────────────────────────────────────── */
+/* ── Secciones compartidas (vista y edición) ─────────────────────────────── */
+.profile-view,
 .profile-form {
   padding: 1.75rem 2rem;
   display: flex;
@@ -438,16 +420,47 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+/* ── Modo vista: campos de solo lectura ──────────────────────────────────── */
+.view-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.view-field--full { grid-column: 1 / -1; }
+
+.view-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.view-label__hint {
+  font-weight: 400;
+  color: #cbd5e1;
+}
+
+.view-value {
+  font-size: 0.9rem;
+  color: #1e293b;
+  font-weight: 500;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.view-value--bio {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* ── Modo edición: inputs ────────────────────────────────────────────────── */
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  position: relative;
 }
 
-.form-group--full {
-  grid-column: 1 / -1;
-}
+.form-group--full { grid-column: 1 / -1; }
 
 .form-label {
   font-size: 0.82rem;
@@ -484,15 +497,9 @@ onMounted(async () => {
   color: #94a3b8;
   cursor: not-allowed;
 }
-.form-input--readonly:focus {
-  border-color: #e2e8f0;
-  box-shadow: none;
-}
+.form-input--readonly:focus { border-color: #e2e8f0; box-shadow: none; }
 
-.form-textarea {
-  resize: vertical;
-  min-height: 90px;
-}
+.form-textarea { resize: vertical; min-height: 90px; }
 
 .char-count {
   font-size: 0.75rem;
@@ -501,7 +508,7 @@ onMounted(async () => {
   margin-top: -0.2rem;
 }
 
-/* ── Acciones del form ───────────────────────────────────────────────────── */
+/* ── Acciones ────────────────────────────────────────────────────────────── */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -543,16 +550,11 @@ onMounted(async () => {
 .btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
 .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ── Spinner botón ───────────────────────────────────────────────────────── */
-.btn-spinner {
-  animation: spin 0.8s linear infinite;
-}
+.btn-spinner { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Card info de cuenta ─────────────────────────────────────────────────── */
-.account-card {
-  padding: 1.5rem 2rem;
-}
+.account-card { padding: 1.5rem 2rem; }
 
 .account-card__title {
   font-size: 0.8rem;
@@ -569,29 +571,12 @@ onMounted(async () => {
   gap: 1rem 2rem;
 }
 
-.account-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
+.account-field { display: flex; flex-direction: column; gap: 0.25rem; }
 
-.account-field__label {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
+.account-field__label { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
+.account-field__value { font-size: 0.875rem; color: #1e293b; font-weight: 500; }
 
-.account-field__value {
-  font-size: 0.875rem;
-  color: #1e293b;
-  font-weight: 500;
-}
-
-.account-field__value--status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
+.account-field__value--status { display: inline-flex; align-items: center; gap: 0.3rem; }
 .account-field__value--status::before {
   content: '';
   width: 7px;
@@ -621,22 +606,10 @@ onMounted(async () => {
   max-width: 340px;
 }
 
-.toast--success {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-
-.toast--error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
+.toast--success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.toast--error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
 /* ── Transiciones ────────────────────────────────────────────────────────── */
-.slide-down-enter-active, .slide-down-leave-active { transition: all 0.2s ease; }
-.slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-8px); }
-
 .toast-enter-active, .toast-leave-active { transition: all 0.25s ease; }
 .toast-enter-from { opacity: 0; transform: translateX(20px); }
 .toast-leave-to   { opacity: 0; transform: translateX(20px); }
@@ -644,9 +617,9 @@ onMounted(async () => {
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .profile-hero { flex-direction: column; text-align: center; padding: 1.5rem; }
-  .profile-form { padding: 1.25rem; }
+  .profile-view, .profile-form { padding: 1.25rem; }
   .form-grid { grid-template-columns: 1fr; }
-  .form-group--full { grid-column: 1; }
+  .view-field--full, .form-group--full { grid-column: 1; }
   .account-fields { grid-template-columns: 1fr; }
   .account-card { padding: 1.25rem; }
   .form-actions { flex-direction: column; }
