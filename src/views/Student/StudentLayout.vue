@@ -29,6 +29,8 @@ const pageTitle = computed(() => {
   const path = route.path.split('/').pop()
   const titles = {
     dashboard: 'Dashboard',
+    calendario: 'Mi Calendario',
+    perfil: 'Mi Perfil',
     reservar: 'Reservar',
     'buscar-material': 'Buscar Material',
     historial: 'Historial'

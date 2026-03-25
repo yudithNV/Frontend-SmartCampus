@@ -15,6 +15,27 @@
         <span class="icon">📚</span>
         <span>Dashboard</span>
       </router-link>
+
+      <!-- Mi Perfil -->
+      <router-link
+        to="/estudiante/perfil"
+        class="menu-item"
+        :class="{ active: $route.path.includes('perfil') }"
+      >
+        <span class="icon">👤</span>
+        <span>Mi Perfil</span>
+      </router-link>
+
+      <!-- ← NUEVO: Calendario -->
+      <router-link
+        to="/estudiante/calendario"
+        class="menu-item"
+        :class="{ active: $route.path.includes('calendario') }"
+      >
+        <span class="icon">📆</span>
+        <span>Mi Calendario</span>
+      </router-link>
+
       <router-link
         to="/estudiante/reservar"
         class="menu-item"

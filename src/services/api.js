@@ -14,7 +14,6 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
       mode: 'cors'
     }
 
-    // Agregar token de autenticación si existe
     if (token) {
       options.headers['Authorization'] = `Bearer ${token}`
     }
@@ -38,7 +37,9 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
   }
 }
 
-// Servicios de Usuario
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Autenticación
+// ─────────────────────────────────────────────────────────────────────────────
 export const userService = {
   login: (email, password) =>
     apiRequest('/auth/login', 'POST', { email, password }),
@@ -46,14 +47,17 @@ export const userService = {
   logout: () =>
     apiRequest('/auth/logout', 'POST'),
 
+  // ✅ Corregido: el backend usa /api/profile (ProfileController)
   getProfile: () =>
-    apiRequest('/users/profile', 'GET'),
+    apiRequest('/profile', 'GET'),
 
   updateProfile: (data) =>
-    apiRequest('/users/profile', 'PUT', data)
+    apiRequest('/profile', 'PUT', data)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Usuarios (Admin)
+// ─────────────────────────────────────────────────────────────────────────────
 export const adminUserService = {
   getAll: () =>
     apiRequest('/users', 'GET'),
@@ -68,7 +72,9 @@ export const adminUserService = {
     apiRequest(`/users/${id}`, 'DELETE')
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Noticias
+// ─────────────────────────────────────────────────────────────────────────────
 export const newsService = {
   getAll: () =>
     apiRequest('/news', 'GET'),
@@ -86,13 +92,25 @@ export const newsService = {
     apiRequest(`/news/${id}`, 'DELETE')
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Eventos
+// ─────────────────────────────────────────────────────────────────────────────
 export const eventService = {
+  /** Todos los eventos publicados */
   getAll: () =>
     apiRequest('/events', 'GET'),
 
+  /** Eventos próximos (desde hoy en adelante) */
+  getUpcoming: () =>
+    apiRequest('/events/upcoming', 'GET'),
+
+  /** Eventos del publicador autenticado */
   getMy: () =>
     apiRequest('/events/my', 'GET'),
+
+  /** Eventos filtrados por carrera — usado por el calendario del estudiante */
+  getByCareer: (careerId) =>
+    apiRequest(`/events/career/${careerId}`, 'GET'),
 
   getById: (id) =>
     apiRequest(`/events/${id}`, 'GET'),
@@ -107,7 +125,31 @@ export const eventService = {
     apiRequest(`/events/${id}`, 'DELETE')
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Calendario Académico (tareas personales del estudiante)
+// Usa la tabla academic_calendar de la BD
+// ─────────────────────────────────────────────────────────────────────────────
+export const academicCalendarService = {
+  /** Obtiene todas las tareas del estudiante autenticado */
+  getMy: () =>
+    apiRequest('/academic-calendar', 'GET'),
+
+  /** Crea una nueva tarea personal */
+  create: (data) =>
+    apiRequest('/academic-calendar', 'POST', data),
+
+  /** Actualiza una tarea existente */
+  update: (id, data) =>
+    apiRequest(`/academic-calendar/${id}`, 'PUT', data),
+
+  /** Elimina una tarea */
+  delete: (id) =>
+    apiRequest(`/academic-calendar/${id}`, 'DELETE')
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Reservas
+// ─────────────────────────────────────────────────────────────────────────────
 export const reservationService = {
   getAll: () =>
     apiRequest('/reservations', 'GET'),
@@ -119,13 +161,17 @@ export const reservationService = {
     apiRequest(`/reservations/${id}/cancel`, 'POST')
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Carreras
+// ─────────────────────────────────────────────────────────────────────────────
 export const careerService = {
   getAll: () =>
     apiRequest('/careers', 'GET')
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Categorías
+// ─────────────────────────────────────────────────────────────────────────────
 export const categoryService = {
   getAll: () =>
     apiRequest('/categories', 'GET')
