@@ -159,7 +159,11 @@
         </div>
 
         <!-- Submit -->
-        <button type="submit" class="btn-submit" :disabled="loading">
+        <<button  
+          type="submit" 
+          class="btn-submit" 
+          :disabled="loading || !form.email.trim() || !form.password"
+        >
           <Transition name="swap" mode="out-in">
             <span v-if="!loading" key="label" class="btn-inner">
               Ingresar
