@@ -411,7 +411,7 @@ const deleteModal = reactive({ show: false, id: null, title: '', loading: false 
 // ── Categories ──
 const categories = [
   { value: 'ACADEMICO', label: 'Académico' },
-  { value: 'INSTITUCIONAL', label: 'Institucional' },
+  { value: 'EVENTOS', label: 'Eventos' },
   { value: 'AVISOS',    label: 'Avisos' },
   { value: 'DEPORTES',  label: 'Deportes' },
   { value: 'CULTURA',   label: 'Cultura' },

@@ -419,7 +419,7 @@ const categories = [
     svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
     paths: [{ d:'M22 10v6M2 10l10-5 10 5-10 5z' }, { d:'M6 12v5c3 3 9 3 12 0v-5' }]
   },
-  { value: 'INSTITUCIONAL', label: 'Institucional',
+  { value: 'EVENTOS', label: 'Eventos',
     svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
     paths: [{ d:'M8 2v4M16 2v4' }, { d:'M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' }]
   },
@@ -492,12 +492,18 @@ function clearCover() {
 function onCoverFileChange(e) {
   const file = e.target.files[0]
   if (!file) return
-  if (file.size > 5 * 1024 * 1024) {
-    showToastMsg('error', 'Archivo demasiado grande', 'La imagen no debe superar 5MB.')
+  if (!file.type.startsWith('image/')) {
+    showToastMsg('warning', 'Formato no válido', 'Solo se aceptan imágenes (JPG, PNG, WEBP, GIF).')
+    if (coverFileInput.value) coverFileInput.value.value = ''
     return
   }
-  coverFileObj.value    = file
-  coverFileName.value   = file.name
+  if (file.size > 5 * 1024 * 1024) {
+    showToastMsg('error', 'Archivo demasiado grande', 'La imagen no debe superar 5MB.')
+    if (coverFileInput.value) coverFileInput.value.value = ''
+    return
+  }
+  coverFileObj.value = file
+  coverFileName.value = file.name
   coverPreviewUrl.value = URL.createObjectURL(file)
 }
 
@@ -526,14 +532,31 @@ function clearAttachment() {
   if (attachFileInput.value) attachFileInput.value.value = ''
 }
 
+const ALLOWED_DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain'
+]
+
 function onAttachFileChange(e) {
   const file = e.target.files[0]
   if (!file) return
-  if (file.size > 10 * 1024 * 1024) {
-    showToastMsg('error', 'Archivo demasiado grande', 'El documento no debe superar 10MB.')
+  if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+    showToastMsg('warning', 'Formato no válido', 'Solo se aceptan documentos: PDF, DOC, DOCX, XLS, XLSX, PPT, TXT.')
+    if (attachFileInput.value) attachFileInput.value.value = ''
     return
   }
-  attachFileObj.value  = file
+  if (file.size > 10 * 1024 * 1024) {
+    showToastMsg('error', 'Archivo demasiado grande', 'El documento no debe superar 10MB.')
+    if (attachFileInput.value) attachFileInput.value.value = ''
+    return
+  }
+  attachFileObj.value = file
   attachFileName.value = file.name
   attachFileSize.value = formatFileSize(file.size)
 }
@@ -542,11 +565,15 @@ function onAttachDrop(e) {
   attachDragging.value = false
   const file = e.dataTransfer.files[0]
   if (!file) return
+  if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+    showToastMsg('warning', 'Formato no válido', 'Solo se aceptan documentos: PDF, DOC, DOCX, XLS, XLSX, PPT, TXT.')
+    return
+  }
   if (file.size > 10 * 1024 * 1024) {
     showToastMsg('error', 'Archivo demasiado grande', 'El documento no debe superar 10MB.')
     return
   }
-  attachFileObj.value  = file
+  attachFileObj.value = file
   attachFileName.value = file.name
   attachFileSize.value = formatFileSize(file.size)
 }
@@ -690,7 +717,7 @@ async function submitNews() {
   try {
     await runSubmit(form.published)
     showToastMsg('success', 'Noticia publicada', form.published
-      ? 'La noticia fue publicada correctamente.'
+      ? 'Se publico una nueva noticia.'
       : 'El borrador fue guardado.')
     setTimeout(() => router.push('/publicador/mis-noticias'), 2000)
   } catch (err) {
