@@ -191,10 +191,10 @@
 
         <!-- Header: author row -->
         <div class="fb-card-header">
-          <div class="fb-avatar">{{ authorInitials }}</div>
+          <div class="fb-avatar">{{ getItemInitials(item) }}</div>
           <div class="fb-author-info">
             <div class="fb-author-name">
-              {{ authorName }}
+                {{ item.authorName || (item._isOwn ? authorName : 'Publicador') }}
               <span class="fb-author-role">· Publicador UCB</span>
             </div>
             <div class="fb-meta-row">
@@ -223,20 +223,25 @@
             </button>
             <Transition name="menu-drop">
               <div v-if="openMenu === item.id" class="fb-dropdown">
-                <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-dd-item" @click="closeMenu(item.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  Editar noticia
-                </router-link>
-                <button class="fb-dd-item" @click="togglePublish(item); closeMenu(item.id)" :disabled="item._saving">
-                  <svg v-if="item.published" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
-                  <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                  {{ item.published ? 'Despublicar' : 'Publicar ahora' }}
-                </button>
-                <div class="fb-dd-divider"></div>
-                <button class="fb-dd-item fb-dd-danger" @click="askDelete(item); closeMenu(item.id)">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-                  Eliminar noticia
-                </button>
+                <template v-if="item._isOwn">
+                  <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-dd-item" @click="closeMenu(item.id)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editar noticia
+                  </router-link>
+                  <button class="fb-dd-item" @click="togglePublish(item); closeMenu(item.id)" :disabled="item._saving">
+                    <svg v-if="item.published" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
+                    <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    {{ item.published ? 'Despublicar' : 'Publicar ahora' }}
+                  </button>
+                  <div class="fb-dd-divider"></div>
+                  <button class="fb-dd-item fb-dd-danger" @click="askDelete(item); closeMenu(item.id)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                    Eliminar noticia
+                  </button>
+                </template>
+                <span v-else class="fb-dd-item" style="cursor:default; color:#94a3b8; font-size:0.78rem;">
+                  Sin acciones disponibles
+                </span>
               </div>
             </Transition>
           </div>
@@ -290,11 +295,16 @@
 
         <!-- Footer action bar -->
         <div class="fb-action-bar">
-          <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-act-btn fb-act-edit">
+          <router-link
+            v-if="item._isOwn"
+            :to="`/publicador/editar-noticia/${item.id}`"
+            class="fb-act-btn fb-act-edit"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
           </router-link>
           <button
+            v-if="item._isOwn"
             class="fb-act-btn"
             :class="item.published ? 'fb-act-unpub' : 'fb-act-pub'"
             @click="togglePublish(item)"
@@ -307,10 +317,15 @@
               {{ item.published ? 'Despublicar' : 'Publicar' }}
             </template>
           </button>
-          <button class="fb-act-btn fb-act-del" @click="askDelete(item)">
+          <button v-if="item._isOwn" class="fb-act-btn fb-act-del" @click="askDelete(item)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
             Eliminar
           </button>
+          <!-- Si no es tuya, solo muestra autor -->
+          <span v-if="!item._isOwn" class="fb-other-author">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {{ item.authorName || 'Otro publicador' }}
+          </span>
         </div>
 
         <!-- Draft watermark -->
@@ -345,12 +360,13 @@
           <p class="card-excerpt">{{ excerpt(item.body) }}</p>
         </div>
         <div class="card-actions">
-          <router-link :to="`/publicador/editar-noticia/${item.id}`" class="action-btn btn-edit">Editar</router-link>
-          <button class="action-btn" :class="item.published ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="action-btn btn-edit">Editar</router-link>
+          <button v-if="item._isOwn" class="action-btn" :class="item.published ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
             <span class="spinner-xs" v-if="item._saving"></span>
             <template v-else>{{ item.published ? 'Despublicar' : 'Publicar' }}</template>
           </button>
-          <button class="action-btn btn-delete" @click="askDelete(item)">Eliminar</button>
+          <button v-if="item._isOwn" class="action-btn btn-delete" @click="askDelete(item)">Eliminar</button>
+          <span v-if="!item._isOwn" class="action-btn" style="cursor:default; color:#94a3b8; font-size:0.71rem; justify-content:center;">Solo lectura</span>
         </div>
       </article>
     </div>
@@ -382,15 +398,15 @@
           </div>
         </div>
         <div class="list-actions">
-          <router-link :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar">
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </router-link>
-          <button class="icon-btn" :class="item.published ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.published ? 'Despublicar' : 'Publicar'">
+          <button v-if="item._isOwn" class="icon-btn" :class="item.published ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.published ? 'Despublicar' : 'Publicar'">
             <span class="spinner-xs" v-if="item._saving"></span>
             <svg v-else-if="item.published" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
             <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
-          <button class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
+          <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           </button>
         </div>
@@ -417,7 +433,7 @@ const openMenu         = ref(null)
 const availableCareers = ref([])
 
 const authorEmail    = localStorage.getItem('ucb_email') || ''
-const authorName     = localStorage.getItem('ucb_name') || authorEmail.split('@')[0] || 'Publicador'
+const authorName     = localStorage.getItem('ucb_name') || localStorage.getItem('ucb_username') || authorEmail.split('@')[0] || 'Publicador'
 const authorInitials = authorName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'P'
 
 const toast       = reactive({ show: false, type: 'success', title: '', message: '' })
@@ -437,6 +453,13 @@ const categories = [
 function getCategoryLabel(val) {
   return categories.find(c => c.value === val)?.label || val || '—'
 }
+
+
+function getItemInitials(item) {
+  const name = item.authorName || (item._isOwn ? authorName : 'P')
+  return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+}
+
 
 function getCareerName(idStr) {
   if (idStr === 'null' || !idStr) return 'General'
@@ -566,9 +589,31 @@ async function loadNews() {
   loading.value = true
   error.value = ''
   try {
-    const res = await fetch('http://localhost:8081/api/news/my', { headers: getHeaders(), mode: 'cors' })
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `Error ${res.status}`) }
-    news.value = (await res.json()).map(n => ({ ...n, _saving: false, _expanded: false }))
+    // Cargar todas las noticias publicadas + las propias (incluye borradores)
+    const [resAll, reMy] = await Promise.all([
+      fetch('http://localhost:8081/api/news', { headers: getHeaders(), mode: 'cors' }),
+      fetch('http://localhost:8081/api/news/my', { headers: getHeaders(), mode: 'cors' })
+    ])
+
+    const allNews  = resAll.ok  ? await resAll.json()  : []
+    const myNews   = reMy.ok    ? await reMy.json()    : []
+    const myIds = new Set(myNews.map(n => n.id))
+    const othersPublished = allNews.filter(n => !myIds.has(n.id))
+
+
+    console.log('Noticia ajena ejemplo:', allNews.find(n => !myNews.map(m=>m.id).includes(n.id))) // ← solo aquí
+    console.log('Noticia propia ejemplo:', myNews[0]) 
+
+
+    const merged = [
+      ...myNews.map(n => ({ ...n, _isOwn: true,  _saving: false, _expanded: false })),
+      ...othersPublished.map(n => ({ ...n, _isOwn: false, _saving: false, _expanded: false }))
+    ]
+
+    const seen = new Set()
+    news.value = merged.filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true })
+
+
   } catch (err) {
     error.value = err.name === 'TypeError' ? 'No se pudo conectar con el servidor.' : err.message
   } finally {
