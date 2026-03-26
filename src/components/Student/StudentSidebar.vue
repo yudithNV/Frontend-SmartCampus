@@ -26,14 +26,14 @@
         <span>Mi Perfil</span>
       </router-link>
 
-      <!-- ← NUEVO: Calendario -->
+      <!-- ← Sugerencias reemplaza el del calendario -->
       <router-link
-        to="/estudiante/calendario"
+        to="/estudiante/sugerencias"
         class="menu-item"
-        :class="{ active: $route.path.includes('calendario') }"
+        :class="{ active: $route.path.includes('sugerencias') }"
       >
-        <span class="icon">📆</span>
-        <span>Mi Calendario</span>
+        <span class="icon">💡</span>
+        <span>Sugerencias</span>
       </router-link>
 
       <router-link

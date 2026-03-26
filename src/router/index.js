@@ -15,7 +15,9 @@ import AdminSettings from '../views/Admin/AdminSettings.vue'
 // Estudiante
 import StudentLayout from '../views/Student/StudentLayout.vue'
 import StudentDashboard from '../views/Student/StudentDashboard.vue'
-import StudentProfile from '../views/Student/StudentProfile.vue'   // ← NUEVO
+import StudentProfile from '../views/Student/StudentProfile.vue'
+import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
+// import StudentCalendar from '../views/Student/StudentCalendar.vue'  // pendiente
 
 // Publicador
 import PublisherLayout from '../views/Publisher/PublisherLayout.vue'
@@ -39,19 +41,19 @@ const routes = [
     component: Login
   },
 
-  // ── Admin Routes ────────────────────────────────────────────────────────
+  // ── Admin Routes ────────────────────────────────────────────────────────────
   {
     path: '/admin',
     component: AdminLayout,
     redirect: '/admin/dashboard',
     children: [
-      { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
-      { path: 'usuarios', name: 'AdminUsers', component: AdminUsers },
-      { path: 'configuracion', name: 'AdminSettings', component: AdminSettings }
+      { path: 'dashboard',    name: 'AdminDashboard', component: AdminDashboard },
+      { path: 'usuarios',     name: 'AdminUsers',     component: AdminUsers },
+      { path: 'configuracion',name: 'AdminSettings',  component: AdminSettings }
     ]
   },
 
-  // ── Estudiante Routes ────────────────────────────────────────────────────
+  // ── Estudiante Routes ───────────────────────────────────────────────────────
   {
     path: '/estudiante',
     component: StudentLayout,
@@ -67,6 +69,12 @@ const routes = [
         name: 'StudentProfile',
         component: StudentProfile
       },
+      {
+        path: 'sugerencias',
+        name: 'StudentSuggestions',
+        component: StudentSuggestions
+      },
+      // { path: 'calendario', name: 'StudentCalendar', component: StudentCalendar }, // pendiente
       {
         path: 'reservar',
         name: 'StudentReserve',
@@ -85,19 +93,19 @@ const routes = [
     ]
   },
 
-  // ── Publicador Routes ────────────────────────────────────────────────────
+  // ── Publicador Routes ───────────────────────────────────────────────────────
   {
     path: '/publicador',
     component: PublisherLayout,
     redirect: '/publicador/dashboard',
     children: [
-      { path: 'dashboard', name: 'PublisherDashboard', component: PublisherDashboard },
-      { path: 'crear-noticia', name: 'PublisherCreateNews', component: PublisherCreateNews },
-      { path: 'mis-noticias', name: 'PublisherMyNews', component: PublisherMyNews },
-      { path: 'editar-noticia/:id', name: 'PublisherEditNews', component: PublisherEditNews, props: true },
-      { path: 'crear-evento', name: 'PublisherCreateEvent', component: PublisherCreateEvent },
-      { path: 'mis-eventos', name: 'PublisherMyEvents', component: PublisherMyEvents },
-      { path: 'editar-evento/:id', name: 'PublisherEditEvent', component: PublisherEditEvent, props: true }
+      { path: 'dashboard',          name: 'PublisherDashboard',    component: PublisherDashboard },
+      { path: 'crear-noticia',      name: 'PublisherCreateNews',   component: PublisherCreateNews },
+      { path: 'mis-noticias',       name: 'PublisherMyNews',       component: PublisherMyNews },
+      { path: 'editar-noticia/:id', name: 'PublisherEditNews',     component: PublisherEditNews, props: true },
+      { path: 'crear-evento',       name: 'PublisherCreateEvent',  component: PublisherCreateEvent },
+      { path: 'mis-eventos',        name: 'PublisherMyEvents',     component: PublisherMyEvents },
+      { path: 'editar-evento/:id',  name: 'PublisherEditEvent',    component: PublisherEditEvent, props: true }
     ]
   }
 ]

@@ -176,3 +176,16 @@ export const categoryService = {
   getAll: () =>
     apiRequest('/categories', 'GET')
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Sugerencias
+// ─────────────────────────────────────────────────────────────────────────────
+export const suggestionService = {
+  /** Envía una nueva sugerencia — POST /api/suggestions */
+  create: (data) =>
+    apiRequest('/suggestions', 'POST', data),
+
+  /** Historial de sugerencias del estudiante — GET /api/suggestions/my */
+  getMy: () =>
+    apiRequest('/suggestions/my', 'GET')
+}
