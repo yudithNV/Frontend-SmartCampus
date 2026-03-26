@@ -33,7 +33,8 @@ const pageTitle = computed(() => {
     perfil: 'Mi Perfil',
     reservar: 'Reservar',
     'buscar-material': 'Buscar Material',
-    historial: 'Historial'
+    historial: 'Historial',
+    sugerencias: 'Sugerencias'
   }
   return titles[path] || 'Estudiante'
 })
