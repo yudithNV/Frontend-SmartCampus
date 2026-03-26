@@ -5,6 +5,7 @@ import Landing from '../views/Landing.vue'
 
 // Auth
 import Login from '../views/Login.vue'
+import ChangePassword from '../views/ChangePassword.vue'
 
 // Admin
 import AdminLayout from '../views/Admin/AdminLayout.vue'
@@ -39,6 +40,11 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword
   },
 
   // ── Admin Routes ────────────────────────────────────────────────────────────
