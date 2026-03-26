@@ -17,8 +17,11 @@
             type="text"
             placeholder="Juan Pérez"
             class="form-input"
+            :class="{ 'input-error': errors.nombre }"
             required
+            @input="validateName"
           />
+          <span v-if="errors.nombre" class="error-message">{{ errors.nombre }}</span>
         </div>
 
         <!-- Correo Electrónico -->
@@ -29,8 +32,11 @@
             type="email"
             placeholder="usuario@ucb.edu.bo"
             class="form-input"
+            :class="{ 'input-error': errors.email }"
             required
+            @blur="validateEmail"
           />
+          <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
         </div>
 
         <!-- Tipo de Usuario -->
@@ -40,6 +46,7 @@
             <option value="">Selecciona un tipo</option>
             <option value="Estudiante">Estudiante</option>
             <option value="Publicador">Publicador</option>
+            <option value="Administrador">Administrador</option>
           </select>
         </div>
 
@@ -62,8 +69,47 @@
             type="password"
             placeholder="••••••••"
             class="form-input"
+            :class="{ 'input-error': errors.contrasena }"
             required
+            @input="validatePassword"
           />
+          <div class="password-requirements">
+            <p class="req-title">La contraseña debe tener:</p>
+            <ul class="req-list">
+              <li :class="{ valid: passwordChecks.length }">
+                <span class="check-icon">{{ passwordChecks.length ? '✓' : '○' }}</span>
+                Mínimo 8 caracteres
+              </li>
+              <li :class="{ valid: passwordChecks.uppercase }">
+                <span class="check-icon">{{ passwordChecks.uppercase ? '✓' : '○' }}</span>
+                Una letra mayúscula
+              </li>
+              <li :class="{ valid: passwordChecks.lowercase }">
+                <span class="check-icon">{{ passwordChecks.lowercase ? '✓' : '○' }}</span>
+                Una letra minúscula
+              </li>
+              <li :class="{ valid: passwordChecks.number }">
+                <span class="check-icon">{{ passwordChecks.number ? '✓' : '○' }}</span>
+                Un número
+              </li>
+            </ul>
+          </div>
+          <span v-if="errors.contrasena" class="error-message">{{ errors.contrasena }}</span>
+        </div>
+
+        <!-- Confirmar Contraseña -->
+        <div class="form-group">
+          <label>Confirmar Contraseña</label>
+          <input
+            v-model="formData.confirmarContrasena"
+            type="password"
+            placeholder="••••••••"
+            class="form-input"
+            :class="{ 'input-error': errors.confirmarContrasena }"
+            required
+            @input="validateConfirmPassword"
+          />
+          <span v-if="errors.confirmarContrasena" class="error-message">{{ errors.confirmarContrasena }}</span>
         </div>
 
         <!-- Botones -->
@@ -71,7 +117,7 @@
           <button type="button" class="btn-cancel" @click="closeModal">
             Cancelar
           </button>
-          <button type="submit" class="btn-create">
+          <button type="submit" class="btn-create" :disabled="!isFormValid">
             Crear Usuario
           </button>
         </div>
@@ -81,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { careerService } from '../../services/api.js'
 
 defineProps({
@@ -98,7 +144,22 @@ const formData = ref({
   email: '',
   tipo: '',
   careerId: null,
-  contrasena: ''
+  contrasena: '',
+  confirmarContrasena: ''
+})
+
+const errors = ref({
+  nombre: '',
+  email: '',
+  contrasena: '',
+  confirmarContrasena: ''
+})
+
+const passwordChecks = ref({
+  length: false,
+  uppercase: false,
+  lowercase: false,
+  number: false
 })
 
 const careers = ref([])
@@ -115,25 +176,129 @@ onMounted(() => {
   fetchCareers()
 })
 
+// Validación de nombre (solo letras y espacios)
+const validateName = () => {
+  const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
+  if (formData.value.nombre && !nameRegex.test(formData.value.nombre)) {
+    errors.value.nombre = 'El nombre solo puede contener letras y espacios'
+  } else {
+    errors.value.nombre = ''
+  }
+}
+
+// Validación de email
+const validateEmail = () => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (formData.value.email && !emailRegex.test(formData.value.email)) {
+    errors.value.email = 'Por favor ingresa un email válido'
+  } else {
+    errors.value.email = ''
+  }
+}
+
+// Validación de contraseña
+const validatePassword = () => {
+  const password = formData.value.contrasena
+
+  // Actualizar checks visuales
+  passwordChecks.value.length = password.length >= 8
+  passwordChecks.value.uppercase = /[A-Z]/.test(password)
+  passwordChecks.value.lowercase = /[a-z]/.test(password)
+  passwordChecks.value.number = /[0-9]/.test(password)
+
+  // Validar al escribir
+  if (password && !passwordChecks.value.length) {
+    errors.value.contrasena = 'Debe tener mínimo 8 caracteres'
+  } else if (password && !passwordChecks.value.uppercase) {
+    errors.value.contrasena = 'Falta una letra mayúscula'
+  } else if (password && !passwordChecks.value.lowercase) {
+    errors.value.contrasena = 'Falta una letra minúscula'
+  } else if (password && !passwordChecks.value.number) {
+    errors.value.contrasena = 'Falta un número'
+  } else {
+    errors.value.contrasena = ''
+  }
+
+  // Revalidar confirmación si ya hay algo escrito
+  if (formData.value.confirmarContrasena) {
+    validateConfirmPassword()
+  }
+}
+
+// Validación de confirmar contraseña
+const validateConfirmPassword = () => {
+  if (formData.value.confirmarContrasena && formData.value.contrasena !== formData.value.confirmarContrasena) {
+    errors.value.confirmarContrasena = 'Las contraseñas no coinciden'
+  } else {
+    errors.value.confirmarContrasena = ''
+  }
+}
+
+// Comprobar si el formulario es válido
+const isFormValid = computed(() => {
+  return (
+    formData.value.nombre &&
+    formData.value.email &&
+    formData.value.tipo &&
+    formData.value.contrasena &&
+    formData.value.confirmarContrasena &&
+    !errors.value.nombre &&
+    !errors.value.email &&
+    !errors.value.contrasena &&
+    !errors.value.confirmarContrasena &&
+    passwordChecks.value.length &&
+    passwordChecks.value.uppercase &&
+    passwordChecks.value.lowercase &&
+    passwordChecks.value.number &&
+    (formData.value.tipo !== 'Estudiante' || formData.value.careerId)
+  )
+})
+
 const closeModal = () => {
+  // Resetear el formulario cuando el usuario cancela intencionalmente
   resetForm()
   emit('close')
 }
 
 const submitForm = () => {
-  emit('submit', { ...formData.value })
-  resetForm()
+  // Validar todo antes de enviar
+  validateName()
+  validateEmail()
+  validatePassword()
+  validateConfirmPassword()
+
+  if (isFormValid.value) {
+    emit('submit', { ...formData.value })
+    // El formulario se reseteará solo si la creación es exitosa (desde el padre)
+  }
 }
 
+// Función pública para resetear desde el padre (cuando sea exitoso)
 const resetForm = () => {
   formData.value = {
     nombre: '',
     email: '',
     tipo: '',
     careerId: null,
-    contrasena: ''
+    contrasena: '',
+    confirmarContrasena: ''
+  }
+  errors.value = {
+    nombre: '',
+    email: '',
+    contrasena: '',
+    confirmarContrasena: ''
+  }
+  passwordChecks.value = {
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false
   }
 }
+
+// Exponer resetForm para que el padre pueda llamarlo
+defineExpose({ resetForm })
 </script>
 
 <style scoped>
@@ -246,6 +411,66 @@ const resetForm = () => {
   font-family: inherit;
 }
 
+.form-input.input-error,
+.form-select.input-error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.password-requirements {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.req-title {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.req-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.req-list li {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.2s;
+}
+
+.req-list li.valid {
+  color: #16a34a;
+}
+
+.check-icon {
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .form-input:focus,
 .form-select:focus {
   outline: none;
@@ -295,10 +520,16 @@ const resetForm = () => {
   transition: all 0.3s ease;
 }
 
-.btn-create:hover {
+.btn-create:hover:not(:disabled) {
   background: #0f2438;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(26, 58, 82, 0.3);
+}
+
+.btn-create:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  transform: none;
 }
 
 @media (max-width: 768px) {

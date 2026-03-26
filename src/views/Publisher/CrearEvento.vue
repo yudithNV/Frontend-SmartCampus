@@ -137,7 +137,7 @@
             <span class="field-num">05</span>
             <label>Fecha <span class="req">*</span></label>
           </div>
-          <input v-model="form.eventDate" type="date" class="form-input" />
+          <input v-model="form.eventDate" type="date" class="form-input" :min="getTodayDate()" />
         </div>
         <div class="field-block">
           <div class="field-label">
@@ -156,7 +156,7 @@
             <label>Fecha de Fin</label>
             <span class="optional-tag">Opcional</span>
           </div>
-          <input v-model="form.endDate" type="date" class="form-input" />
+          <input v-model="form.endDate" type="date" class="form-input" :min="form.eventDate || getTodayDate()" />
         </div>
         <div class="field-block">
           <div class="field-label">
@@ -384,7 +384,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { careerService, categoryService } from '../../services/api.js'
+import { careerService, categoryService, eventService } from '../../services/api.js'
 
 const router = useRouter()
 const saving = ref(false)
@@ -436,15 +436,29 @@ watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
   }
 })
 
-const isValid = computed(() =>
-  form.title.trim().length > 0 &&
-  form.description.trim().length > 0 &&
-  form.categoryId !== null &&
-  form.eventType !== '' &&
-  form.eventDate !== '' &&
-  form.eventTime !== '' &&
-  form.location.trim().length > 0
-)
+const isValid = computed(() => {
+  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.location.trim()) {
+    return false
+  }
+
+  // Validar que la fecha no sea pasada
+  const today = new Date().toISOString().split('T')[0]
+  if (form.eventDate < today) {
+    return false
+  }
+
+  // Validar que si hay fecha de fin, sea >= fecha de inicio
+  if (form.endDate && form.endDate < form.eventDate) {
+    return false
+  }
+
+  // Validar que si es el mismo día, hora fin > hora inicio
+  if (form.endDate === form.eventDate && form.endTime && form.eventTime >= form.endTime) {
+    return false
+  }
+
+  return true
+})
 
 function showToastMsg(type, title, message) {
   toast.show = false
@@ -475,6 +489,10 @@ function formatEventTimeRange(startTime, endTime) {
   return `${startTime} - ${endTime}`
 }
 
+function getTodayDate() {
+  return new Date().toISOString().split('T')[0]
+}
+
 // Cover image functions
 function switchCoverMode(mode) {
   coverMode.value = mode
@@ -495,32 +513,20 @@ function clearCover() {
 
 // Helper function to format data for backend
 function formatEventDataForBackend() {
-  // Crear fecha y hora de inicio en formato ISO
-  const startDateTime = new Date(`${form.eventDate}T${form.eventTime}:00`)
-
-  // Crear fecha y hora de fin si están definidas
-  let endDateTime = null
-  if (form.endDate && form.endTime) {
-    endDateTime = new Date(`${form.endDate}T${form.endTime}:00`)
-  } else if (form.endDate) {
-    // Si solo hay fecha de fin, usar la misma hora de inicio
-    endDateTime = new Date(`${form.endDate}T${form.eventTime}:00`)
-  } else if (form.endTime) {
-    // Si solo hay hora de fin, usar la misma fecha de inicio
-    endDateTime = new Date(`${form.eventDate}T${form.endTime}:00`)
-  }
-
   return {
-    title: form.title.trim(),
+    name: form.title.trim(),
     description: form.description.trim(),
-    eventDate: startDateTime.toISOString(),
-    endDateTime: endDateTime ? endDateTime.toISOString() : null,
+    eventType: form.eventType,
     location: form.location.trim(),
-    imageUrl: form.coverUrl || null,
-    categoryId: form.categoryId,
-    careerId: form.careerId,
+    startDate: form.eventDate,
+    startTime: form.eventTime,
+    endDate: form.endDate || form.eventDate,
+    endTime: form.endTime || form.eventTime,
     maxCapacity: form.maxCapacity || null,
-    eventType: form.eventType
+    posterUrl: form.coverUrl || null,
+    careerId: form.careerId,
+    categoryId: form.categoryId,
+    publish: form.published
   }
 }
 
@@ -533,7 +539,9 @@ function onCoverFileChange(e) {
   }
   coverFileObj.value = file
   coverFileName.value = file.name
-  coverPreviewUrl.value = URL.createObjectURL(file)
+  const previewUrl = URL.createObjectURL(file)
+  coverPreviewUrl.value = previewUrl
+  form.coverUrl = previewUrl
 }
 
 function onCoverDrop(e) {
@@ -549,7 +557,9 @@ function onCoverDrop(e) {
   }
   coverFileObj.value = file
   coverFileName.value = file.name
-  coverPreviewUrl.value = URL.createObjectURL(file)
+  const previewUrl = URL.createObjectURL(file)
+  coverPreviewUrl.value = previewUrl
+  form.coverUrl = previewUrl
 }
 
 async function loadCareers() {
@@ -577,8 +587,24 @@ async function loadCategories() {
 }
 
 async function submitEvent() {
-  if (!isValid.value) {
+  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.location.trim()) {
     showToastMsg('warning', 'Campos incompletos', 'Por favor completa todos los campos obligatorios.')
+    return
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+  if (form.eventDate < today) {
+    showToastMsg('error', 'Fecha inválida', 'No puedes crear eventos en fechas pasadas.')
+    return
+  }
+
+  if (form.endDate && form.endDate < form.eventDate) {
+    showToastMsg('error', 'Fecha de fin inválida', 'La fecha de fin debe ser igual o posterior a la fecha de inicio.')
+    return
+  }
+
+  if (form.endDate === form.eventDate && form.endTime && form.eventTime >= form.endTime) {
+    showToastMsg('error', 'Hora inválida', 'La hora de fin debe ser posterior a la hora de inicio.')
     return
   }
 
@@ -587,13 +613,14 @@ async function submitEvent() {
     const eventData = formatEventDataForBackend()
     console.log('Datos del evento para enviar:', eventData)
 
-    // TODO: Conectar con el API de eventos cuando esté listo
-    // await eventService.create(eventData)
+    const response = await eventService.create(eventData)
+    console.log('Respuesta del servidor:', response)
 
     showToastMsg('success', 'Evento guardado', form.published ? 'El evento fue publicado correctamente.' : 'El borrador fue guardado.')
     setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
   } catch (err) {
-    showToastMsg('error', 'Error al publicar', 'No se pudo guardar el evento.')
+    console.error('Error al crear evento:', err)
+    showToastMsg('error', 'Error al publicar', err.message || 'No se pudo guardar el evento.')
   } finally {
     saving.value = false
   }
@@ -604,12 +631,32 @@ async function saveDraft() {
     showToastMsg('warning', 'Sin contenido', 'Escribe algo antes de guardar.')
     return
   }
+
+  const today = new Date().toISOString().split('T')[0]
+  if (form.eventDate && form.eventDate < today) {
+    showToastMsg('error', 'Fecha inválida', 'No puedes crear eventos en fechas pasadas.')
+    return
+  }
+
+  if (form.endDate && form.eventDate && form.endDate < form.eventDate) {
+    showToastMsg('error', 'Fecha de fin inválida', 'La fecha de fin debe ser igual o posterior a la fecha de inicio.')
+    return
+  }
+
+  if (form.endDate === form.eventDate && form.endTime && form.eventTime && form.eventTime >= form.endTime) {
+    showToastMsg('error', 'Hora inválida', 'La hora de fin debe ser posterior a la hora de inicio.')
+    return
+  }
+
   saving.value = true
   try {
-    // TODO: Conectar con el API de eventos cuando esté listo
+    const eventData = formatEventDataForBackend()
+    const response = await eventService.create(eventData)
+    console.log('Borrador guardado:', response)
     showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado correctamente.')
   } catch (err) {
-    showToastMsg('error', 'Error', 'No se pudo guardar el borrador.')
+    console.error('Error al guardar borrador:', err)
+    showToastMsg('error', 'Error', err.message || 'No se pudo guardar el borrador.')
   } finally {
     saving.value = false
   }

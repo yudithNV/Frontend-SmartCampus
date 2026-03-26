@@ -37,28 +37,21 @@
       </router-link>
 
       <router-link
-        to="/estudiante/reservar"
+        to="/estudiante/reclamos"
         class="menu-item"
-        :class="{ active: $route.path.includes('reservar') }"
+        :class="{ active: $route.path.includes('reclamos') }"
       >
-        <span class="icon">📅</span>
-        <span>Reservar</span>
+        <span class="icon">📩</span>
+        <span>Reclamos</span>
       </router-link>
+      
       <router-link
-        to="/estudiante/buscar-material"
+        to="/estudiante/Sugerencias"
         class="menu-item"
-        :class="{ active: $route.path.includes('buscar-material') }"
+        :class="{ active: $route.path.includes('sugerencias') }"
       >
-        <span class="icon">🔍</span>
-        <span>Buscar Material</span>
-      </router-link>
-      <router-link
-        to="/estudiante/historial"
-        class="menu-item"
-        :class="{ active: $route.path.includes('historial') }"
-      >
-        <span class="icon">📋</span>
-        <span>Historial</span>
+        <span class="icon">📩</span>
+        <span>Sugerencias</span>
       </router-link>
     </nav>
 

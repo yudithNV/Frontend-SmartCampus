@@ -280,11 +280,38 @@ async function loadEvents() {
   loading.value = true
   error.value = ''
   try {
+    console.log('🔄 Iniciando carga de eventos...')
     const response = await eventService.getMy()
-    events.value = response || []
+    console.log('✅ Respuesta recibida:', response)
+
+    // Validar que la respuesta sea un array o convertirla
+    if (Array.isArray(response)) {
+      events.value = response
+    } else if (response && response.data && Array.isArray(response.data)) {
+      events.value = response.data
+    } else if (response && typeof response === 'object') {
+      console.warn('⚠️ Estructura de respuesta inesperada:', response)
+      events.value = Array.isArray(response) ? response : []
+    } else {
+      events.value = []
+    }
+    console.log('📊 Eventos cargados:', events.value.length)
   } catch (err) {
-    console.error('Error al cargar eventos:', err)
-    error.value = 'No se pudo conectar con el servidor.'
+    console.error('❌ Error al cargar eventos:', err)
+    const errorMsg = err.message || 'Error desconocido'
+
+    // Proporcionar mensajes de error más específicos
+    if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+      error.value = 'No estás autenticado. Por favor, inicia sesión nuevamente.'
+    } else if (errorMsg.includes('404')) {
+      error.value = 'Endpoint no encontrado en el servidor.'
+    } else if (errorMsg.includes('500')) {
+      error.value = 'Error interno del servidor. Intenta más tarde.'
+    } else if (errorMsg.includes('Network') || errorMsg.includes('fetch')) {
+      error.value = 'No se pudo conectar con el servidor. Verifica tu conexión.'
+    } else {
+      error.value = `Error: ${errorMsg}`
+    }
   } finally {
     loading.value = false
   }

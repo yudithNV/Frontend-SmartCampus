@@ -11,6 +11,7 @@
 
     <!-- Modal -->
     <CreateUserModal
+      ref="modalRef"
       :is-open="showModal"
       @close="showModal = false"
       @submit="handleCreateUser"
@@ -27,6 +28,7 @@
     <!-- Search Bar -->
     <div class="search-bar">
       <input
+        v-model="search"
         type="text"
         placeholder="Buscar por nombre, email o rol..."
         class="search-input"
@@ -44,7 +46,13 @@
     </div>
 
     <div v-else class="table-container">
-      <table class="users-table">
+      <!-- Mensaje si no hay resultados -->
+      <div v-if="usuariosFiltrados.length === 0" class="empty-state">
+        <p>No se encontraron usuarios que coincidan con tu búsqueda.</p>
+      </div>
+
+      <!-- Tabla de usuarios -->
+      <table v-else class="users-table">
         <thead>
           <tr>
             <th>Usuario</th>
@@ -56,7 +64,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in usuarios" :key="user.id" class="table-row">
+          <tr v-for="user in usuariosFiltrados" :key="user.id" class="table-row">
             <td class="user-cell">
               <div class="user-avatar">{{ user.iniciales }}</div>
               <div class="user-info">
@@ -117,6 +125,8 @@ const showModal = ref(false)
 const usuarios = ref([])
 const loading = ref(false)
 const error = ref('')
+const modalRef = ref(null)
+const search = ref('')
 
 // Sistema de notificaciones
 const toast = ref({
@@ -174,11 +184,30 @@ const contarAdministradores = computed(() => {
   return usuarios.value.filter(u => u.rol === 'Administrador').length
 })
 
+// Filtrar usuarios por búsqueda
+const usuariosFiltrados = computed(() => {
+  if (!search.value.trim()) {
+    return usuarios.value
+  }
+  const query = search.value.toLowerCase()
+  return usuarios.value.filter(u =>
+    u.nombre?.toLowerCase().includes(query) ||
+    u.email?.toLowerCase().includes(query) ||
+    u.rol?.toLowerCase().includes(query)
+  )
+})
+
 const handleCreateUser = async (formData) => {
   try {
     // Validación básica
-    if (!formData.nombre || !formData.email || !formData.contrasena) {
+    if (!formData.nombre || !formData.email || !formData.contrasena || !formData.confirmarContrasena) {
       showToast('error', 'Datos incompletos', 'Por favor completa todos los campos obligatorios.')
+      return
+    }
+
+    // Validar que las contraseñas coincidan
+    if (formData.contrasena !== formData.confirmarContrasena) {
+      showToast('error', 'Error', 'Las contraseñas no coinciden.')
       return
     }
 
@@ -189,9 +218,19 @@ const handleCreateUser = async (formData) => {
       return
     }
 
-    // Validar contraseña (mínimo 8 caracteres)
-    if (formData.contrasena.length < 8) {
-      showToast('error', 'Contraseña débil', 'La contraseña debe tener al menos 8 caracteres.')
+    // Validar nombre (solo letras)
+    const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
+    if (!nameRegex.test(formData.nombre)) {
+      showToast('error', 'Nombre inválido', 'El nombre solo puede contener letras y espacios.')
+      return
+    }
+
+    // Validar contraseña segura
+    if (formData.contrasena.length < 8 ||
+        !/[A-Z]/.test(formData.contrasena) ||
+        !/[a-z]/.test(formData.contrasena) ||
+        !/[0-9]/.test(formData.contrasena)) {
+      showToast('error', 'Contraseña débil', 'La contraseña debe cumplir con todos los requisitos de seguridad.')
       return
     }
 
@@ -200,7 +239,8 @@ const handleCreateUser = async (formData) => {
       fullName: formData.nombre,
       email: formData.email,
       password: formData.contrasena,
-      role: formData.tipo === 'Estudiante' ? 'ESTUDIANTE' : 'PUBLICADOR'
+      role: formData.tipo === 'Estudiante' ? 'ESTUDIANTE' :
+            formData.tipo === 'Publicador' ? 'PUBLICADOR' : 'ADMINISTRADOR'
     }
 
     // Solo agregar careerId si es estudiante
@@ -210,7 +250,12 @@ const handleCreateUser = async (formData) => {
 
     const response = await adminUserService.create(payload)
 
-    // Cerrar modal inmediatamente
+    // ✅ SOLO resetear el formulario cuando es exitoso
+    if (modalRef.value && modalRef.value.resetForm) {
+      modalRef.value.resetForm()
+    }
+
+    // Cerrar modal
     showModal.value = false
 
     // Mostrar mensaje de éxito
@@ -221,6 +266,7 @@ const handleCreateUser = async (formData) => {
   } catch (err) {
     console.error('Error al crear usuario:', err)
 
+    // ❌ NO resetear el formulario cuando hay error - mantener los datos
     // Manejar diferentes tipos de error
     let errorMessage = 'Por favor intenta de nuevo.'
 
@@ -230,6 +276,8 @@ const handleCreateUser = async (formData) => {
       errorMessage = 'Datos inválidos. Verifica que todos los campos estén correctos.'
     } else if (err.message.includes('500')) {
       errorMessage = 'Error en el servidor. Por favor contacta al administrador.'
+    } else {
+      errorMessage = err.message || errorMessage
     }
 
     showToast('error', 'Error al crear usuario', errorMessage)
@@ -345,6 +393,13 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 2rem;
+}
+
+.empty-state {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .users-table {
