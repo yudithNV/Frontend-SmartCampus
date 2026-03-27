@@ -1,9 +1,14 @@
 <template>
   <div class="dashboard">
+    <PasswordChangedBanner />
     <h2>Dashboard</h2>
     <p>Bienvenido al panel de administración</p>
   </div>
 </template>
+
+<script setup>
+import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
+</script>
 
 <style scoped>
 .dashboard {

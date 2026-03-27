@@ -276,6 +276,7 @@ async function handleSubmit() {
     if (!res.ok) throw new Error(data.error || data.message || 'Error al cambiar la contraseña')
 
     // Contraseña cambiada — redirigir al dashboard según el rol
+    localStorage.setItem('pwd_changed', '1')
     const role = localStorage.getItem('ucb_role')
     const redirectMap = {
       ESTUDIANTE:    '/estudiante/dashboard',
