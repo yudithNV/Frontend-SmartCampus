@@ -53,11 +53,12 @@
           </div>
         </div>
         <div class="header-actions">
-          <button class="btn-toggle-preview" @click="togglePreview">
+          <!-- Botón "Vista Previa/Editar" comentado - ya no es necesario con la vista lado a lado -->
+          <!-- <button class="btn-toggle-preview" @click="togglePreview">
             <svg v-if="showPreview" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             {{ showPreview ? 'Editar' : 'Vista Previa' }}
-          </button>
+          </button> -->
           <button class="btn-secondary" @click="saveDraft" :disabled="saving">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Guardar Borrador
@@ -323,8 +324,8 @@
           <small class="field-help">Máximo número de asistentes permitidos</small>
         </div>
 
-        <!-- Published toggle -->
-        <div class="field-block publish-block">
+        <!-- Toggle "Publicar/Borrador" comentado - ya existen botones "Guardar Borrador" y "Guardar Cambios" -->
+        <!-- <div class="field-block publish-block">
           <div class="toggle-row">
             <div class="toggle-left">
               <div class="toggle-icon" :class="form.published ? 'icon-pub' : 'icon-draft'">
@@ -340,7 +341,7 @@
               <span class="toggle-knob"></span>
             </button>
           </div>
-        </div>
+        </div> -->
 
       </form>
     </div>
@@ -560,7 +561,14 @@ function onCoverFileChange(e) {
   }
   coverFileObj.value = file
   coverFileName.value = file.name
-  coverPreviewUrl.value = URL.createObjectURL(file)
+
+  // Usar FileReader en lugar de URL.createObjectURL para evitar blob URLs
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    coverPreviewUrl.value = event.target.result
+    form.coverUrl = event.target.result  // Data URL (base64)
+  }
+  reader.readAsDataURL(file)
 }
 
 function onCoverDrop(e) {
@@ -576,7 +584,14 @@ function onCoverDrop(e) {
   }
   coverFileObj.value = file
   coverFileName.value = file.name
-  coverPreviewUrl.value = URL.createObjectURL(file)
+
+  // Usar FileReader en lugar de URL.createObjectURL para evitar blob URLs
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    coverPreviewUrl.value = event.target.result
+    form.coverUrl = event.target.result  // Data URL (base64)
+  }
+  reader.readAsDataURL(file)
 }
 
 async function loadCareers() {
@@ -623,33 +638,63 @@ async function loadEventData() {
   loadError.value = ''
 
   try {
-    // TODO: Conectar con el API de eventos cuando esté listo
-    // const event = await eventService.getById(eventId.value)
+    const response = await eventService.getById(eventId.value)
+    console.log('📡 Respuesta del backend:', response)
 
-    // Datos de ejemplo mientras se conecta con el API
-    const mockEvent = {
-      id: eventId.value,
-      title: 'Feria de Ciencias UCB 2026',
-      description: 'Gran evento de exhibición de proyectos científicos de todas las carreras.',
-      categoryId: 1, // Académico por defecto
-      eventType: 'CONFERENCIA',
-      eventDate: '2026-05-15',
-      eventTime: '09:00',
-      endDate: '2026-05-15',
-      endTime: '17:00',
-      location: 'Auditorio Principal, Campus Obrajes',
-      coverUrl: 'https://example.com/event.jpg',
-      careerId: null,
-      maxCapacity: 150,
-      published: true,
-      updatedAt: new Date()
+    // Si el backend envuelve en { data: {...} }, desenvolver
+    const event = response.data || response
+
+    console.log('📋 Evento a cargar:', event)
+
+    // Parsear startDatetime y endDatetime a campos separados
+    const parseDateTime = (isoString) => {
+      if (!isoString) return { date: '', time: '' }
+      const dt = new Date(isoString)
+      return {
+        date: dt.toISOString().split('T')[0],  // "2026-04-15"
+        time: dt.toISOString().split('T')[1].substring(0, 5)  // "14:30"
+      }
     }
 
-    Object.assign(form, mockEvent)
-    originalData.value = { ...mockEvent }
-    originalUpdatedAt.value = mockEvent.updatedAt
+    const startParsed = parseDateTime(event.startDatetime)
+    const endParsed = parseDateTime(event.endDatetime)
+
+    // Si endDatetime es igual a startDatetime, dejar fin vacío
+    const isSameDateTime = event.startDatetime === event.endDatetime
+    const endDate = isSameDateTime ? '' : endParsed.date
+    const endTime = isSameDateTime ? '' : endParsed.time
+
+    // Mapear los datos del backend al formulario
+    const eventData = {
+      title: event.name || '',
+      description: event.description || '',
+      categoryId: event.categoryId,
+      eventType: event.eventType || '',
+      eventDate: startParsed.date,
+      eventTime: startParsed.time,
+      endDate: endDate,
+      endTime: endTime,
+      locationId: event.locationId,
+      coverUrl: event.posterUrl || '',
+      careerId: event.careerId || null,
+      maxCapacity: event.maxCapacity || null,
+      published: event.isActive || false
+    }
+
+    console.log('✅ Datos mapeados al formulario:', eventData)
+
+    Object.assign(form, eventData)
+
+    // Si hay coverUrl, actualizar preview
+    if (form.coverUrl) {
+      updateCoverPreview()
+    }
+
+    originalData.value = { ...eventData }
+    originalUpdatedAt.value = new Date(event.updatedAt || event.createdAt)
     loadingEvent.value = false
   } catch (err) {
+    console.error('❌ Error al cargar evento:', err)
     loadError.value = err.message || 'No se pudo cargar el evento'
     loadingEvent.value = false
   }
@@ -666,12 +711,12 @@ async function updateEvent() {
     const eventData = formatEventDataForBackend()
     console.log('Datos del evento para actualizar:', eventData)
 
-    // TODO: Conectar con el API de eventos cuando esté listo
-    // await eventService.update(eventId.value, eventData)
+    await eventService.update(eventId.value, eventData)
 
     showToastMsg('success', 'Evento actualizado', 'Los cambios fueron guardados correctamente.')
     setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
   } catch (err) {
+    console.error('Error al actualizar evento:', err)
     showToastMsg('error', 'Error al actualizar', err.message || 'No se pudieron guardar los cambios.')
   } finally {
     saving.value = false
@@ -803,17 +848,15 @@ onMounted(() => {
 
 .header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
-.btn-toggle-preview {
+/* CSS del botón toggle preview comentado - botón eliminado */
+/* .btn-toggle-preview {
   display: flex; align-items: center; gap: 0.45rem;
   padding: 0.6rem 1.1rem; border-radius: 8px;
   font-size: 0.83rem; font-weight: 600; cursor: pointer;
   border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
   transition: all 0.18s; font-family: 'Inter', sans-serif;
 }
-.btn-toggle-preview:hover { background: #f8fafc; border-color: #cbd5e1; }
-@media (max-width: 1199px) {
-  .btn-toggle-preview svg:last-child { display: none; }
-}
+.btn-toggle-preview:hover { background: #f8fafc; border-color: #cbd5e1; } */
 
 .btn-secondary, .btn-primary {
   display: flex; align-items: center; gap: 0.45rem;
@@ -1154,8 +1197,8 @@ onMounted(() => {
 .form-select:focus { border-color: #FFD200; box-shadow: 0 0 0 3px rgba(255,210,0,0.08); }
 .select-arrow { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
-/* Publish toggle */
-.publish-block { border-color: #f1f5f9; }
+/* CSS del toggle de publicar comentado - toggle eliminado */
+/* .publish-block { border-color: #f1f5f9; }
 .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .toggle-left { display: flex; align-items: center; gap: 0.75rem; flex: 1; }
 .toggle-icon {
@@ -1178,7 +1221,7 @@ onMounted(() => {
   width: 19px; height: 19px; background: #fff; border-radius: 50%;
   transition: transform 0.22s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: block;
 }
-.toggle-switch.on .toggle-knob { transform: translateX(21px); background: #FFD200; }
+.toggle-switch.on .toggle-knob { transform: translateX(21px); background: #FFD200; } */
 
 @media (max-width: 768px) {
   .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
@@ -1189,12 +1232,12 @@ onMounted(() => {
 /* ═══ EDITOR LAYOUT ═══ */
 .editor-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2rem;
   align-items: flex-start;
 }
-@media (max-width: 1199px) {
-  .editor-layout { grid-template-columns: 1fr; }
+@media (min-width: 1200px) {
+  .editor-layout { grid-template-columns: 1fr 360px; }
 }
 
 .editor-column { max-width: 900px; }

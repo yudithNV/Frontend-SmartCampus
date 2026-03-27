@@ -165,13 +165,13 @@
         <div class="card-content">
           <div class="card-date-wrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>{{ formatEventDate(item.startDatetime) }}</span>
+            <span>{{ formatEventDate(item.startDatetime, item.endDatetime) }}</span>
           </div>
           <h3 class="card-title">{{ item.name }}</h3>
           <p class="card-excerpt">{{ excerpt(item.description) }}</p>
           <div class="card-location">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {{ item.location }}
+            {{ getLocationName(item.locationId) }}
           </div>
         </div>
 
@@ -212,8 +212,8 @@
           <h3 class="list-title">{{ item.name }}</h3>
           <p class="list-excerpt">{{ excerpt(item.description) }}</p>
           <div class="list-meta">
-            <time>{{ formatEventDate(item.startDatetime) }}</time>
-            <span> · {{ item.location }}</span>
+            <time>{{ formatEventDate(item.startDatetime, item.endDatetime) }}</time>
+            <span> · {{ getLocationName(item.locationId) }}</span>
           </div>
         </div>
         <div class="list-actions">
@@ -237,9 +237,10 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
-import { eventService } from '../../services/api.js'
+import { eventService, locationService } from '../../services/api.js'
 
 const events = ref([])
+const locations = ref([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
@@ -256,12 +257,26 @@ function excerpt(text) {
   return plain.length > 110 ? plain.substring(0, 110) + '...' : plain
 }
 
-function formatEventDate(startDatetime) {
+function getLocationName(locationId) {
+  const location = locations.value.find(loc => loc.id === locationId)
+  return location ? `${location.name}` : 'Ubicación no disponible'
+}
+
+function formatEventDate(startDatetime, endDatetime) {
   if (!startDatetime) return 'Fecha por definir'
-  const date = new Date(startDatetime)
-  const dateStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-  const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-  return `${dateStr} · ${timeStr}`
+
+  const startDate = new Date(startDatetime)
+  const dateStr = startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  const startTimeStr = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
+
+  // Si hay hora fin diferente a hora inicio, mostrar rango
+  if (endDatetime && endDatetime !== startDatetime) {
+    const endDate = new Date(endDatetime)
+    const endTimeStr = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
+    return `${dateStr} · ${startTimeStr} - ${endTimeStr}`
+  }
+
+  return `${dateStr} · ${startTimeStr}`
 }
 
 const filteredEvents = computed(() => {
@@ -291,6 +306,12 @@ async function loadEvents() {
   error.value = ''
   try {
     console.log('🔄 Iniciando carga de eventos...')
+
+    // Cargar ubicaciones
+    const locResponse = await locationService.getAll()
+    locations.value = locResponse.data || locResponse || []
+    console.log('📍 Ubicaciones cargadas:', locations.value.length)
+
     const response = await eventService.getMy()
     console.log('✅ Respuesta recibida:', response)
 
