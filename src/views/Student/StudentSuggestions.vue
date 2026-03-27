@@ -54,7 +54,7 @@
 
         <!-- Botón enviar -->
         <div class="form-actions">
-          <button type="submit" class="btn-primary" :disabled="sending">
+          <button type="submit" class="btn-primary" :disabled="sending || !form.body.trim() || !form.category">
             <svg v-if="sending" class="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
@@ -74,7 +74,7 @@
       <Transition name="modal">
         <div v-if="showSuccessModal" class="modal-overlay" @click.self="closeModal">
           <div class="modal">
-            <div class="modal-icon">✅</div>
+            <div class="modal-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#059669"/><polyline points="20,6 9,17 4,12"/></svg></div>
             <h3 class="modal-title">Sugerencia enviada</h3>
             <p class="modal-body">Tu sugerencia fue recibida correctamente. ¡Gracias por contribuir a mejorar la UCB!</p>
             <button class="btn-primary btn-primary--full" @click="closeModal">Aceptar</button>
