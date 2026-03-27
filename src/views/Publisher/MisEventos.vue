@@ -58,20 +58,25 @@
 
     <!-- Stats Row -->
     <div class="stats-row" v-if="!loading && !error">
-      <button class="stat-pill" :class="{ active: activeFilter === 'all' }" @click="activeFilter = 'all'">
+      <button class="stat-pill" :class="{ active: activeFilter === 'all' && scopeFilter === 'my' }" @click="activeFilter = 'all'; scopeFilter = 'my'; loadEvents()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span class="stat-num">{{ events.length }}</span>
+        <span class="stat-num">{{ myEventsCount }}</span>
         <span class="stat-txt">Total</span>
       </button>
-      <button class="stat-pill stat-pub" :class="{ active: activeFilter === 'published' }" @click="activeFilter = 'published'">
+      <button class="stat-pill stat-pub" :class="{ active: activeFilter === 'published' && scopeFilter === 'my' }" @click="activeFilter = 'published'; scopeFilter = 'my'; loadEvents()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span class="stat-num">{{ events.filter(e => e.isActive).length }}</span>
+        <span class="stat-num">{{ myPublishedCount }}</span>
         <span class="stat-txt">Publicados</span>
       </button>
-      <button class="stat-pill stat-draft" :class="{ active: activeFilter === 'draft' }" @click="activeFilter = 'draft'">
+      <button class="stat-pill stat-draft" :class="{ active: activeFilter === 'draft' && scopeFilter === 'my' }" @click="activeFilter = 'draft'; scopeFilter = 'my'; loadEvents()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span class="stat-num">{{ events.filter(e => !e.isActive).length }}</span>
+        <span class="stat-num">{{ myDraftsCount }}</span>
         <span class="stat-txt">Borradores</span>
+      </button>
+      <button class="stat-pill stat-global" :class="{ active: scopeFilter === 'global' }" @click="activeFilter = 'published'; scopeFilter = 'global'; loadEvents()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="stat-num">{{ globalEventsCount }}</span>
+        <span class="stat-txt">Global</span>
       </button>
     </div>
 
@@ -86,10 +91,30 @@
       </div>
       <div class="right-filters">
         <div class="select-wrap">
+          <select v-model="categoryFilter" class="filter-select">
+            <option value="all">Todas las categorías</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+          <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="select-wrap">
+          <select v-model="careerFilter" class="filter-select">
+            <option value="all">Todas las carreras</option>
+            <option v-for="career in careers" :key="career.id" :value="career.id">
+              {{ career.name }}
+            </option>
+          </select>
+          <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="select-wrap">
           <select v-model="sortBy" class="filter-select">
             <option value="newest">Más recientes</option>
             <option value="oldest">Más antiguos</option>
             <option value="date">Por fecha de evento</option>
+            <option value="title-asc">A-Z Título</option>
+            <option value="title-desc">Z-A Título</option>
           </select>
           <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -139,7 +164,7 @@
       </div>
       <h3>Sin resultados</h3>
       <p>No se encontraron eventos con ese criterio.</p>
-      <button class="btn-retry" @click="search = ''; activeFilter = 'all'">Limpiar filtros</button>
+      <button class="btn-retry" @click="search = ''; activeFilter = 'all'; categoryFilter = 'all'; careerFilter = 'all'">Limpiar filtros</button>
     </div>
 
     <!-- GRID VIEW -->
@@ -173,23 +198,35 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
             {{ getLocationName(item.locationId) }}
           </div>
+          <div class="card-updated" v-if="item.updatedAt">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <span>Actualizado: {{ formatUpdatedDate(item.updatedAt) }}</span>
+          </div>
         </div>
 
         <!-- Actions -->
         <div class="card-actions">
-          <router-link v-if="item._isOwn" :to="`/publicador/editar-evento/${item.id}`" class="action-btn btn-edit">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar
-          </router-link>
-          <button v-if="item._isOwn" class="action-btn" :class="item.isActive ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
-            <span class="spinner-xs" v-if="item._saving"></span>
-            <template v-else>{{ item.isActive ? 'Despublicar' : 'Publicar' }}</template>
-          </button>
-          <button v-if="item._isOwn" class="action-btn btn-delete" @click="askDelete(item)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-            Eliminar
-          </button>
-          <span v-if="!item._isOwn" class="action-btn" style="cursor:default; color:#94a3b8; font-size:0.71rem; justify-content:center;">Solo lectura</span>
+          <!-- Botones de edición si es mi evento -->
+          <template v-if="item._isOwn">
+            <router-link :to="`/publicador/editar-evento/${item.id}`" class="action-btn btn-edit">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar
+            </router-link>
+            <button class="action-btn" :class="item.isActive ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
+              <span class="spinner-xs" v-if="item._saving"></span>
+              <template v-else>{{ item.isActive ? 'Despublicar' : 'Publicar' }}</template>
+            </button>
+            <button class="action-btn btn-delete" @click="askDelete(item)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+              Eliminar
+            </button>
+          </template>
+
+          <!-- Mostrar autor si NO es mi evento -->
+          <div v-else class="event-author">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Publicado por: {{ item.authorName || 'Autor desconocido' }}</span>
+          </div>
         </div>
       </article>
     </div>
@@ -214,20 +251,33 @@
           <div class="list-meta">
             <time>{{ formatEventDate(item.startDatetime, item.endDatetime) }}</time>
             <span> · {{ getLocationName(item.locationId) }}</span>
+            <div class="list-updated" v-if="item.updatedAt">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              <span>Actualizado: {{ formatUpdatedDate(item.updatedAt) }}</span>
+            </div>
           </div>
         </div>
         <div class="list-actions">
-          <router-link v-if="item._isOwn" :to="`/publicador/editar-evento/${item.id}`" class="icon-btn" title="Editar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </router-link>
-          <button v-if="item._isOwn" class="icon-btn" :class="item.isActive ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.isActive ? 'Despublicar' : 'Publicar'">
-            <span class="spinner-xs" v-if="item._saving"></span>
-            <svg v-else-if="item.isActive" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
-            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-          <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          </button>
+          <!-- Botones si es mi evento -->
+          <template v-if="item._isOwn">
+            <router-link :to="`/publicador/editar-evento/${item.id}`" class="icon-btn" title="Editar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </router-link>
+            <button class="icon-btn" :class="item.isActive ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.isActive ? 'Despublicar' : 'Publicar'">
+              <span class="spinner-xs" v-if="item._saving"></span>
+              <svg v-else-if="item.isActive" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
+              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+            <button class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            </button>
+          </template>
+
+          <!-- Mostrar autor si NO es mi evento -->
+          <div v-else class="list-author">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>{{ item.authorName || 'Autor desconocido' }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -236,17 +286,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
-import { eventService, locationService } from '../../services/api.js'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { eventService, locationService, categoryService, careerService } from '../../services/api.js'
+
+const route = useRoute()
 
 const events = ref([])
 const locations = ref([])
+const categories = ref([])
+const careers = ref([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
 const activeFilter = ref('all')
+const scopeFilter = ref('my') // 'my' o 'global'
+const categoryFilter = ref('all')
+const careerFilter = ref('all')
 const sortBy = ref('newest')
 const viewMode = ref('grid')
+const currentUserId = ref(null)
 
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
 const deleteModal = reactive({ show: false, id: null, title: '', loading: false })
@@ -279,10 +338,28 @@ function formatEventDate(startDatetime, endDatetime) {
   return `${dateStr} · ${startTimeStr}`
 }
 
+function formatUpdatedDate(updatedAt) {
+  if (!updatedAt) return 'Fecha desconocida'
+  const date = new Date(updatedAt)
+  const dateStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+  const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
+  return `${dateStr} · ${timeStr}`
+}
+
 const filteredEvents = computed(() => {
   let list = [...events.value]
-  if (activeFilter.value === 'published') list = list.filter(e => e.isActive)
-  if (activeFilter.value === 'draft') list = list.filter(e => !e.isActive)
+
+  // En modo global, solo mostrar eventos publicados
+  if (scopeFilter.value === 'global') {
+    list = list.filter(e => e.isActive)
+  } else {
+    // En modo 'my', aplicar filtros de estado
+    if (activeFilter.value === 'published') list = list.filter(e => e.isActive)
+    if (activeFilter.value === 'draft') list = list.filter(e => !e.isActive)
+  }
+
+  if (categoryFilter.value !== 'all') list = list.filter(e => e.categoryId === parseInt(categoryFilter.value))
+  if (careerFilter.value !== 'all') list = list.filter(e => e.careerId === parseInt(careerFilter.value))
   if (search.value.trim()) {
     const q = search.value.toLowerCase()
     list = list.filter(e => e.name?.toLowerCase().includes(q))
@@ -290,8 +367,16 @@ const filteredEvents = computed(() => {
   if (sortBy.value === 'newest') list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   if (sortBy.value === 'oldest') list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
   if (sortBy.value === 'date') list.sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime))
+  if (sortBy.value === 'title-asc') list.sort((a, b) => a.name.localeCompare(b.name))
+  if (sortBy.value === 'title-desc') list.sort((a, b) => b.name.localeCompare(a.name))
   return list
 })
+
+// Contadores para los stats
+const myEventsCount = computed(() => events.value.filter(e => e._isOwn).length)
+const myPublishedCount = computed(() => events.value.filter(e => e._isOwn && e.isActive).length)
+const myDraftsCount = computed(() => events.value.filter(e => e._isOwn && !e.isActive).length)
+const globalEventsCount = computed(() => events.value.filter(e => e.isActive).length)
 
 function showToast(type, title, message) {
   toast.show = false
@@ -305,14 +390,33 @@ async function loadEvents() {
   loading.value = true
   error.value = ''
   try {
-    console.log('🔄 Iniciando carga de eventos...')
+    console.log('🔄 Iniciando carga de eventos...', 'Scope:', scopeFilter.value)
+
+    // Obtener userId del localStorage (del token o de ucb_user_id)
+    const storedUser = localStorage.getItem('ucb_user_id')
+    if (storedUser) {
+      currentUserId.value = storedUser
+    }
 
     // Cargar ubicaciones
     const locResponse = await locationService.getAll()
     locations.value = locResponse.data || locResponse || []
     console.log('📍 Ubicaciones cargadas:', locations.value.length)
 
-    const response = await eventService.getMy()
+    // Cargar categorías
+    const catResponse = await categoryService.getAll()
+    categories.value = catResponse.data || catResponse || []
+    console.log('📂 Categorías cargadas:', categories.value.length)
+
+    // Cargar carreras
+    const careerResponse = await careerService.getAll()
+    careers.value = careerResponse.data || careerResponse || []
+    console.log('🎓 Carreras cargadas:', careers.value.length)
+
+    // Cargar eventos según el scope (mis eventos o todos)
+    const response = scopeFilter.value === 'my'
+      ? await eventService.getMy()
+      : await eventService.getAll()
     console.log('✅ Respuesta recibida:', response)
 
     // Validar que la respuesta sea un array o convertirla
@@ -329,7 +433,7 @@ async function loadEvents() {
     // Agregar propiedades auxiliares (_isOwn, _saving)
     events.value = eventsList.map(e => ({
       ...e,
-      _isOwn: true,  // El backend solo devuelve eventos del usuario autenticado
+      _isOwn: scopeFilter.value === 'my' ? true : (e.authorId === currentUserId.value),
       _saving: false
     }))
 
@@ -433,6 +537,14 @@ async function confirmDelete() {
     deleteModal.loading = false
   }
 }
+
+// Recargar eventos cuando se vuelve desde editar evento (via query param)
+watch(() => route.query.refreshed, () => {
+  if (route.query.refreshed) {
+    console.log('✨ Query param detectado, recargando eventos...')
+    loadEvents()
+  }
+})
 
 onMounted(loadEvents)
 </script>
@@ -539,6 +651,7 @@ onMounted(loadEvents)
 .stat-txt { font-size:0.77rem; color:#64748b; font-weight:500; }
 .stat-pub .stat-num { color:#16a34a; }
 .stat-draft .stat-num { color:#d97706; }
+.stat-global .stat-num { color:#3b82f6; }
 
 /* Filters */
 .filters-bar { display:flex; align-items:center; justify-content:space-between; gap:0.8rem; margin-bottom:1.8rem; flex-wrap:wrap; }
@@ -608,6 +721,8 @@ onMounted(loadEvents)
 .card-title { font-family:'Syne',sans-serif; font-size:0.93rem; font-weight:800; color:#0f172a; line-height:1.35; margin-bottom:0.4rem; letter-spacing:-0.2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .card-excerpt { font-size:0.77rem; color:#64748b; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:0.5rem; }
 .card-location { display:flex; align-items:center; gap:0.35rem; font-size:0.72rem; color:#64748b; }
+.card-updated { display:flex; align-items:center; gap:0.35rem; font-size:0.70rem; color:#22c55e; margin-top:0.5rem; font-weight:500; }
+.card-updated svg { stroke:#22c55e; }
 
 /* Card actions */
 .card-actions { display:flex; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid #f1f5f9; }
@@ -617,6 +732,8 @@ onMounted(loadEvents)
 .btn-publish-action:hover { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
 .btn-delete:hover     { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
 .action-btn:disabled  { opacity:0.45; cursor:not-allowed; }
+.event-author { display:flex; align-items:center; gap:0.4rem; font-size:0.73rem; color:#64748b; padding:0.4rem; font-weight:500; width:100%; justify-content:center; }
+.event-author svg { stroke:#64748b; flex-shrink:0; }
 
 /* List */
 .events-list { display:flex; flex-direction:column; gap:0.65rem; }
@@ -631,6 +748,8 @@ onMounted(loadEvents)
 .list-title { font-family:'Syne',sans-serif; font-size:0.87rem; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.18rem; }
 .list-excerpt { font-size:0.75rem; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.22rem; }
 .list-meta { font-size:0.7rem; color:#94a3b8; }
+.list-updated { display:flex; align-items:center; gap:0.3rem; font-size:0.68rem; color:#22c55e; margin-top:0.3rem; font-weight:500; }
+.list-updated svg { stroke:#22c55e; }
 .list-actions { display:flex; gap:0.4rem; flex-shrink:0; }
 .icon-btn { width:32px; height:32px; border:1px solid #e2e8f0; border-radius:7px; background:#fff; cursor:pointer; color:#64748b; display:flex; align-items:center; justify-content:center; transition:all 0.18s; }
 .icon-btn:hover       { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
@@ -638,6 +757,8 @@ onMounted(loadEvents)
 .ico-publish:hover    { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
 .ico-delete:hover     { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
 .icon-btn:disabled    { opacity:0.45; cursor:not-allowed; }
+.list-author { display:flex; align-items:center; gap:0.35rem; font-size:0.72rem; color:#64748b; font-weight:500; padding:0.35rem 0.5rem; }
+.list-author svg { stroke:#64748b; flex-shrink:0; }
 
 /* Helpers */
 .loading-row { display:flex; align-items:center; gap:0.4rem; }

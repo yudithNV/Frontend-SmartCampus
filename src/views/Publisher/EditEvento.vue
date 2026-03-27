@@ -719,7 +719,7 @@ async function updateEvent() {
     await eventService.update(eventId.value, eventData)
 
     showToastMsg('success', 'Evento actualizado', 'Los cambios fueron guardados correctamente.')
-    setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
+    setTimeout(() => router.push('/publicador/mis-eventos?refreshed=1'), 2000)
   } catch (err) {
     console.error('Error al actualizar evento:', err)
     showToastMsg('error', 'Error al actualizar', err.message || 'No se pudieron guardar los cambios.')
@@ -750,7 +750,7 @@ async function saveDraft() {
     showToastMsg('success', 'Borrador guardado', 'Los cambios fueron guardados como borrador.')
 
     // Redirigir a mis eventos después de 2 segundos
-    setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
+    setTimeout(() => router.push('/publicador/mis-eventos?refreshed=1'), 2000)
   } catch (err) {
     console.error('Error al guardar borrador:', err)
     showToastMsg('error', 'Error', err.message || 'No se pudo guardar el borrador.')

@@ -49,10 +49,10 @@
     </nav>
 
     <div class="user-profile">
-      <div class="profile-avatar">A</div>
+      <div class="profile-avatar">{{ userInitial }}</div>
       <div class="profile-info">
-        <span class="profile-name">Administrador</span>
-        <small>admin@ucb.edu.bo</small>
+        <span class="profile-name">{{ userName }}</span>
+        <small>{{ userEmail }}</small>
       </div>
       <router-link to="/" class="logout">Cerrar Sesión</router-link>
     </div>
@@ -61,6 +61,33 @@
 
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
+import { userService } from '../../services/api.js'
+
+const userName = ref('Administrador')
+const userEmail = ref('admin@ucb.edu.bo')
+
+const userInitial = computed(() => {
+  return userName.value ? userName.value.charAt(0).toUpperCase() : 'A'
+})
+
+async function loadProfile() {
+  try {
+    const response = await userService.getProfile()
+    const profile = response.data || response
+    if (profile) {
+      userName.value = profile.fullName || 'Administrador'
+      userEmail.value = profile.email || 'admin@ucb.edu.bo'
+    }
+  } catch (error) {
+    console.error('Error al cargar perfil:', error)
+    // Mantener valores por defecto si falla
+  }
+}
+
+onMounted(() => {
+  loadProfile()
+})
 </script>
 
 <style scoped>
