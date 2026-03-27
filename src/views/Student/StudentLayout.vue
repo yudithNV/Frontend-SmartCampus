@@ -1,6 +1,7 @@
 <template>
   <div class="student-layout">
-    <ChangePasswordModal />
+    <ChangePasswordModal @done="onPasswordChanged" />
+    <PasswordChangedBanner :trigger="bannerTrigger" />
     <StudentSidebar :active-item="activeItem" @select="activeItem = $event" />
 
     <main class="main-content">
@@ -22,9 +23,17 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import StudentSidebar from '../../components/Student/StudentSidebar.vue'
 import ChangePasswordModal from '../../components/ChangePasswordModal.vue'
+import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 
 const route = useRoute()
 const activeItem = ref('dashboard')
+const bannerTrigger = ref(false)
+
+function onPasswordChanged() {
+  bannerTrigger.value = true
+  // Resetea el trigger después para que pueda volver a activarse si hiciera falta
+  setTimeout(() => { bannerTrigger.value = false }, 100)
+}
 
 const pageTitle = computed(() => {
   const path = route.path.split('/').pop()

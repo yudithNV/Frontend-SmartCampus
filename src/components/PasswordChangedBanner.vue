@@ -18,7 +18,6 @@
             </svg>
           </button>
         </div>
-        <!-- Barra de progreso que indica cuándo desaparece -->
         <div class="pwd-banner__progress" :style="{ animationDuration: DURATION + 'ms' }"></div>
       </div>
     </Transition>
@@ -26,9 +25,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
-const DURATION = 5000  // ms — el banner se cierra solo después de 5 segundos
+const props = defineProps({
+  // Se activa desde el padre vía prop (cuando el modal emite 'done')
+  trigger: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const DURATION = 5000
 const show = ref(false)
 let timer = null
 
@@ -37,13 +44,23 @@ function dismiss() {
   clearTimeout(timer)
 }
 
+function activate() {
+  show.value = true
+  clearTimeout(timer)
+  timer = setTimeout(dismiss, DURATION)
+}
+
+// Activar por localStorage (para cuando viene de login con nueva sesión)
 onMounted(() => {
-  // Revisa si el flag fue dejado por ChangePassword.vue
   if (localStorage.getItem('pwd_changed') === '1') {
-    localStorage.removeItem('pwd_changed')  // limpia el flag de inmediato
-    show.value = true
-    timer = setTimeout(dismiss, DURATION)
+    localStorage.removeItem('pwd_changed')
+    activate()
   }
+})
+
+// Activar por prop (cuando el modal cierra sin recargar página)
+watch(() => props.trigger, (val) => {
+  if (val) activate()
 })
 </script>
 
@@ -53,7 +70,7 @@ onMounted(() => {
   top: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 9998;
   width: calc(100% - 2rem);
   max-width: 520px;
   background: #ecfdf5;
@@ -114,7 +131,6 @@ onMounted(() => {
 }
 .pwd-banner__close:hover { background: rgba(5, 150, 105, 0.1); }
 
-/* Barra de progreso inferior */
 .pwd-banner__progress {
   height: 3px;
   background: #059669;
@@ -128,7 +144,6 @@ onMounted(() => {
   to   { transform: scaleX(0); }
 }
 
-/* Transición de entrada/salida */
 .banner-enter-active { transition: all 0.35s cubic-bezier(0.34, 1.5, 0.64, 1); }
 .banner-leave-active { transition: all 0.25s ease; }
 .banner-enter-from  { opacity: 0; transform: translateX(-50%) translateY(-16px); }

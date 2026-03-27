@@ -1,6 +1,7 @@
 <template>
   <div class="admin-layout">
-    <ChangePasswordModal />
+    <ChangePasswordModal @done="onPasswordChanged" />
+    <PasswordChangedBanner :trigger="bannerTrigger" />
     <AdminSidebar />
 
     <main class="main-content">
@@ -18,12 +19,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminSidebar from '../../components/Admin/AdminSidebar.vue'
 import ChangePasswordModal from '../../components/ChangePasswordModal.vue'
+import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 
 const route = useRoute()
+const bannerTrigger = ref(false)
+
+function onPasswordChanged() {
+  bannerTrigger.value = true
+  setTimeout(() => { bannerTrigger.value = false }, 100)
+}
 
 const pageTitle = computed(() => {
   const path = route.path.split('/').pop()
