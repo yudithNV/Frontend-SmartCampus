@@ -263,7 +263,7 @@ const handleCreateComplaint = async (formData) => {
     showToast(
       'success',
       '✅ Reclamo enviado exitosamente',
-      `Tu reclamo ha sido registrado. Número de seguimiento: ${response.trackingNumber}`
+      `Reclamo registrado. Su número de seguimiento es: ${response.trackingNumber}`
     )
 
     // Recargar la lista de reclamos

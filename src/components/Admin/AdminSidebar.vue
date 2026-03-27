@@ -1,5 +1,22 @@
 <template>
   <aside class="sidebar">
+    <!-- Modal de confirmación -->
+    <Transition name="modal-fade">
+      <div v-if="showLogoutModal" class="logout-modal-overlay" @click.self="showLogoutModal = false">
+        <div class="logout-modal-box">
+          <h3>¿Cerrar sesión?</h3>
+          <p>¿Estás seguro de que deseas cerrar tu sesión?</p>
+          <div class="modal-actions">
+            <button class="btn-cancel" @click="showLogoutModal = false">Cancelar</button>
+            <button class="btn-logout" @click="confirmLogout" :disabled="loggingOut">
+              <span v-if="!loggingOut">Cerrar Sesión</span>
+              <span v-else>Cerrando...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <div class="logo-admin">
       <div class="logo-icon">
         <!-- Graduation Cap -->
@@ -54,7 +71,7 @@
         <span class="profile-name">{{ userName }}</span>
         <small>{{ userEmail }}</small>
       </div>
-      <router-link to="/" class="logout">Cerrar Sesión</router-link>
+      <button class="logout" @click="showLogoutModal = true">Cerrar Sesión</button>
     </div>
   </aside>
 </template>
@@ -62,10 +79,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { userService } from '../../services/api.js'
 
+const router = useRouter()
 const userName = ref('Administrador')
 const userEmail = ref('admin@ucb.edu.bo')
+const showLogoutModal = ref(false)
+const loggingOut = ref(false)
 
 const userInitial = computed(() => {
   return userName.value ? userName.value.charAt(0).toUpperCase() : 'A'
@@ -73,7 +94,7 @@ const userInitial = computed(() => {
 
 async function loadProfile() {
   try {
-    const response = await userService.getProfile()
+    const response = await userService.getMe()
     const profile = response.data || response
     if (profile) {
       userName.value = profile.fullName || 'Administrador'
@@ -82,6 +103,24 @@ async function loadProfile() {
   } catch (error) {
     console.error('Error al cargar perfil:', error)
     // Mantener valores por defecto si falla
+  }
+}
+
+async function confirmLogout() {
+  loggingOut.value = true
+  try {
+    await userService.logout()
+    // Limpiar localStorage
+    localStorage.removeItem('ucb_token')
+    localStorage.removeItem('ucb_user_id')
+    // Navegar a home
+    router.push('/')
+  } catch (error) {
+    console.error('Error al cerrar sesión:', error)
+    // Aun así navegar
+    router.push('/')
+  } finally {
+    loggingOut.value = false
   }
 }
 
@@ -198,14 +237,124 @@ onMounted(() => {
 .logout {
   display: block;
   margin-top: 1rem;
-  color: #cbd5e1;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: color 0.3s ease;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .logout:hover {
-  color: #FFD200;
+  background: #FFD200;
+  color: #1a3a52;
+  border-color: #FFD200;
+}
+
+/* Logout Modal */
+.logout-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-modal-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: modalPopIn 0.3s ease;
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.logout-modal-box h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a3a52;
+  margin: 0 0 0.5rem 0;
+}
+
+.logout-modal-box p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.btn-cancel,
+.btn-logout {
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-cancel {
+  background: #e2e8f0;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+}
+
+.btn-cancel:hover {
+  background: #cbd5e1;
+}
+
+.btn-logout {
+  background: #ef4444;
+  color: #fff;
+  flex: 1;
+}
+
+.btn-logout:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-logout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Transición modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
 }
 
 @media (max-width: 768px) {

@@ -47,6 +47,10 @@ export const userService = {
   logout: () =>
     apiRequest('/auth/logout', 'POST'),
 
+  // Obtener información del usuario autenticado (para sidebars)
+  getMe: () =>
+    apiRequest('/auth/me', 'GET'),
+
   // ✅ Corregido: el backend usa /api/profile (ProfileController)
   getProfile: () =>
     apiRequest('/profile', 'GET'),
