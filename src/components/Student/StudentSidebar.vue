@@ -1,48 +1,56 @@
 <template>
   <aside class="sidebar">
     <div class="logo-admin">
-      <div class="logo-icon">🎓</div>
+      <div class="logo-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFD200" stroke-width="2">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+      </div>
       <span>UCB SmartCampus</span>
       <small>Estudiante</small>
     </div>
 
     <nav class="sidebar-menu">
-      <router-link
-        to="/estudiante/dashboard"
-        class="menu-item"
-        :class="{ active: $route.path.includes('dashboard') }"
-      >
-        <span class="icon">📚</span>
+      <router-link to="/estudiante/dashboard" class="menu-item" :class="{ active: $route.path.includes('dashboard') }">
+        <span class="icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </span>
         <span>Dashboard</span>
       </router-link>
 
-      <!-- Mi Perfil -->
-      <router-link
-        to="/estudiante/perfil"
-        class="menu-item"
-        :class="{ active: $route.path.includes('perfil') }"
-      >
-        <span class="icon">👤</span>
+      <router-link to="/estudiante/perfil" class="menu-item" :class="{ active: $route.path.includes('perfil') }">
+        <span class="icon">
+          <!-- User -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
         <span>Mi Perfil</span>
       </router-link>
 
-      <!-- Sugerencias -->
-      <router-link
-        to="/estudiante/sugerencias"
-        class="menu-item"
-        :class="{ active: $route.path.includes('sugerencias') }"
-      >
-        <span class="icon">💡</span>
+      <router-link to="/estudiante/sugerencias" class="menu-item" :class="{ active: $route.path.includes('sugerencias') }">
+        <span class="icon">
+          <!-- Lightbulb -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18h6M10 22h4M12 2a7 7 0 017 7c0 2.5-1.5 4.5-3 6H8c-1.5-1.5-3-3.5-3-6a7 7 0 017-7z"/>
+          </svg>
+        </span>
         <span>Sugerencias</span>
       </router-link>
 
-      <!-- Reclamos -->
-      <router-link
-        to="/estudiante/reclamos"
-        class="menu-item"
-        :class="{ active: $route.path.includes('reclamos') }"
-      >
-        <span class="icon">📩</span>
+      <router-link to="/estudiante/reclamos" class="menu-item" :class="{ active: $route.path.includes('reclamos') }">
+        <span class="icon">
+          <!-- Message Warning -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
         <span>Reclamos</span>
       </router-link>
     </nav>
