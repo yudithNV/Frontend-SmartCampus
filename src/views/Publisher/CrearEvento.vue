@@ -174,12 +174,16 @@
           <span class="field-num">09</span>
           <label>Ubicación <span class="req">*</span></label>
         </div>
-        <input
-          v-model="form.location"
-          type="text"
-          class="form-input"
-          placeholder="Ej: Auditorio Principal, Campus Obrajes"
-        />
+        <select
+          v-model.number="form.locationId"
+          class="form-input form-select"
+          required
+        >
+          <option :value="null">Selecciona una ubicación</option>
+          <option v-for="loc in locations" :key="loc.id" :value="loc.id">
+            {{ loc.name }} (Bloque {{ loc.block }})
+          </option>
+        </select>
       </div>
 
       <!-- Imagen de Portada -->
@@ -354,9 +358,9 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><calendar xmlns="http://www.w3.org/2000/svg"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
             <span>Hasta {{ formatEventDate(form.endDate) }}</span>
           </div>
-          <div class="event-detail-item" v-if="form.location">
+          <div class="event-detail-item" v-if="form.locationId && getLocationName(form.locationId)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>{{ form.location }}</span>
+            <span>{{ getLocationName(form.locationId) }}</span>
           </div>
           <div class="event-detail-item" v-if="form.maxCapacity">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
@@ -384,12 +388,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { careerService, categoryService, eventService } from '../../services/api.js'
+import { careerService, categoryService, eventService, locationService } from '../../services/api.js'
 
 const router = useRouter()
 const saving = ref(false)
 const careers = ref([])
 const categories = ref([])
+const locations = ref([])
 const showPreview = ref(false)
 const isWide = ref(window.innerWidth >= 1200)
 
@@ -410,7 +415,7 @@ const form = reactive({
   eventTime: '',
   endDate: '',
   endTime: '',
-  location: '',
+  locationId: null,
   coverUrl: '',
   careerId: null,
   maxCapacity: null,
@@ -437,7 +442,7 @@ watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
 })
 
 const isValid = computed(() => {
-  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.location.trim()) {
+  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.locationId) {
     return false
   }
 
@@ -517,7 +522,7 @@ function formatEventDataForBackend() {
     name: form.title.trim(),
     description: form.description.trim(),
     eventType: form.eventType,
-    location: form.location.trim(),
+    locationId: form.locationId,
     startDate: form.eventDate,
     startTime: form.eventTime,
     endDate: form.endDate || form.eventDate,
@@ -586,8 +591,23 @@ async function loadCategories() {
   }
 }
 
+async function loadLocations() {
+  try {
+    const response = await locationService.getAll()
+    locations.value = response.data || response
+  } catch (error) {
+    console.error('Error al cargar ubicaciones:', error)
+    showToastMsg('error', 'Error', 'No se pudieron cargar las ubicaciones.')
+  }
+}
+
+function getLocationName(locationId) {
+  const location = locations.value.find(loc => loc.id === locationId)
+  return location ? `${location.name} (Bloque ${location.block})` : ''
+}
+
 async function submitEvent() {
-  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.location.trim()) {
+  if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.locationId) {
     showToastMsg('warning', 'Campos incompletos', 'Por favor completa todos los campos obligatorios.')
     return
   }
@@ -616,11 +636,17 @@ async function submitEvent() {
     const response = await eventService.create(eventData)
     console.log('Respuesta del servidor:', response)
 
-    showToastMsg('success', 'Evento guardado', form.published ? 'El evento fue publicado correctamente.' : 'El borrador fue guardado.')
+    showToastMsg('success', 'Evento registrado', form.published ? 'El evento fue publicado con éxito.' : 'El borrador fue guardado.')
     setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
   } catch (err) {
     console.error('Error al crear evento:', err)
-    showToastMsg('error', 'Error al publicar', err.message || 'No se pudo guardar el evento.')
+
+    // Manejar error de conflicto de horarios
+    if (err.message && err.message.includes('ubicación') && err.message.includes('horario')) {
+      showToastMsg('error', 'Conflicto de horarios', 'Ya existe un evento en esta ubicación en el horario seleccionado. Selecciona otra ubicación u horario.')
+    } else {
+      showToastMsg('error', 'Error al publicar', err.message || 'No se pudo guardar el evento.')
+    }
   } finally {
     saving.value = false
   }
@@ -653,7 +679,7 @@ async function saveDraft() {
     const eventData = formatEventDataForBackend()
     const response = await eventService.create(eventData)
     console.log('Borrador guardado:', response)
-    showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado correctamente.')
+    showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado con éxito.')
   } catch (err) {
     console.error('Error al guardar borrador:', err)
     showToastMsg('error', 'Error', err.message || 'No se pudo guardar el borrador.')
@@ -665,6 +691,7 @@ async function saveDraft() {
 onMounted(() => {
   loadCareers()
   loadCategories()
+  loadLocations()
 
   // Detectar cambios de tamaño de ventana
   const handleResize = () => {
@@ -1099,12 +1126,12 @@ onMounted(() => {
 /* ═══ EDITOR LAYOUT ═══ */
 .editor-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2rem;
   align-items: flex-start;
 }
-@media (max-width: 1199px) {
-  .editor-layout { grid-template-columns: 1fr; }
+@media (min-width: 1200px) {
+  .editor-layout { grid-template-columns: 1fr 360px; }
 }
 
 .editor-column { max-width: 900px; }

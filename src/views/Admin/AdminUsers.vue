@@ -225,12 +225,9 @@ const handleCreateUser = async (formData) => {
       return
     }
 
-    // Validar contraseña segura
-    if (formData.contrasena.length < 8 ||
-        !/[A-Z]/.test(formData.contrasena) ||
-        !/[a-z]/.test(formData.contrasena) ||
-        !/[0-9]/.test(formData.contrasena)) {
-      showToast('error', 'Contraseña débil', 'La contraseña debe cumplir con todos los requisitos de seguridad.')
+    // Validar contraseña temporal (solo longitud mínima)
+    if (formData.contrasena.length < 8) {
+      showToast('error', 'Contraseña muy corta', 'La contraseña debe tener al menos 8 caracteres.')
       return
     }
 
@@ -240,7 +237,8 @@ const handleCreateUser = async (formData) => {
       email: formData.email,
       password: formData.contrasena,
       role: formData.tipo === 'Estudiante' ? 'ESTUDIANTE' :
-            formData.tipo === 'Publicador' ? 'PUBLICADOR' : 'ADMINISTRADOR'
+            formData.tipo === 'Publicador' ? 'PUBLICADOR' : 'ADMINISTRADOR',
+      mustChangePassword: true
     }
 
     // Solo agregar careerId si es estudiante

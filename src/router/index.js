@@ -18,6 +18,7 @@ import StudentLayout from '../views/Student/StudentLayout.vue'
 import StudentDashboard from '../views/Student/StudentDashboard.vue'
 import StudentProfile from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
+import StudentComplaints from '../views/Student/StudentComplaints.vue'
 // import StudentCalendar from '../views/Student/StudentCalendar.vue'  // pendiente
 
 // Publicador
@@ -79,6 +80,11 @@ const routes = [
         path: 'sugerencias',
         name: 'StudentSuggestions',
         component: StudentSuggestions
+      },
+      {
+        path: 'reclamos',
+        name: 'StudentComplaints',
+        component: StudentComplaints
       },
       // { path: 'calendario', name: 'StudentCalendar', component: StudentCalendar }, // pendiente
       {

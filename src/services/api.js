@@ -178,6 +178,14 @@ export const categoryService = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Ubicaciones
+// ─────────────────────────────────────────────────────────────────────────────
+export const locationService = {
+  getAll: () =>
+    apiRequest('/locations', 'GET')
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Sugerencias
 // ─────────────────────────────────────────────────────────────────────────────
 export const suggestionService = {
@@ -188,4 +196,77 @@ export const suggestionService = {
   /** Historial de sugerencias del estudiante — GET /api/suggestions/my */
   getMy: () =>
     apiRequest('/suggestions/my', 'GET')
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Reclamos
+// ─────────────────────────────────────────────────────────────────────────────
+export const complaintService = {
+  /** Obtiene todos los reclamos del estudiante autenticado — GET /api/complaints/my */
+  getMy: async () => {
+    const response = await apiRequest('/complaints/my', 'GET')
+    // El backend devuelve { success, message, data: [...] }
+    return response.data || response
+  },
+
+  /** Crea un nuevo reclamo con evidencia opcional */
+  create: async (data) => {
+    const token = localStorage.getItem('ucb_token')
+
+    // Si NO hay evidencia → usar endpoint JSON simple
+    if (!data.evidence) {
+      const response = await fetch(`${API_BASE_URL}/complaints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: data.title,
+          category: data.category,
+          body: data.description
+        }),
+        mode: 'cors'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        const errorMessage = errorData?.message || errorData?.error || `Error ${response.status}`
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      return result.data || result
+    }
+
+    // Si HAY evidencia → usar endpoint multipart
+    const formData = new FormData()
+
+    const complaintData = {
+      title: data.title,
+      category: data.category,
+      body: data.description
+    }
+
+    formData.append('complaint', JSON.stringify(complaintData))
+    formData.append('evidence', data.evidence)
+
+    const response = await fetch(`${API_BASE_URL}/complaints/with-evidence`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData,
+      mode: 'cors'
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      const errorMessage = errorData?.message || errorData?.error || `Error ${response.status}`
+      throw new Error(errorMessage)
+    }
+
+    const result = await response.json()
+    return result.data || result
+  }
 }

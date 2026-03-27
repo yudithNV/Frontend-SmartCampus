@@ -198,12 +198,16 @@
             <span class="field-num">09</span>
             <label>Ubicación <span class="req">*</span></label>
           </div>
-          <input
-            v-model="form.location"
-            type="text"
-            class="form-input"
-            placeholder="Ej: Auditorio Principal, Campus Obrajes"
-          />
+          <select
+            v-model.number="form.locationId"
+            class="form-input form-select"
+            required
+          >
+            <option :value="null">Selecciona una ubicación</option>
+            <option v-for="loc in locations" :key="loc.id" :value="loc.id">
+              {{ loc.name }} (Bloque {{ loc.block }})
+            </option>
+          </select>
         </div>
 
         <!-- Imagen de Portada -->
@@ -378,9 +382,9 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><calendar xmlns="http://www.w3.org/2000/svg"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
               <span>Hasta {{ formatEventDate(form.endDate) }}</span>
             </div>
-            <div class="event-detail-item" v-if="form.location">
+            <div class="event-detail-item" v-if="form.locationId && getLocationName(form.locationId)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span>{{ form.location }}</span>
+              <span>{{ getLocationName(form.locationId) }}</span>
             </div>
             <div class="event-detail-item" v-if="form.maxCapacity">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
@@ -409,7 +413,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { careerService, categoryService } from '../../services/api.js'
+import { careerService, categoryService, eventService, locationService } from '../../services/api.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -420,6 +424,7 @@ const loadingEvent = ref(true)
 const loadError = ref('')
 const careers = ref([])
 const categories = ref([])
+const locations = ref([])
 const showPreview = ref(false)
 const isWide = ref(window.innerWidth >= 1200)
 
@@ -440,7 +445,7 @@ const form = reactive({
   eventTime: '',
   endDate: '',
   endTime: '',
-  location: '',
+  locationId: null,
   coverUrl: '',
   careerId: null,
   maxCapacity: null,
@@ -477,7 +482,7 @@ const isValid = computed(() =>
   form.eventType !== '' &&
   form.eventDate !== '' &&
   form.eventTime !== '' &&
-  form.location.trim().length > 0
+  form.locationId !== null
 )
 
 function showToastMsg(type, title, message) {
@@ -511,32 +516,20 @@ function formatEventTimeRange(startTime, endTime) {
 
 // Helper function to format data for backend
 function formatEventDataForBackend() {
-  // Crear fecha y hora de inicio en formato ISO
-  const startDateTime = new Date(`${form.eventDate}T${form.eventTime}:00`)
-
-  // Crear fecha y hora de fin si están definidas
-  let endDateTime = null
-  if (form.endDate && form.endTime) {
-    endDateTime = new Date(`${form.endDate}T${form.endTime}:00`)
-  } else if (form.endDate) {
-    // Si solo hay fecha de fin, usar la misma hora de inicio
-    endDateTime = new Date(`${form.endDate}T${form.eventTime}:00`)
-  } else if (form.endTime) {
-    // Si solo hay hora de fin, usar la misma fecha de inicio
-    endDateTime = new Date(`${form.eventDate}T${form.endTime}:00`)
-  }
-
   return {
-    title: form.title.trim(),
+    name: form.title.trim(),
     description: form.description.trim(),
-    eventDate: startDateTime.toISOString(),
-    endDateTime: endDateTime ? endDateTime.toISOString() : null,
-    location: form.location.trim(),
-    imageUrl: form.coverUrl || null,
-    categoryId: form.categoryId,
-    careerId: form.careerId,
+    eventType: form.eventType,
+    locationId: form.locationId,
+    startDate: form.eventDate,
+    startTime: form.eventTime,
+    endDate: form.endDate || form.eventDate,
+    endTime: form.endTime || form.eventTime,
     maxCapacity: form.maxCapacity || null,
-    eventType: form.eventType
+    posterUrl: form.coverUrl || null,
+    careerId: form.careerId,
+    categoryId: form.categoryId,
+    publish: form.published
   }
 }
 
@@ -608,6 +601,21 @@ async function loadCategories() {
       { id: 5, name: 'Trámites', color: '#dc3545' }
     ]
   }
+}
+
+async function loadLocations() {
+  try {
+    const response = await locationService.getAll()
+    locations.value = response.data || response
+  } catch (error) {
+    console.error('Error al cargar ubicaciones:', error)
+    showToastMsg('error', 'Error', 'No se pudieron cargar las ubicaciones.')
+  }
+}
+
+function getLocationName(locationId) {
+  const location = locations.value.find(loc => loc.id === locationId)
+  return location ? `${location.name} (Bloque ${location.block})` : ''
 }
 
 async function loadEventData() {
@@ -692,6 +700,7 @@ async function saveDraft() {
 onMounted(() => {
   loadCareers()
   loadCategories()
+  loadLocations()
   loadEventData()
 
   // Detectar cambios de tamaño de ventana

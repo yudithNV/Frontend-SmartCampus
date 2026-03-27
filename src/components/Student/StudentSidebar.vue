@@ -26,7 +26,7 @@
         <span>Mi Perfil</span>
       </router-link>
 
-      <!-- ← Sugerencias reemplaza el del calendario -->
+      <!-- Sugerencias -->
       <router-link
         to="/estudiante/sugerencias"
         class="menu-item"
@@ -36,6 +36,7 @@
         <span>Sugerencias</span>
       </router-link>
 
+      <!-- Reclamos -->
       <router-link
         to="/estudiante/reclamos"
         class="menu-item"
@@ -43,15 +44,6 @@
       >
         <span class="icon">📩</span>
         <span>Reclamos</span>
-      </router-link>
-      
-      <router-link
-        to="/estudiante/Sugerencias"
-        class="menu-item"
-        :class="{ active: $route.path.includes('sugerencias') }"
-      >
-        <span class="icon">📩</span>
-        <span>Sugerencias</span>
       </router-link>
     </nav>
 

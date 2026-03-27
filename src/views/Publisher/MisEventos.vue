@@ -177,14 +177,19 @@
 
         <!-- Actions -->
         <div class="card-actions">
-          <router-link :to="`/publicador/editar-evento/${item.id}`" class="action-btn btn-edit">
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-evento/${item.id}`" class="action-btn btn-edit">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Editar
           </router-link>
-          <button class="action-btn btn-delete" @click="askDelete(item)">
+          <button v-if="item._isOwn" class="action-btn" :class="item.isActive ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <template v-else>{{ item.isActive ? 'Despublicar' : 'Publicar' }}</template>
+          </button>
+          <button v-if="item._isOwn" class="action-btn btn-delete" @click="askDelete(item)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
             Eliminar
           </button>
+          <span v-if="!item._isOwn" class="action-btn" style="cursor:default; color:#94a3b8; font-size:0.71rem; justify-content:center;">Solo lectura</span>
         </div>
       </article>
     </div>
@@ -212,10 +217,15 @@
           </div>
         </div>
         <div class="list-actions">
-          <router-link :to="`/publicador/editar-evento/${item.id}`" class="icon-btn" title="Editar">
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-evento/${item.id}`" class="icon-btn" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </router-link>
-          <button class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
+          <button v-if="item._isOwn" class="icon-btn" :class="item.isActive ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.isActive ? 'Despublicar' : 'Publicar'">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <svg v-else-if="item.isActive" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
+            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+          <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           </button>
         </div>
@@ -285,16 +295,23 @@ async function loadEvents() {
     console.log('✅ Respuesta recibida:', response)
 
     // Validar que la respuesta sea un array o convertirla
+    let eventsList = []
     if (Array.isArray(response)) {
-      events.value = response
+      eventsList = response
     } else if (response && response.data && Array.isArray(response.data)) {
-      events.value = response.data
+      eventsList = response.data
     } else if (response && typeof response === 'object') {
       console.warn('⚠️ Estructura de respuesta inesperada:', response)
-      events.value = Array.isArray(response) ? response : []
-    } else {
-      events.value = []
+      eventsList = Array.isArray(response) ? response : []
     }
+
+    // Agregar propiedades auxiliares (_isOwn, _saving)
+    events.value = eventsList.map(e => ({
+      ...e,
+      _isOwn: true,  // El backend solo devuelve eventos del usuario autenticado
+      _saving: false
+    }))
+
     console.log('📊 Eventos cargados:', events.value.length)
   } catch (err) {
     console.error('❌ Error al cargar eventos:', err)
@@ -314,6 +331,65 @@ async function loadEvents() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+// ── Toggle publish ──
+async function togglePublish(item) {
+  item._saving = true
+  try {
+    // Parsear datetime a fecha y hora por separado
+    const parseDateTime = (isoString) => {
+      if (!isoString) return { date: '', time: '' }
+      const date = new Date(isoString)
+      const dateStr = date.toISOString().split('T')[0]
+      const timeStr = date.toISOString().split('T')[1].substring(0, 5)
+      return { date: dateStr, time: timeStr }
+    }
+
+    const startParsed = parseDateTime(item.startDatetime)
+    const endParsed = parseDateTime(item.endDatetime)
+
+    // Construir el objeto completo del evento para el PUT
+    const eventData = {
+      name: item.name,
+      description: item.description,
+      //eventType: item.eventType,
+      // OPCIÓN A: Prueba enviarlo como event_type si el backend es estricto
+      event_type: item.eventType || item.event_type, 
+      // OPCIÓN B: Asegúrate de que eventType no sea undefined
+      eventType: item.eventType || "ACADEMICO", // Pon un valor por defecto si está vacío
+      locationId: item.locationId,
+      startDate: startParsed.date,
+      startTime: startParsed.time,
+      endDate: endParsed.date,
+      endTime: endParsed.time,
+      maxCapacity: item.maxCapacity,
+      posterUrl: item.posterUrl || null,
+      careerId: item.careerId,
+      categoryId: item.categoryId,
+      publish: !item.isActive  // Cambiar el estado de publicación
+    }
+
+    const res = await fetch(`http://localhost:8081/api/events/${item.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('ucb_token')}`
+      },
+      mode: 'cors',
+      body: JSON.stringify(eventData)
+    })
+    if (!res.ok) throw new Error()
+    const result = await res.json()
+    item.isActive = result.data?.isActive || result.isActive
+    showToast('success', item.isActive ? 'Evento publicado' : 'Evento despublicado',
+      `"${item.name}" fue actualizado.`)
+  } catch (err) {
+    console.error('Error al actualizar evento:', err)
+    showToast('error', 'Error', 'No se pudo actualizar el estado.')
+  } finally {
+    item._saving = false
   }
 }
 
@@ -516,6 +592,8 @@ onMounted(loadEvents)
 .card-actions { display:flex; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid #f1f5f9; }
 .action-btn { flex:1; padding:0.48rem 0.3rem; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:0.71rem; font-weight:500; cursor:pointer; text-decoration:none; text-align:center; transition:all 0.18s; color:#475569; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; gap:0.3rem; }
 .btn-edit:hover       { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+.btn-unpublish:hover  { background:#fff7ed; border-color:#fed7aa; color:#c2410c; }
+.btn-publish-action:hover { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
 .btn-delete:hover     { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
 .action-btn:disabled  { opacity:0.45; cursor:not-allowed; }
 
@@ -535,6 +613,8 @@ onMounted(loadEvents)
 .list-actions { display:flex; gap:0.4rem; flex-shrink:0; }
 .icon-btn { width:32px; height:32px; border:1px solid #e2e8f0; border-radius:7px; background:#fff; cursor:pointer; color:#64748b; display:flex; align-items:center; justify-content:center; transition:all 0.18s; }
 .icon-btn:hover       { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+.ico-unpublish:hover  { background:#fff7ed; border-color:#fed7aa; color:#c2410c; }
+.ico-publish:hover    { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
 .ico-delete:hover     { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
 .icon-btn:disabled    { opacity:0.45; cursor:not-allowed; }
 

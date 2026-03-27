@@ -6,16 +6,16 @@
         <button class="close-btn" @click="closeModal">×</button>
       </div>
 
-      <p class="modal-subtitle">Completa los datos para crear un nuevo usuario</p>
+      <p class="modal-subtitle">Complete los datos para crear un nuevo usuario. La contraseña será temporal.</p>
 
       <form @submit.prevent="submitForm" class="form">
         <!-- Nombre Completo -->
         <div class="form-group">
-          <label>Nombre Completo</label>
+          <label>Nombre Completo <span class="required">*</span></label>
           <input
             v-model="formData.nombre"
             type="text"
-            placeholder="Juan Pérez"
+            placeholder="Juan Pérez García"
             class="form-input"
             :class="{ 'input-error': errors.nombre }"
             required
@@ -26,7 +26,7 @@
 
         <!-- Correo Electrónico -->
         <div class="form-group">
-          <label>Correo Electrónico</label>
+          <label>Correo Electrónico <span class="required">*</span></label>
           <input
             v-model="formData.email"
             type="email"
@@ -41,7 +41,7 @@
 
         <!-- Tipo de Usuario -->
         <div class="form-group">
-          <label>Tipo de Usuario</label>
+          <label>Tipo de Usuario <span class="required">*</span></label>
           <select v-model="formData.tipo" class="form-select" required>
             <option value="">Selecciona un tipo</option>
             <option value="Estudiante">Estudiante</option>
@@ -52,7 +52,7 @@
 
         <!-- Carrera (solo para Estudiantes) -->
         <div v-if="formData.tipo === 'Estudiante'" class="form-group">
-          <label>Carrera</label>
+          <label>Carrera <span class="required">*</span></label>
           <select v-model.number="formData.careerId" class="form-select" required>
             <option value="">Selecciona una carrera</option>
             <option v-for="career in careers" :key="career.id" :value="career.id">
@@ -63,7 +63,7 @@
 
         <!-- Contraseña -->
         <div class="form-group">
-          <label>Contraseña</label>
+          <label>Contraseña Temporal <span class="required">*</span></label>
           <input
             v-model="formData.contrasena"
             type="password"
@@ -73,33 +73,13 @@
             required
             @input="validatePassword"
           />
-          <div class="password-requirements">
-            <p class="req-title">La contraseña debe tener:</p>
-            <ul class="req-list">
-              <li :class="{ valid: passwordChecks.length }">
-                <span class="check-icon">{{ passwordChecks.length ? '✓' : '○' }}</span>
-                Mínimo 8 caracteres
-              </li>
-              <li :class="{ valid: passwordChecks.uppercase }">
-                <span class="check-icon">{{ passwordChecks.uppercase ? '✓' : '○' }}</span>
-                Una letra mayúscula
-              </li>
-              <li :class="{ valid: passwordChecks.lowercase }">
-                <span class="check-icon">{{ passwordChecks.lowercase ? '✓' : '○' }}</span>
-                Una letra minúscula
-              </li>
-              <li :class="{ valid: passwordChecks.number }">
-                <span class="check-icon">{{ passwordChecks.number ? '✓' : '○' }}</span>
-                Un número
-              </li>
-            </ul>
-          </div>
           <span v-if="errors.contrasena" class="error-message">{{ errors.contrasena }}</span>
+          <small class="field-hint">Mínimo 8 caracteres. El usuario deberá cambiarla en el primer acceso.</small>
         </div>
 
         <!-- Confirmar Contraseña -->
         <div class="form-group">
-          <label>Confirmar Contraseña</label>
+          <label>Confirmar Contraseña <span class="required">*</span></label>
           <input
             v-model="formData.confirmarContrasena"
             type="password"
@@ -155,13 +135,6 @@ const errors = ref({
   confirmarContrasena: ''
 })
 
-const passwordChecks = ref({
-  length: false,
-  uppercase: false,
-  lowercase: false,
-  number: false
-})
-
 const careers = ref([])
 
 const fetchCareers = async () => {
@@ -176,7 +149,7 @@ onMounted(() => {
   fetchCareers()
 })
 
-// Validación de nombre (solo letras y espacios)
+// Validación simple de nombre (solo letras y espacios)
 const validateName = () => {
   const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
   if (formData.value.nombre && !nameRegex.test(formData.value.nombre)) {
@@ -196,25 +169,12 @@ const validateEmail = () => {
   }
 }
 
-// Validación de contraseña
+// Validación SIMPLE de contraseña (solo mínimo de caracteres)
 const validatePassword = () => {
   const password = formData.value.contrasena
 
-  // Actualizar checks visuales
-  passwordChecks.value.length = password.length >= 8
-  passwordChecks.value.uppercase = /[A-Z]/.test(password)
-  passwordChecks.value.lowercase = /[a-z]/.test(password)
-  passwordChecks.value.number = /[0-9]/.test(password)
-
-  // Validar al escribir
-  if (password && !passwordChecks.value.length) {
+  if (password && password.length < 8) {
     errors.value.contrasena = 'Debe tener mínimo 8 caracteres'
-  } else if (password && !passwordChecks.value.uppercase) {
-    errors.value.contrasena = 'Falta una letra mayúscula'
-  } else if (password && !passwordChecks.value.lowercase) {
-    errors.value.contrasena = 'Falta una letra minúscula'
-  } else if (password && !passwordChecks.value.number) {
-    errors.value.contrasena = 'Falta un número'
   } else {
     errors.value.contrasena = ''
   }
@@ -236,22 +196,17 @@ const validateConfirmPassword = () => {
 
 // Comprobar si el formulario es válido
 const isFormValid = computed(() => {
-  return (
-    formData.value.nombre &&
-    formData.value.email &&
-    formData.value.tipo &&
-    formData.value.contrasena &&
-    formData.value.confirmarContrasena &&
-    !errors.value.nombre &&
-    !errors.value.email &&
-    !errors.value.contrasena &&
-    !errors.value.confirmarContrasena &&
-    passwordChecks.value.length &&
-    passwordChecks.value.uppercase &&
-    passwordChecks.value.lowercase &&
-    passwordChecks.value.number &&
-    (formData.value.tipo !== 'Estudiante' || formData.value.careerId)
-  )
+  const hasName = formData.value.nombre && formData.value.nombre.trim().length > 0
+  const hasEmail = formData.value.email && formData.value.email.trim().length > 0
+  const hasType = formData.value.tipo !== ''
+  const hasPassword = formData.value.contrasena && formData.value.contrasena.length >= 8
+  const hasPasswordConfirm = formData.value.confirmarContrasena && formData.value.contrasena === formData.value.confirmarContrasena
+  const noNameError = !errors.value.nombre
+  const noEmailError = !errors.value.email
+  const noPasswordError = !errors.value.contrasena
+  const hasCareer = formData.value.tipo !== 'Estudiante' || formData.value.careerId
+
+  return hasName && hasEmail && hasType && hasPassword && hasPasswordConfirm && noNameError && noEmailError && noPasswordError && hasCareer
 })
 
 const closeModal = () => {
@@ -289,12 +244,6 @@ const resetForm = () => {
     contrasena: '',
     confirmarContrasena: ''
   }
-  passwordChecks.value = {
-    length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false
-  }
 }
 
 // Exponer resetForm para que el padre pueda llamarlo
@@ -314,16 +263,18 @@ defineExpose({ resetForm })
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
-  min-height: 100vh;
+  overflow-y: auto;
 }
 
 .modal-content {
   background: #ffffff;
   border-radius: 12px;
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   animation: slideIn 0.3s ease-out;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @keyframes slideIn {
@@ -343,11 +294,15 @@ defineExpose({ resetForm })
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 10;
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   color: #1a3a52;
   font-weight: 700;
 }
@@ -375,7 +330,7 @@ defineExpose({ resetForm })
 .modal-subtitle {
   padding: 0 1.5rem;
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   margin: 0;
   padding-top: 0.75rem;
 }
@@ -384,27 +339,31 @@ defineExpose({ resetForm })
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .form-group label {
   font-weight: 600;
   color: #1a3a52;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+}
+
+.required {
+  color: #ef4444;
 }
 
 .form-input,
 .form-select {
-  padding: 0.6rem 0.8rem;
+  padding: 0.75rem;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   background: #f8fafc;
   color: #1a3a52;
   transition: all 0.3s ease;
@@ -419,56 +378,14 @@ defineExpose({ resetForm })
 
 .error-message {
   color: #ef4444;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  display: block;
+  font-size: 0.8rem;
+  margin-top: -0.25rem;
 }
 
-.password-requirements {
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-}
-
-.req-title {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin: 0 0 0.5rem 0;
-  font-weight: 600;
-}
-
-.req-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.req-list li {
-  font-size: 0.75rem;
+.field-hint {
   color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.2s;
-}
-
-.req-list li.valid {
-  color: #16a34a;
-}
-
-.check-icon {
-  font-size: 0.7rem;
-  font-weight: 700;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 0.8rem;
+  margin-top: -0.25rem;
 }
 
 .form-input:focus,
@@ -491,14 +408,14 @@ defineExpose({ resetForm })
 
 .btn-cancel {
   flex: 1;
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1a3a52;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: all 0.3s ease;
 }
 
@@ -509,14 +426,14 @@ defineExpose({ resetForm })
 
 .btn-create {
   flex: 1;
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
   background: #1a3a52;
   color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: all 0.3s ease;
 }
 
@@ -535,11 +452,8 @@ defineExpose({ resetForm })
 @media (max-width: 768px) {
   .modal-content {
     max-width: 100%;
-    margin: 1rem;
-  }
-
-  .modal-header {
-    padding: 1.25rem;
+    margin: 0;
+    border-radius: 0;
   }
 
   .form {
@@ -547,3 +461,4 @@ defineExpose({ resetForm })
   }
 }
 </style>
+
