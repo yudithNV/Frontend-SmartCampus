@@ -59,10 +59,11 @@
             <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             {{ showPreview ? 'Editar' : 'Vista Previa' }}
           </button> -->
-          <button class="btn-secondary" @click="saveDraft" :disabled="saving">
+          <!-- Botón "Guardar Borrador" eliminado - hace lo mismo que "Guardar Cambios" -->
+          <!-- <button class="btn-secondary" @click="saveDraft" :disabled="saving">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Guardar Borrador
-          </button>
+          </button> -->
           <button class="btn-primary" @click="updateEvent" :disabled="saving || !isValid">
             <template v-if="!saving">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -145,8 +146,8 @@
             <label>Tipo de Evento <span class="req">*</span></label>
           </div>
           <div class="select-wrap">
-            <select v-model="form.eventType" class="form-select" :disabled="!form.categoryId">
-              <option value="">{{ !form.categoryId ? 'Primero selecciona una categoría' : 'Selecciona el tipo de evento' }}</option>
+            <select v-model="form.eventType" class="form-select">
+              <option value="">Selecciona el tipo de evento</option>
               <option v-for="type in availableEventTypes" :key="type" :value="type">
                 {{ type }}
               </option>
@@ -469,12 +470,12 @@ const availableEventTypes = computed(() => {
   return allEventTypes
 })
 
-// Watcher para resetear eventType cuando cambia la categoría
-watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
-  if (newCategoryId !== oldCategoryId) {
-    form.eventType = ''
-  }
-})
+// Watcher para resetear eventType cuando cambia la categoría - REMOVIDO porque eventType es independiente de categoryId
+// watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
+//   if (newCategoryId !== oldCategoryId) {
+//     form.eventType = ''
+//   }
+// })
 
 const isValid = computed(() =>
   form.title.trim().length > 0 &&
@@ -645,6 +646,8 @@ async function loadEventData() {
     const event = response.data || response
 
     console.log('📋 Evento a cargar:', event)
+    console.log('🔍 eventType recibido del backend:', event.eventType)
+    console.log('🔍 Todos los campos del evento:', Object.keys(event))
 
     // Parsear startDatetime y endDatetime a campos separados
     const parseDateTime = (isoString) => {
@@ -669,7 +672,8 @@ async function loadEventData() {
       title: event.name || '',
       description: event.description || '',
       categoryId: event.categoryId,
-      eventType: event.eventType || '',
+      // Intentar múltiples nombres posibles para el tipo de evento
+      eventType: event.eventType || event.event_type || event.type || '',
       eventDate: startParsed.date,
       eventTime: startParsed.time,
       endDate: endDate,
@@ -682,6 +686,7 @@ async function loadEventData() {
     }
 
     console.log('✅ Datos mapeados al formulario:', eventData)
+    console.log('🔍 eventType final asignado:', eventData.eventType)
 
     Object.assign(form, eventData)
 
@@ -729,14 +734,29 @@ async function saveDraft() {
     return
   }
 
+  // Guardar estado original de published
+  const wasPublished = form.published
+
+  // Forzar a false para guardar como borrador
   form.published = false
   saving.value = true
 
   try {
-    // TODO: Conectar con el API de eventos cuando esté listo
-    showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado correctamente.')
+    const eventData = formatEventDataForBackend()
+    console.log('Guardando como borrador:', eventData)
+
+    await eventService.update(eventId.value, eventData)
+
+    showToastMsg('success', 'Borrador guardado', 'Los cambios fueron guardados como borrador.')
+
+    // Redirigir a mis eventos después de 2 segundos
+    setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
   } catch (err) {
-    showToastMsg('error', 'Error', 'No se pudo guardar el borrador.')
+    console.error('Error al guardar borrador:', err)
+    showToastMsg('error', 'Error', err.message || 'No se pudo guardar el borrador.')
+
+    // Restaurar estado original si hay error
+    form.published = wasPublished
   } finally {
     saving.value = false
   }

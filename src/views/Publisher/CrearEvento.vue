@@ -121,8 +121,8 @@
           <label>Tipo de Evento <span class="req">*</span></label>
         </div>
         <div class="select-wrap">
-          <select v-model="form.eventType" class="form-select" :disabled="!form.categoryId">
-            <option value="">{{ !form.categoryId ? 'Primero selecciona una categoría' : 'Selecciona el tipo de evento' }}</option>
+          <select v-model="form.eventType" class="form-select">
+            <option value="">Selecciona el tipo de evento</option>
             <option v-for="type in availableEventTypes" :key="type" :value="type">
               {{ type }}
             </option>
@@ -435,12 +435,12 @@ const availableEventTypes = computed(() => {
   return allEventTypes
 })
 
-// Watcher para resetear eventType cuando cambia la categoría
-watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
-  if (newCategoryId !== oldCategoryId) {
-    form.eventType = ''
-  }
-})
+// Watcher para resetear eventType cuando cambia la categoría - REMOVIDO porque eventType es independiente de categoryId
+// watch(() => form.categoryId, (newCategoryId, oldCategoryId) => {
+//   if (newCategoryId !== oldCategoryId) {
+//     form.eventType = ''
+//   }
+// })
 
 const isValid = computed(() => {
   if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.locationId) {
@@ -693,10 +693,23 @@ async function saveDraft() {
 
   saving.value = true
   try {
+    // Guardar el estado original de published
+    const wasPublished = form.published
+
+    // Forzar a false para guardar como borrador
+    form.published = false
+
     const eventData = formatEventDataForBackend()
     const response = await eventService.create(eventData)
     console.log('Borrador guardado:', response)
+
     showToastMsg('success', 'Borrador guardado', 'Tu borrador fue guardado con éxito.')
+
+    // Redirigir a mis eventos después de 2 segundos
+    setTimeout(() => router.push('/publicador/mis-eventos'), 2000)
+
+    // Restaurar el estado original
+    form.published = wasPublished
   } catch (err) {
     console.error('Error al guardar borrador:', err)
     showToastMsg('error', 'Error', err.message || 'No se pudo guardar el borrador.')
