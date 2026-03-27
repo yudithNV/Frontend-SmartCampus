@@ -245,11 +245,12 @@ async function handleLogin () {
     localStorage.setItem('ucb_role',  data.role)
     localStorage.setItem('ucb_email', form.email.trim())
     
+    // ── AGREGAR esto ──
     if (data.mustChangePassword) {
-      router.push('/change-password')
-    } else {
-      router.push(data.redirectUrl)
+      localStorage.setItem('must_change_password', '1')
     }
+    // ── SIEMPRE redirige al dashboard ──
+    router.push(data.redirectUrl)
   } catch (err) {
     globalError.value = err.name === 'TypeError'
       ? 'No se pudo conectar con el servidor. Verifica que el backend esté activo.'
