@@ -138,14 +138,16 @@
             <span class="field-num">05</span>
             <label>Fecha <span class="req">*</span></label>
           </div>
-          <input v-model="form.eventDate" type="date" class="form-input" :min="getTodayDate()" />
+          <input v-model="form.eventDate" type="date" class="form-input" :class="{ 'input-error': validationErrors.eventDate }" :min="getTodayDate()" />
+          <span v-if="validationErrors.eventDate" class="field-error">{{ validationErrors.eventDate }}</span>
         </div>
         <div class="field-block">
           <div class="field-label">
             <span class="field-num">06</span>
             <label>Hora de Inicio <span class="req">*</span></label>
           </div>
-          <input v-model="form.eventTime" type="time" class="form-input" />
+          <input v-model="form.eventTime" type="time" class="form-input" :class="{ 'input-error': validationErrors.eventTime }" />
+          <span v-if="validationErrors.eventTime" class="field-error">{{ validationErrors.eventTime }}</span>
         </div>
       </div>
 
@@ -157,7 +159,8 @@
             <label>Fecha de Fin</label>
             <span class="optional-tag">Opcional</span>
           </div>
-          <input v-model="form.endDate" type="date" class="form-input" :min="form.eventDate || getTodayDate()" />
+          <input v-model="form.endDate" type="date" class="form-input" :class="{ 'input-error': validationErrors.endDate }" :min="form.eventDate || getTodayDate()" />
+          <span v-if="validationErrors.endDate" class="field-error">{{ validationErrors.endDate }}</span>
         </div>
         <div class="field-block">
           <div class="field-label">
@@ -165,7 +168,8 @@
             <label>Hora de Fin</label>
             <span class="optional-tag">Opcional</span>
           </div>
-          <input v-model="form.endTime" type="time" class="form-input" />
+          <input v-model="form.endTime" type="time" class="form-input" :class="{ 'input-error': validationErrors.endTime }" />
+          <span v-if="validationErrors.endTime" class="field-error">{{ validationErrors.endTime }}</span>
         </div>
       </div>
 
@@ -442,24 +446,56 @@ const availableEventTypes = computed(() => {
 //   }
 // })
 
+const isEventInPast = computed(() => {
+  if (!form.eventDate || !form.eventTime) return false
+  try {
+    const eventDateTime = new Date(`${form.eventDate}T${form.eventTime}`)
+    return eventDateTime < new Date()
+  } catch {
+    return false
+  }
+})
+
+const validationErrors = computed(() => {
+  const errors = {}
+
+  if (form.eventDate && form.eventDate < getTodayDate()) {
+    errors.eventDate = 'La fecha no puede ser anterior a hoy'
+  }
+
+  if (form.eventTime && form.eventDate && isEventInPast.value) {
+    errors.eventTime = 'La hora no puede estar en el pasado'
+  }
+
+  if (form.endDate && form.eventDate && form.endDate < form.eventDate) {
+    errors.endDate = 'La fecha de fin debe ser posterior a la fecha de inicio'
+  }
+
+  if (form.endDate === form.eventDate && form.endTime && form.eventTime && form.endTime <= form.eventTime) {
+    errors.endTime = 'La hora de fin debe ser posterior a la hora de inicio'
+  }
+
+  return errors
+})
+
 const isValid = computed(() => {
   if (!form.title.trim() || !form.description.trim() || !form.categoryId || !form.eventType || !form.eventDate || !form.eventTime || !form.locationId) {
     return false
   }
 
-  // Validar que la fecha no sea pasada
-  const today = new Date().toISOString().split('T')[0]
-  if (form.eventDate < today) {
+  if (isEventInPast.value) {
     return false
   }
 
-  // Validar que si hay fecha de fin, sea >= fecha de inicio
   if (form.endDate && form.endDate < form.eventDate) {
     return false
   }
 
-  // Validar que si es el mismo día, hora fin > hora inicio
   if (form.endDate === form.eventDate && form.endTime && form.eventTime >= form.endTime) {
+    return false
+  }
+
+  if (Object.keys(validationErrors.value).length > 0) {
     return false
   }
 
@@ -629,9 +665,8 @@ async function submitEvent() {
     return
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  if (form.eventDate < today) {
-    showToastMsg('error', 'Fecha inválida', 'No puedes crear eventos en fechas pasadas.')
+  if (isEventInPast.value) {
+    showToastMsg('error', 'Fecha inválida', 'No puedes crear un evento en el pasado. Por favor selecciona una fecha y hora futuras.')
     return
   }
 
@@ -675,9 +710,8 @@ async function saveDraft() {
     return
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  if (form.eventDate && form.eventDate < today) {
-    showToastMsg('error', 'Fecha inválida', 'No puedes crear eventos en fechas pasadas.')
+  if (form.eventDate && form.eventTime && isEventInPast.value) {
+    showToastMsg('error', 'Fecha inválida', 'No puedes crear un evento en el pasado. Por favor selecciona una fecha y hora futuras.')
     return
   }
 
@@ -1096,6 +1130,12 @@ onMounted(() => {
   background: #f8fafc; outline: none; transition: all 0.18s;
 }
 .form-input:focus { border-color: #FFD200; background: #fffef5; box-shadow: 0 0 0 3px rgba(255,210,0,0.07); }
+.form-input.input-error { border-color: #ef4444; background: #fef2f2; }
+.form-input.input-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.07); }
+
+.field-error {
+  display: block; margin-top: 0.35rem; font-size: 0.75rem; color: #ef4444; font-weight: 500;
+}
 
 .input-icon-wrap { position: relative; display: flex; align-items: center; }
 .input-icon { position: absolute; left: 0.85rem; pointer-events: none; flex-shrink: 0; }
