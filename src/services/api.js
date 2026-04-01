@@ -63,8 +63,10 @@ export const userService = {
 // Servicios de Usuarios (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminUserService = {
-  getAll: () =>
-    apiRequest('/users', 'GET'),
+  getAll: (page = 0, size = 20) => {
+    const params = new URLSearchParams({ page, size })
+    return apiRequest(`/users?${params}`, 'GET')
+  },
 
   create: (data) =>
     apiRequest('/users', 'POST', data),

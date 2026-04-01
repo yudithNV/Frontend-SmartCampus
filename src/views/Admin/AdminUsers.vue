@@ -92,11 +92,35 @@
       </table>
     </div>
 
+    <!-- Paginación -->
+    <div class="pagination-container">
+      <div class="pagination-info">
+        <p>Mostrando {{ usuarios.length > 0 ? currentPage * pageSize + 1 : 0 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }} de {{ totalElements }} usuarios</p>
+      </div>
+      <div class="pagination-controls">
+        <button
+          class="btn-pagination"
+          @click="currentPage--; loadUsers()"
+          :disabled="currentPage === 0"
+        >
+          ← Anterior
+        </button>
+        <span class="page-indicator">Página {{ currentPage + 1 }} de {{ totalPages }}</span>
+        <button
+          class="btn-pagination"
+          @click="currentPage++; loadUsers()"
+          :disabled="currentPage >= totalPages - 1"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </div>
+
     <!-- Stats -->
     <div class="stats-grid">
       <div class="stat-card">
         <span class="stat-label">Total Usuarios</span>
-        <span class="stat-number">{{ usuarios.length }}</span>
+        <span class="stat-number">{{ totalElements }}</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">Estudiantes</span>
@@ -128,6 +152,12 @@ const error = ref('')
 const modalRef = ref(null)
 const search = ref('')
 
+// Paginación
+const currentPage = ref(0)
+const pageSize = ref(10)
+const totalElements = ref(0)
+const totalPages = ref(0)
+
 // Sistema de notificaciones
 const toast = ref({
   show: false,
@@ -145,14 +175,20 @@ const showToast = (type, title, message) => {
   }
 }
 
-// Cargar usuarios desde el backend
+// Cargar usuarios desde el backend con paginación
 const loadUsers = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await adminUserService.getAll()
+    const response = await adminUserService.getAll(currentPage.value, pageSize.value)
+    // Extraer datos de la respuesta paginada
+    const { content, totalElements: total, totalPages: pages } = response
+
+    totalElements.value = total
+    totalPages.value = pages
+
     // Transformar datos del backend al formato de la tabla
-    usuarios.value = response.map(user => ({
+    usuarios.value = content.map(user => ({
       id: user.id,
       nombre: user.fullName,
       email: user.email,
@@ -522,6 +558,62 @@ onMounted(() => {
 
 .action-btn:hover {
   color: #1a3a52;
+}
+
+/* Paginación */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  margin-top: 2rem;
+}
+
+.pagination-info p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-pagination {
+  background: #FFD200;
+  color: #1a3a52;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #FFC500;
+  transform: translateY(-2px);
+}
+
+.btn-pagination:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.page-indicator {
+  color: #1a3a52;
+  font-weight: 600;
+  min-width: 150px;
+  text-align: center;
 }
 
 /* Stats */
