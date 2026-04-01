@@ -21,18 +21,31 @@
 
     <!-- Confirm delete modal -->
     <Transition name="modal-fade">
-      <div v-if="deleteModal.show" class="modal-overlay" @click.self="deleteModal.show = false">
+      <div v-if="deleteModal.show" class="modal-overlay" @click.self="cancelDelete">
         <div class="modal-box">
-          <div class="modal-icon-wrap">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <div class="modal-trash-wrap">
+            <div class="modal-trash-ring"></div>
+            <svg class="modal-trash-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
           </div>
-          <h3>Eliminar noticia</h3>
-          <p>¿Estás seguro de eliminar <strong>"{{ deleteModal.title }}"</strong>?<br>Esta acción no se puede deshacer.</p>
+          <h3 class="modal-title">¿Estás seguro de eliminar esta noticia?</h3>
+          <p class="modal-desc">Vas a eliminar permanentemente<br/><strong class="modal-news-title">"{{ deleteModal.title }}"</strong></p>
+          <p class="modal-warning">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Esta acción no se puede deshacer.
+          </p>
           <div class="modal-actions">
-            <button class="btn-cancel-modal" @click="deleteModal.show = false">Cancelar</button>
-            <button class="btn-confirm-delete" @click="confirmDelete" :disabled="deleteModal.loading">
-              <span v-if="!deleteModal.loading">Eliminar definitivamente</span>
-              <span v-else class="loading-row"><span class="spinner-xs"></span> Eliminando...</span>
+            <button class="modal-btn-cancel" @click="cancelDelete" :disabled="deleteModal.loading">Cancelar</button>
+            <button class="modal-btn-confirm" @click="confirmDelete" :disabled="deleteModal.loading">
+              <template v-if="!deleteModal.loading">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                Eliminar definitivamente
+              </template>
+              <template v-else>
+                <span class="spinner-xs white"></span> Eliminando...
+              </template>
             </button>
           </div>
         </div>
@@ -81,9 +94,7 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-
       <div class="right-filters">
-        <!-- Category filter -->
         <div class="select-wrap">
           <select v-model="categoryFilter" class="filter-select">
             <option value="">Todas las categorías</option>
@@ -91,18 +102,14 @@
           </select>
           <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-
-        <!-- Career filter -->
         <div class="select-wrap">
           <select v-model="careerFilter" class="filter-select">
             <option value="">Todas las carreras</option>
-            <option value="null">General (sin carrera)</option>
+            <option value="null">General</option>
             <option v-for="c in availableCareers" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
           </select>
           <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-
-        <!-- Sort -->
         <div class="select-wrap">
           <select v-model="sortBy" class="filter-select">
             <option value="newest">Más recientes</option>
@@ -111,8 +118,6 @@
           </select>
           <svg class="sel-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-
-        <!-- View toggle -->
         <div class="view-toggle">
           <button :class="{ active: viewMode === 'feed' }" @click="viewMode = 'feed'" title="Feed">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="5" rx="1"/><rect x="3" y="10" width="18" height="11" rx="1"/></svg>
@@ -145,7 +150,7 @@
       <button class="chip-clear-all" @click="clearAllFilters">Limpiar todo</button>
     </div>
 
-    <!-- Loading -->
+     <!-- Loading -->
     <div v-if="loading" class="state-box">
       <div class="state-spinner"></div>
       <p>Cargando noticias...</p>
@@ -183,10 +188,8 @@
       <button class="btn-retry" @click="clearAllFilters">Limpiar filtros</button>
     </div>
 
-    <!-- ═══════════════════════════════
-         FEED VIEW — estilo Facebook
-    ════════════════════════════════ -->
-    <div v-else-if="viewMode === 'feed'" class="feed-list">
+    <!-- ══════════════════════════ FEED ══════════════════════════ -->
+     <div v-else-if="viewMode === 'feed'" class="feed-list">
       <article v-for="item in filteredNews" :key="item.id" class="fb-card" :class="{ 'is-draft': !item.published }">
 
         <!-- Header: author row -->
@@ -417,9 +420,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { careerService } from '../../services/api.js'
 
+// ── State ──────────────────────────────────────────────────────────────────
 const news             = ref([])
 const loading          = ref(false)
 const error            = ref('')
@@ -432,245 +436,141 @@ const viewMode         = ref('feed')
 const openMenu         = ref(null)
 const availableCareers = ref([])
 
-const authorEmail    = localStorage.getItem('ucb_email') || ''
-const authorName     = localStorage.getItem('ucb_name') || localStorage.getItem('ucb_username') || authorEmail.split('@')[0] || 'Publicador'
-const authorInitials = authorName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'P'
+const authorEmail = localStorage.getItem('ucb_email') || ''
+const authorName  = localStorage.getItem('ucb_name') || localStorage.getItem('ucb_username') || authorEmail.split('@')[0] || 'Publicador'
 
-const toast       = reactive({ show: false, type: 'success', title: '', message: '' })
-const deleteModal = reactive({ show: false, id: null, title: '', loading: false })
+const toast       = reactive({ show:false, type:'success', title:'', message:'' })
+const deleteModal = reactive({ show:false, id:null, title:'', loading:false })
 
-// ── Categories ──
+// ── Categorías ─────────────────────────────────────────────────────────────
 const categories = [
-  { value: 'ACADEMICO', label: 'Académico' },
-  { value: 'EVENTOS', label: 'Eventos' },
-  { value: 'AVISOS',    label: 'Avisos' },
-  { value: 'DEPORTES',  label: 'Deportes' },
-  { value: 'CULTURA',   label: 'Cultura' },
-  { value: 'OTRO',      label: 'Otro' }
+  { value:'ACADEMICO', label:'Académico' }, { value:'EVENTOS', label:'Eventos' },
+  { value:'AVISOS',    label:'Avisos'    }, { value:'DEPORTES', label:'Deportes' },
+  { value:'CULTURA',   label:'Cultura'   }, { value:'OTRO',     label:'Otro'     }
 ]
 
-// ── Helpers ──
-function getCategoryLabel(val) {
-  return categories.find(c => c.value === val)?.label || val || '—'
-}
+// ── Helpers ────────────────────────────────────────────────────────────────
+function getCategoryLabel(val)   { return categories.find(c=>c.value===val)?.label || val || '—' }
+function getCareerName(idStr)    { if(!idStr||idStr==='null') return 'General'; return availableCareers.value.find(c=>String(c.id)===idStr)?.name || `Carrera ${idStr}` }
+function getItemInitials(item)   { const name=item.authorName||(item._isOwn?authorName:'PU'); return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() }
+function excerpt(text)           { if(!text) return ''; const p=text.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').replace(/\n/g,' ').trim(); return p.length>120?p.substring(0,120)+'...':p }
+function formatDate(d)           { if(!d) return ''; return new Date(d).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) }
+function formatDateFull(d)       { return formatDate(d) }
+function formatDateRelative(d)   { if(!d) return ''; const diff=Date.now()-new Date(d).getTime(); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),dy=Math.floor(diff/86400000); if(m<1) return 'Ahora mismo'; if(m<60) return `Hace ${m} min`; if(h<24) return `Hace ${h}h`; if(dy<7) return `Hace ${dy} días`; return formatDate(d) }
+function needsTruncation(body)   { return body&&body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').length>350 }
+function renderBody(text)        { if(!text) return ''; return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^## (.+)$/gm,'<h3 class="body-h3">$1</h3>').replace(/^> (.+)$/gm,'<blockquote class="body-quote">$1</blockquote>').replace(/^- (.+)$/gm,'<li class="body-li">$1</li>').replace(/---/g,'<hr class="body-hr"/>').replace(/\n/g,'<br/>') }
+function clearAllFilters()       { search.value=''; categoryFilter.value=''; careerFilter.value=''; activeFilter.value='all' }
+function toggleMenu(id)          { openMenu.value=openMenu.value===id?null:id }
+function handleOutsideClick(e)   { if(!e.target.closest('.fb-menu-wrap')) openMenu.value=null }
 
-
-function getItemInitials(item) {
-  const name = item.authorName || (item._isOwn ? authorName : 'P')
-  return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
-}
-
-
-function getCareerName(idStr) {
-  if (idStr === 'null' || !idStr) return 'General'
-  const found = availableCareers.value.find(c => String(c.id) === idStr)
-  return found ? found.name : `Carrera ${idStr}`
-}
-
-function excerpt(text) {
-  if (!text) return ''
-  const plain = text.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g, '').replace(/\n/g, ' ').trim()
-  return plain.length > 120 ? plain.substring(0, 120) + '...' : plain
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function formatDateRelative(dateStr) {
-  if (!dateStr) return ''
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins  = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days  = Math.floor(diff / 86400000)
-  if (mins < 1)   return 'Ahora mismo'
-  if (mins < 60)  return `Hace ${mins} min`
-  if (hours < 24) return `Hace ${hours}h`
-  if (days < 7)   return `Hace ${days} días`
-  return new Date(dateStr).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function formatDateFull(dateStr) {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-// Body over 350 chars needs truncation
-function needsTruncation(body) {
-  return body && body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g, '').length > 350
-}
-
-function renderBody(text) {
-  if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^## (.+)$/gm, '<h3 class="body-h3">$1</h3>')
-    .replace(/^> (.+)$/gm, '<blockquote class="body-quote">$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li class="body-li">$1</li>')
-    .replace(/---/g, '<hr class="body-hr"/>')
-    .replace(/\n/g, '<br/>')
-}
-
-function clearAllFilters() {
-  search.value = ''
-  categoryFilter.value = ''
-  careerFilter.value = ''
-  activeFilter.value = 'all'
-}
-
-// ── Menu ──
-function toggleMenu(id) {
-  openMenu.value = openMenu.value === id ? null : id
-}
-function closeMenu() {
-  openMenu.value = null
-}
-
-// Close menu on outside click
-function handleOutsideClick(e) {
-  if (!e.target.closest('.fb-menu-wrap')) {
-    openMenu.value = null
-  }
-}
-
-// ── Filtered + sorted list ──
+// ── Filtrado y ordenado ────────────────────────────────────────────────────
 const filteredNews = computed(() => {
-  let list = [...news.value]
-
-  if (activeFilter.value === 'published') list = list.filter(n => n.published)
-  if (activeFilter.value === 'draft')     list = list.filter(n => !n.published)
-  if (categoryFilter.value)               list = list.filter(n => n.category === categoryFilter.value)
-
-  if (careerFilter.value === 'null') {
-    list = list.filter(n => !n.careerId)
-  } else if (careerFilter.value) {
-    list = list.filter(n => String(n.careerId) === careerFilter.value)
-  }
-
-  if (search.value.trim()) {
-    const q = search.value.toLowerCase()
-    list = list.filter(n => n.title?.toLowerCase().includes(q))
-  }
-
-  if (sortBy.value === 'newest') list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  if (sortBy.value === 'oldest') list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-  if (sortBy.value === 'title')  list.sort((a, b) => a.title?.localeCompare(b.title))
-
+  let list=[...news.value]
+  if(activeFilter.value==='published') list=list.filter(n=>n.published)
+  if(activeFilter.value==='draft')     list=list.filter(n=>!n.published)
+  if(categoryFilter.value)             list=list.filter(n=>n.category===categoryFilter.value)
+  if(careerFilter.value==='null')      list=list.filter(n=>!n.careerId)
+  else if(careerFilter.value)          list=list.filter(n=>String(n.careerId)===careerFilter.value)
+  if(search.value.trim())              { const q=search.value.toLowerCase(); list=list.filter(n=>n.title?.toLowerCase().includes(q)) }
+  if(sortBy.value==='newest') list.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
+  if(sortBy.value==='oldest') list.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
+  if(sortBy.value==='title')  list.sort((a,b)=>a.title?.localeCompare(b.title))
   return list
 })
 
-// ── Toast ──
-function showToast(type, title, message) {
-  toast.show = false
-  setTimeout(() => {
-    Object.assign(toast, { show: true, type, title, message })
-    setTimeout(() => { toast.show = false }, 4500)
-  }, 60)
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(type,title,message) {
+  toast.show=false
+  setTimeout(()=>{ Object.assign(toast,{show:true,type,title,message}); setTimeout(()=>{toast.show=false},4500) },60)
 }
 
-// ── Auth ──
+// ── Auth ───────────────────────────────────────────────────────────────────
 function getHeaders() {
-  const token = localStorage.getItem('ucb_token')
-  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  const token=localStorage.getItem('ucb_token')
+  return {'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})}
 }
 
-// ── Load ──
+// ── Cargar ─────────────────────────────────────────────────────────────────
 async function loadNews() {
-  loading.value = true
-  error.value = ''
+  loading.value=true; error.value=''
   try {
-    // Cargar todas las noticias publicadas + las propias (incluye borradores)
-    const [resAll, reMy] = await Promise.all([
-      fetch('http://localhost:8081/api/news', { headers: getHeaders(), mode: 'cors' }),
-      fetch('http://localhost:8081/api/news/my', { headers: getHeaders(), mode: 'cors' })
+    const [resAll,reMy]=await Promise.all([
+      fetch('http://localhost:8081/api/news',    {headers:getHeaders(),mode:'cors'}),
+      fetch('http://localhost:8081/api/news/my', {headers:getHeaders(),mode:'cors'})
     ])
-
-    const allNews  = resAll.ok  ? await resAll.json()  : []
-    const myNews   = reMy.ok    ? await reMy.json()    : []
-    const myIds = new Set(myNews.map(n => n.id))
-    const othersPublished = allNews.filter(n => !myIds.has(n.id))
-
-
-    console.log('Noticia ajena ejemplo:', allNews.find(n => !myNews.map(m=>m.id).includes(n.id))) // ← solo aquí
-    console.log('Noticia propia ejemplo:', myNews[0]) 
-
-
-    const merged = [
-      ...myNews.map(n => ({ ...n, _isOwn: true,  _saving: false, _expanded: false })),
-      ...othersPublished.map(n => ({ ...n, _isOwn: false, _saving: false, _expanded: false }))
+    const allNews=resAll.ok?await resAll.json():[]
+    const myNews =reMy.ok ?await reMy.json() :[]
+    const myIds  =new Set(myNews.map(n=>n.id))
+    const merged =[
+      ...myNews.map(n=>({...n,_isOwn:true, _saving:false,_expanded:false,_deleting:false})),
+      ...allNews.filter(n=>!myIds.has(n.id)).map(n=>({...n,_isOwn:false,_saving:false,_expanded:false,_deleting:false}))
     ]
-
-    const seen = new Set()
-    news.value = merged.filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true })
-
-
-  } catch (err) {
-    error.value = err.name === 'TypeError' ? 'No se pudo conectar con el servidor.' : err.message
-  } finally {
-    loading.value = false
-  }
+    const seen=new Set()
+    news.value=merged.filter(n=>{if(seen.has(n.id))return false;seen.add(n.id);return true})
+  } catch(err) { error.value=err.name==='TypeError'?'No se pudo conectar con el servidor.':err.message }
+  finally { loading.value=false }
 }
 
-// ── Toggle publish ──
+// ── Publicar/Despublicar ───────────────────────────────────────────────────
 async function togglePublish(item) {
-  item._saving = true
+  item._saving=true
   try {
-    const res = await fetch(`http://localhost:8081/api/news/${item.id}`, {
-      method: 'PUT', headers: getHeaders(), mode: 'cors',
-      body: JSON.stringify({ published: !item.published })
-    })
-    if (!res.ok) throw new Error()
-    item.published = (await res.json()).published
-    showToast('success', item.published ? 'Noticia publicada' : 'Noticia despublicada',
-      `"${item.title}" fue actualizada.`)
-  } catch {
-    showToast('error', 'Error', 'No se pudo actualizar el estado.')
-  } finally {
-    item._saving = false
-  }
+    const res=await fetch(`http://localhost:8081/api/news/${item.id}`,{method:'PUT',headers:getHeaders(),mode:'cors',body:JSON.stringify({published:!item.published})})
+    if(!res.ok) throw new Error()
+    item.published=(await res.json()).published
+    showToast('success',item.published?'Noticia publicada':'Noticia despublicada',`"${item.title}" fue actualizada.`)
+  } catch { showToast('error','Error','No se pudo actualizar el estado.') }
+  finally  { item._saving=false }
 }
 
-// ── Delete ──
 function askDelete(item) {
-  Object.assign(deleteModal, { show: true, id: item.id, title: item.title, loading: false })
+  Object.assign(deleteModal,{show:true,id:item.id,title:item.title,loading:false})
+}
+
+function cancelDelete() {
+  if(deleteModal.loading) return
+  deleteModal.show=false
 }
 
 async function confirmDelete() {
-  deleteModal.loading = true
+  deleteModal.loading=true
+  const target=news.value.find(n=>n.id===deleteModal.id)
+  if(target) target._deleting=true
+
   try {
-    const res = await fetch(`http://localhost:8081/api/news/${deleteModal.id}`, {
-      method: 'DELETE', headers: getHeaders(), mode: 'cors'
+    const res=await fetch(`http://localhost:8081/api/news/${deleteModal.id}`,{
+      method:'DELETE', headers:getHeaders(), mode:'cors'
     })
-    if (!res.ok) throw new Error()
-    const title = deleteModal.title
-    news.value = news.value.filter(n => n.id !== deleteModal.id)
-    deleteModal.show = false
-    showToast('success', 'Eliminada', `"${title}" fue eliminada correctamente.`)
-  } catch {
-    showToast('error', 'Error', 'No se pudo eliminar la noticia.')
-  } finally {
-    deleteModal.loading = false
-  }
+
+    if(res.status===403) throw new Error('No tienes permiso para eliminar esta noticia.')
+    if(res.status===404) throw new Error('La noticia ya no existe.')
+    if(!res.ok) { const b=await res.json().catch(()=>({})); throw new Error(b.message||`Error ${res.status}`) }
+
+    const deletedTitle=deleteModal.title
+
+    news.value=news.value.filter(n=>n.id!==deleteModal.id)
+    deleteModal.show=false
+
+    showToast('success','Noticia borrada exitosamente',`"${deletedTitle}" fue eliminada correctamente.`)
+
+  } catch(err) {
+    if(target) target._deleting=false
+    deleteModal.show=false
+    showToast('error','Error al eliminar',err.message)
+  } finally { deleteModal.loading=false }
 }
 
-onMounted(async () => {
-  document.addEventListener('click', handleOutsideClick)
+// ── Lifecycle ──────────────────────────────────────────────────────────────
+onMounted(async()=>{
+  document.addEventListener('click',handleOutsideClick)
   await loadNews()
-  try { availableCareers.value = await careerService.getAll() } catch {}
+  try { availableCareers.value=await careerService.getAll() } catch {}
 })
+onBeforeUnmount(()=>{ document.removeEventListener('click',handleOutsideClick) })
 </script>
 
 <style scoped>
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
