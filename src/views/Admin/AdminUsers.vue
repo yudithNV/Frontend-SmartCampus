@@ -25,14 +25,70 @@
       <button class="btn-primary" @click="showModal = true">+ Nuevo Usuario</button>
     </div>
 
-    <!-- Search Bar -->
-    <div class="search-bar">
-      <input
-        v-model="search"
-        type="text"
-        placeholder="Buscar por nombre, email o rol..."
-        class="search-input"
-      />
+    <!-- Search Bar + Filters -->
+    <div class="search-section">
+      <div class="search-bar">
+        <span class="search-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </span>
+        
+        <input
+          v-model="search"
+          @input="handleSearch"
+          type="text"
+          placeholder="Buscar por nombre o email..."
+          class="search-input"
+        />
+        <button
+          v-if="search"
+          @click="clearSearch"
+          class="clear-btn"
+          title="Limpiar búsqueda"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="filters-row">
+        <!-- Filtro Rol -->
+        <select
+          v-model="roleFilter"
+          @change="handleRoleChange"
+          class="filter-select"
+        >
+          <option value="">Todos los Roles</option>
+          <option value="ESTUDIANTE">Estudiante</option>
+          <option value="PUBLICADOR">Publicador</option>
+          <option value="ADMINISTRADOR">Administrador</option>
+        </select>
+
+        <!-- Filtro Estado -->
+        <select
+          v-model="statusFilter"
+          @change="handleStatusChange"
+          class="filter-select"
+        >
+          <option value="">Todos los Estados</option>
+          <option value="ACTIVO">Activo</option>
+          <option value="INACTIVO">Inactivo</option>
+        </select>
+
+        <!-- Indicador de filtros activos + Botón limpiar -->
+        <div class="filters-status">
+          <span v-if="hasActiveFilters" class="filter-badge">
+            {{ hasActiveFilters ? '⚡ Filtros activos' : '' }}
+          </span>
+          <button
+            v-if="hasActiveFilters"
+            @click="clearAllFilters"
+            class="btn-clear-filters"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Users Table -->
@@ -151,6 +207,9 @@ const loading = ref(false)
 const error = ref('')
 const modalRef = ref(null)
 const search = ref('')
+const roleFilter = ref('')
+const statusFilter = ref('')
+let searchTimeout
 
 // Paginación
 const currentPage = ref(0)
@@ -175,12 +234,18 @@ const showToast = (type, title, message) => {
   }
 }
 
-// Cargar usuarios desde el backend con paginación
+// Cargar usuarios desde el backend con paginación, búsqueda y filtros
 const loadUsers = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await adminUserService.getAll(currentPage.value, pageSize.value)
+    const response = await adminUserService.getAll(
+      currentPage.value,
+      pageSize.value,
+      search.value,
+      roleFilter.value,
+      statusFilter.value
+    )
     // Extraer datos de la respuesta paginada
     const { content, totalElements: total, totalPages: pages } = response
 
@@ -318,6 +383,50 @@ const handleCreateUser = async (formData) => {
   }
 }
 
+// Manejo de búsqueda con debounce
+const handleSearch = () => {
+  currentPage.value = 0
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    loadUsers()
+  }, 500)
+}
+
+// Limpiar búsqueda
+const clearSearch = () => {
+  search.value = ''
+  currentPage.value = 0
+  clearTimeout(searchTimeout)
+  loadUsers()
+}
+
+// Cambiar filtro de rol
+const handleRoleChange = () => {
+  currentPage.value = 0
+  loadUsers()
+}
+
+// Cambiar filtro de estado
+const handleStatusChange = () => {
+  currentPage.value = 0
+  loadUsers()
+}
+
+// Limpiar todos los filtros
+const clearAllFilters = () => {
+  search.value = ''
+  roleFilter.value = ''
+  statusFilter.value = ''
+  currentPage.value = 0
+  clearTimeout(searchTimeout)
+  loadUsers()
+}
+
+// Computado para saber si hay filtros activos
+const hasActiveFilters = computed(() => {
+  return search.value || roleFilter.value || statusFilter.value
+})
+
 // Cargar usuarios al montar el componente
 onMounted(() => {
   loadUsers()
@@ -367,24 +476,143 @@ onMounted(() => {
 }
 
 /* Search Bar */
-.search-bar {
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   margin-bottom: 2rem;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 2.5rem 0.75rem 2.75rem;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.95rem;
   background: #ffffff;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .search-input:focus {
   outline: none;
   border-color: #FFD200;
   box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: color 0.3s ease;
+  padding: 0.25rem 0.5rem;
+}
+
+.clear-btn:hover {
+  color: #1a3a52;
+}
+
+/* Filters Row */
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 0.65rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #ffffff;
+  color: #1a3a52;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  min-width: 160px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #FFD200;
+  box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
+}
+
+.filters-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.filter-badge {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.btn-clear-filters {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.btn-clear-filters:hover {
+  background: #fecaca;
+  transform: translateY(-2px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .filters-status {
+    width: 100%;
+    margin-left: 0;
+    flex-direction: column;
+  }
+
+  .filter-badge {
+    width: 100%;
+    text-align: center;
+  }
+
+  .btn-clear-filters {
+    width: 100%;
+  }
 }
 
 /* Table */
