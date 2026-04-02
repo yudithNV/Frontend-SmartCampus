@@ -30,7 +30,7 @@
               <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
             </svg>
           </div>
-          <h3 class="modal-title">¿Estás seguro de eliminar esta noticia?</h3>
+          <h3 class="modal-title">¿Estás seguro de que deseaseliminar esta noticia?</h3>
           <p class="modal-desc">Vas a eliminar permanentemente<br/><strong class="modal-news-title">"{{ deleteModal.title }}"</strong></p>
           <p class="modal-warning">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -460,8 +460,11 @@ function formatDateRelative(d)   { if(!d) return ''; const diff=Date.now()-new D
 function needsTruncation(body)   { return body&&body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').length>350 }
 function renderBody(text)        { if(!text) return ''; return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^## (.+)$/gm,'<h3 class="body-h3">$1</h3>').replace(/^> (.+)$/gm,'<blockquote class="body-quote">$1</blockquote>').replace(/^- (.+)$/gm,'<li class="body-li">$1</li>').replace(/---/g,'<hr class="body-hr"/>').replace(/\n/g,'<br/>') }
 function clearAllFilters()       { search.value=''; categoryFilter.value=''; careerFilter.value=''; activeFilter.value='all' }
-function toggleMenu(id)          { openMenu.value=openMenu.value===id?null:id }
-function handleOutsideClick(e)   { if(!e.target.closest('.fb-menu-wrap')) openMenu.value=null }
+function toggleMenu(id)  { openMenu.value = openMenu.value === id ? null : id }
+function closeMenu()     { openMenu.value = null }
+function handleOutsideClick(e) { if (!e.target.closest('.fb-menu-wrap')) openMenu.value = null 
+  else if (e.target.closest('a[href]'))   openMenu.value = null
+}
 
 // ── Filtrado y ordenado ────────────────────────────────────────────────────
 const filteredNews = computed(() => {
