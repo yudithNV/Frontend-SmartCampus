@@ -30,7 +30,7 @@
               <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
             </svg>
           </div>
-          <h3 class="modal-title">¿Estás seguro de que deseaseliminar esta noticia?</h3>
+          <h3 class="modal-title">¿Estás seguro de que deseas eliminar esta noticia?</h3>
           <p class="modal-desc">Vas a eliminar permanentemente<br/><strong class="modal-news-title">"{{ deleteModal.title }}"</strong></p>
           <p class="modal-warning">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -613,20 +613,117 @@ onBeforeUnmount(()=>{ document.removeEventListener('click',handleOutsideClick) }
 .toast-slide-enter-from, .toast-slide-leave-to { opacity: 0; transform: translateX(28px); }
 
 /* ── Modal ── */
-.modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(15,23,42,0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 1rem; }
-.modal-box { background: #fff; border-radius: 16px; padding: 2.2rem 2rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.18); animation: popIn 0.22s cubic-bezier(0.34,1.56,0.64,1); }
-@keyframes popIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
-.modal-icon-wrap { width: 56px; height: 56px; background: #fff1f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem; }
-.modal-box h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:#1e293b; margin-bottom:0.6rem; }
-.modal-box p { font-size:0.85rem; color:#64748b; line-height:1.65; margin-bottom:1.8rem; }
-.modal-actions { display:flex; gap:0.75rem; justify-content:center; }
-.btn-cancel-modal { padding:0.62rem 1.4rem; border:1.5px solid #e2e8f0; background:#fff; color:#64748b; border-radius:8px; font-size:0.83rem; font-weight:500; cursor:pointer; transition:all 0.18s; }
-.btn-cancel-modal:hover { background:#f8fafc; }
-.btn-confirm-delete { padding:0.62rem 1.4rem; background:#ef4444; color:#fff; border:none; border-radius:8px; font-size:0.83rem; font-weight:600; cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:0.5rem; }
-.btn-confirm-delete:hover:not(:disabled) { background:#dc2626; }
-.btn-confirm-delete:disabled { opacity:0.55; cursor:not-allowed; }
-.modal-fade-enter-active, .modal-fade-leave-active { transition:opacity 0.2s; }
-.modal-fade-enter-from, .modal-fade-leave-to { opacity:0; }
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15,23,42,0.6);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+
+.modal-box {
+  background: #fff; border-radius: 20px;
+  padding: 2.5rem 2rem 2rem;
+  max-width: 400px; width: 100%;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.22);
+  animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes popIn {
+  from { opacity:0; transform: scale(0.88) translateY(16px); }
+  to   { opacity:1; transform: scale(1)    translateY(0); }
+}
+
+/* Ícono del basurero con anillo animado */
+.modal-trash-wrap {
+  position: relative;
+  width: 72px; height: 72px;
+  margin: 0 auto 1.4rem;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.modal-trash-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff1f2, #fee2e2);
+  border: 2px solid #fecdd3;
+  animation: ringPulse 2s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.06); opacity: 0.8; }
+}
+
+.modal-trash-icon {
+  position: relative; z-index: 1;
+}
+
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.15rem; font-weight: 800;
+  color: #0f172a; margin-bottom: 0.6rem;
+  line-height: 1.35;
+}
+
+.modal-desc {
+  font-size: 0.85rem; color: #64748b;
+  line-height: 1.65; margin-bottom: 0.75rem !important;
+}
+
+.modal-news-title {
+  color: #1e293b; font-weight: 700;
+}
+
+.modal-warning {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.75rem; color: #dc2626; font-weight: 600;
+  background: #fff1f2; border: 1px solid #fecdd3;
+  padding: 5px 12px; border-radius: 20px;
+  margin-bottom: 1.8rem !important;
+}
+
+.modal-actions {
+  display: flex; gap: 0.75rem; justify-content: center;
+}
+
+.modal-btn-cancel {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc; color: #475569;
+  border-radius: 10px; font-size: 0.84rem;
+  font-weight: 600; cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Inter', sans-serif;
+}
+.modal-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9; border-color: #cbd5e1; color: #1e293b;
+}
+.modal-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.modal-btn-confirm {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff; border: none;
+  border-radius: 10px; font-size: 0.84rem;
+  font-weight: 600; cursor: pointer;
+  transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 14px rgba(239,68,68,0.35);
+}
+.modal-btn-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.45);
+}
+.modal-btn-confirm:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.22s; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
 /* ── Header ── */
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.6rem; padding-bottom:1.4rem; border-bottom:1px solid #f1f5f9; }
