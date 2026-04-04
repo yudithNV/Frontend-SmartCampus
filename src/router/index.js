@@ -19,6 +19,7 @@ import StudentDashboard from '../views/Student/StudentDashboard.vue'
 import StudentProfile from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints from '../views/Student/StudentComplaints.vue'
+import NewsFeed from '../views/Student/NewsFeed.vue'
 // import StudentCalendar from '../views/Student/StudentCalendar.vue'  // pendiente
 
 // Publicador
@@ -101,6 +102,11 @@ const routes = [
         path: 'historial',
         name: 'StudentHistory',
         component: { template: '<div class="placeholder"><h2>Historial</h2><p>Próximamente...</p></div>' }
+      },
+      {
+        path: 'noticias',
+        name: 'StudentNewsFeed',
+        component: NewsFeed
       }
     ]
   },
