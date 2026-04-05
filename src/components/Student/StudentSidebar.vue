@@ -1,8 +1,16 @@
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ collapsed }">
+    <!-- Botón Toggle -->
+    <button class="toggle-btn" @click="$emit('toggle')" :title="collapsed ? 'Expandir' : 'Contraer'">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6" v-if="!collapsed"/>
+        <polyline points="9 18 15 12 9 6" v-else/>
+      </svg>
+    </button>
+
     <!-- Modal de confirmación -->
-    <Teleport to="body"> 
-      
+    <Teleport to="body">
+
       <Transition name="modal-fade">
         <div v-if="showLogoutModal" class="logout-modal-overlay" @click.self="showLogoutModal = false">
           <div class="logout-modal-box">
@@ -28,19 +36,27 @@
           <path d="M6 12v5c3 3 9 3 12 0v-5"/>
         </svg>
       </div>
-      <span>UCB SmartCampus</span>
-      <small>Estudiante</small>
+      <transition name="text-fade">
+        <div v-if="!collapsed" class="logo-text">
+          <span>UCB SmartCampus</span>
+          <small>Estudiante</small>
+        </div>
+      </transition>
     </div>
 
     <nav class="sidebar-menu">
       <router-link to="/estudiante/eventos" class="menu-item" :class="{ active: $route.path.includes('eventos') }">
         <span class="icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
         </span>
-        <span>Muro de Eventos</span>
+        <transition name="text-fade">
+          <span v-if="!collapsed">Muro de Eventos</span>
+        </transition>
       </router-link>
 
       <router-link to="/estudiante/noticias" class="menu-item"
@@ -52,49 +68,62 @@
             <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
           </svg>
         </span>
-        <span>Muro de Noticias</span>
+        <transition name="text-fade">
+          <span v-if="!collapsed">Muro de Noticias</span>
+        </transition>
       </router-link>
 
       <router-link to="/estudiante/perfil" class="menu-item" :class="{ active: $route.path.includes('perfil') }">
         <span class="icon">
-          <!-- User -->
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
         </span>
-        <span>Mi Perfil</span>
+        <transition name="text-fade">
+          <span v-if="!collapsed">Mi Perfil</span>
+        </transition>
       </router-link>
 
       <router-link to="/estudiante/sugerencias" class="menu-item" :class="{ active: $route.path.includes('sugerencias') }">
         <span class="icon">
-          <!-- Lightbulb -->
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 18h6M10 22h4M12 2a7 7 0 017 7c0 2.5-1.5 4.5-3 6H8c-1.5-1.5-3-3.5-3-6a7 7 0 017-7z"/>
           </svg>
         </span>
-        <span>Sugerencias</span>
+        <transition name="text-fade">
+          <span v-if="!collapsed">Sugerencias</span>
+        </transition>
       </router-link>
 
       <router-link to="/estudiante/reclamos" class="menu-item" :class="{ active: $route.path.includes('reclamos') }">
         <span class="icon">
-          <!-- Message Warning -->
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         </span>
-        <span>Reclamos</span>
+        <transition name="text-fade">
+          <span v-if="!collapsed">Reclamos</span>
+        </transition>
       </router-link>
     </nav>
 
     <div class="user-profile">
       <div class="profile-avatar">{{ userInitial }}</div>
-      <div class="profile-info">
-        <span class="profile-name">{{ userName }}</span>
-        <small>{{ userEmail }}</small>
-      </div>
-      <button class="logout" @click="showLogoutModal = true">Cerrar Sesión</button>
+      <transition name="text-fade">
+        <div v-if="!collapsed" class="profile-info">
+          <span class="profile-name">{{ userName }}</span>
+          <small>{{ userEmail }}</small>
+          <button class="logout" @click="showLogoutModal = true">Cerrar Sesión</button>
+        </div>
+      </transition>
+      <button v-if="collapsed" class="logout logout-collapsed" @click="showLogoutModal = true" title="Cerrar Sesión">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18.36 6.64a9 9 0 11-12.73 0"/>
+          <polyline points="12 3 12 12 16 8"/>
+        </svg>
+      </button>
     </div>
   </aside>
 </template>
@@ -103,6 +132,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { userService } from '../../services/api.js'
+
+defineProps({
+  collapsed: {
+    type: Boolean,
+    default: false
+  }
+})
+
+defineEmits(['toggle'])
 
 const router = useRouter()
 const userName = ref('Estudiante')
@@ -156,18 +194,47 @@ onMounted(() => {
   width: 280px;
   background: #1a3a52;
   color: #ffffff;
-  padding: 2rem 0;
+  padding: 1rem 0;
   display: flex;
   flex-direction: column;
   position: fixed;
   height: 100vh;
   overflow-y: auto;
+  transition: width 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.toggle-btn {
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  color: #FFD200;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 210, 0, 0.1);
 }
 
 .logo-admin {
   padding: 0 1.5rem;
   margin-bottom: 2rem;
   text-align: center;
+  transition: padding 0.3s ease;
+}
+
+.sidebar.collapsed .logo-admin {
+  padding: 0;
 }
 
 .logo-icon {
@@ -176,13 +243,13 @@ onMounted(() => {
   margin-bottom: 0.5rem;
 }
 
-.logo-admin span {
+.logo-text span {
   font-size: 1.1rem;
   font-weight: 700;
   display: block;
 }
 
-.logo-admin small {
+.logo-text small {
   font-size: 0.75rem;
   opacity: 0.8;
   display: block;
@@ -195,17 +262,27 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  transition: padding 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-menu {
+  padding: 0 0.5rem;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 1rem;
+  padding: 1rem;
   color: #cbd5e1;
   text-decoration: none;
   border-radius: 8px;
   transition: all 0.3s ease;
+  justify-content: center;
+}
+
+.sidebar:not(.collapsed) .menu-item {
+  justify-content: flex-start;
 }
 
 .menu-item:hover {
@@ -221,12 +298,26 @@ onMounted(() => {
 
 .menu-item .icon {
   font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.menu-item span:not(.icon) {
+  white-space: nowrap;
 }
 
 .user-profile {
   padding: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: padding 0.3s ease;
+}
+
+.sidebar.collapsed .user-profile {
+  padding: 1rem 0.5rem;
 }
 
 .profile-avatar {
@@ -240,7 +331,12 @@ onMounted(() => {
   justify-content: center;
   font-weight: 700;
   font-size: 1.2rem;
-  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  width: 100%;
+  text-align: center;
 }
 
 .profile-info span {
@@ -256,27 +352,47 @@ onMounted(() => {
 .profile-info small {
   font-size: 0.8rem;
   opacity: 0.7;
+  display: block;
+  margin-bottom: 1rem;
 }
 
 .logout {
   display: block;
-  margin-top: 1rem;
   padding: 0.6rem 1rem;
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  text-decoration: none;
   font-size: 0.9rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
+  width: 100%;
 }
 
 .logout:hover {
   background: #FFD200;
   color: #1a3a52;
   border-color: #FFD200;
+}
+
+.logout-collapsed {
+  width: auto;
+  padding: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Transiciones */
+.text-fade-enter-active,
+.text-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.text-fade-enter-from,
+.text-fade-leave-to {
+  opacity: 0;
 }
 
 /* Logout Modal */
@@ -390,9 +506,21 @@ onMounted(() => {
     position: relative;
   }
 
+  .sidebar.collapsed {
+    width: 100%;
+  }
+
+  .toggle-btn {
+    display: none;
+  }
+
   .sidebar-menu {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .menu-item {
+    justify-content: center;
   }
 }
 </style>
