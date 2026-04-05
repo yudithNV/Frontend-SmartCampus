@@ -1,21 +1,25 @@
 <template>
   <aside class="sidebar">
     <!-- Modal de confirmación -->
-    <Transition name="modal-fade">
-      <div v-if="showLogoutModal" class="logout-modal-overlay" @click.self="showLogoutModal = false">
-        <div class="logout-modal-box">
-          <h3>¿Cerrar sesión?</h3>
-          <p>¿Estás seguro de que deseas cerrar tu sesión?</p>
-          <div class="modal-actions">
-            <button class="btn-cancel" @click="showLogoutModal = false">Cancelar</button>
-            <button class="btn-logout" @click="confirmLogout" :disabled="loggingOut">
-              <span v-if="!loggingOut">Cerrar Sesión</span>
-              <span v-else>Cerrando...</span>
-            </button>
+    <Teleport to="body"> 
+      
+      <Transition name="modal-fade">
+        <div v-if="showLogoutModal" class="logout-modal-overlay" @click.self="showLogoutModal = false">
+          <div class="logout-modal-box">
+            <h3>¿Cerrar sesión?</h3>
+            <p>¿Estás seguro de que deseas cerrar tu sesión?</p>
+            <div class="modal-actions">
+              <button class="btn-cancel" @click="showLogoutModal = false">Cancelar</button>
+              <button class="btn-logout" @click="confirmLogout" :disabled="loggingOut">
+                <span v-if="!loggingOut">Cerrar Sesión</span>
+                <span v-else>Cerrando...</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+
+    </Teleport>
 
     <div class="logo-admin">
       <div class="logo-icon">
@@ -280,7 +284,7 @@ onMounted(() => {
 .logout-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 2147483647;
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(3px);
   display: flex;
@@ -297,6 +301,8 @@ onMounted(() => {
   text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   animation: modalPopIn 0.3s ease;
+  position: relative;
+  z-index: 2147483647;
 }
 
 @keyframes modalPopIn {

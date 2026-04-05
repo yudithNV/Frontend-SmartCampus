@@ -249,8 +249,18 @@ async function handleLogin () {
     if (data.mustChangePassword) {
       localStorage.setItem('must_change_password', '1')
     }
-    // ── SIEMPRE redirige al dashboard ──
-    router.push(data.redirectUrl)
+    
+    // ── LÓGICA DE REDIRECCIÓN CORREGIDA ──
+    // Interceptamos la URL del backend antes de hacer el push
+    let finalUrl = data.redirectUrl;
+
+    if (data.role === 'ESTUDIANTE') {
+      finalUrl = '/estudiante/eventos';
+    }
+
+    // Ahora sí, redirigimos a la ruta que nosotros decidimos
+    router.push(finalUrl);
+    
   } catch (err) {
     globalError.value = err.name === 'TypeError'
       ? 'No se pudo conectar con el servidor. Verifica que el backend esté activo.'

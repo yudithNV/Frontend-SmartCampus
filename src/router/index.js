@@ -15,7 +15,7 @@ import AdminSettings from '../views/Admin/AdminSettings.vue'
 
 // Estudiante
 import StudentLayout from '../views/Student/StudentLayout.vue'
-import StudentDashboard from '../views/Student/StudentDashboard.vue'
+import StudentEvents from '../views/Student/StudentEvents.vue'
 import StudentProfile from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints from '../views/Student/StudentComplaints.vue'
@@ -65,12 +65,12 @@ const routes = [
   {
     path: '/estudiante',
     component: StudentLayout,
-    redirect: '/estudiante/dashboard',
+    redirect: '/estudiante/eventos',
     children: [
       {
-        path: 'dashboard',
-        name: 'StudentDashboard',
-        component: StudentDashboard
+        path: 'eventos',
+        name: 'StudentEvents',
+        component: StudentEvents
       },
       {
         path: 'perfil',
