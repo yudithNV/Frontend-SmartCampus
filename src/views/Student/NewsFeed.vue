@@ -17,6 +17,67 @@
       </div>
     </div>
 
+    <!----- FILTROS----->
+    <div class="filters-bar">
+
+      <!-- Buscador -->
+      <div class="filter-search">
+        <svg class="filter-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          v-model="searchInput"
+          @input="onSearchInput"
+          type="text"
+          placeholder="Buscar noticias..."
+          class="filter-search__input"
+        />
+        <button v-if="searchInput" @click="clearSearch" class="filter-clear-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Fila de selects -->
+      <div class="filter-row">
+
+        <!-- Carrera -->
+        <select v-model="selectedCareer" @change="applyFilters" class="filter-select">
+          <option value="">Todas las carreras</option>
+          <option v-for="c in careers" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+
+        <!-- Categoría -->
+        <select v-model="selectedCategory" @change="applyFilters" class="filter-select">
+          <option value="">Todas las categorías</option>
+          <option v-for="c in CATEGORIES" :key="c.value" :value="c.value">{{ c.label }}</option>
+        </select>
+
+        <!-- Ordenamiento -->
+        <select v-model="sortType" @change="applyFilters" class="filter-select filter-select--sort">
+          <option value="DESC">Más recientes</option>
+          <option value="ASC">Más antiguas</option>
+        </select>
+
+        <!-- Botón limpiar -->
+        <button v-if="hasActiveFilters" @click="clearAllFilters" class="filter-reset-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+          </svg>
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Resultado count -->
+      <div v-if="!loading" class="filter-result-info">
+        <span v-if="totalElements > 0">
+          {{ totalElements }} noticia{{ totalElements !== 1 ? 's' : '' }} encontrada{{ totalElements !== 1 ? 's' : '' }}
+        </span>
+        <span v-else class="filter-result-info--empty">Sin resultados para los filtros aplicados</span>
+      </div>
+    </div>
+
     <!-- ── LOADING SKELETONS ──────────────────────────────────────── -->
     <div v-if="loading" class="feed-list">
       <div v-for="n in 4" :key="n" class="news-card news-card--skeleton">
@@ -44,8 +105,9 @@
           <line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="12" y2="14"/>
         </svg>
       </div>
-      <h3>No hay noticias publicadas</h3>
-      <p>Vuelve pronto para encontrar novedades del campus.</p>
+      <h3>{{ hasActiveFilters ? 'Sin resultados' : 'No hay noticias publicadas' }}</h3>
+      <p>{{ hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Vuelve pronto para encontrar novedades del campus.' }}</p>
+      <button v-if="hasActiveFilters" @click="clearAllFilters" class="empty-clear-btn">Limpiar filtros</button>
     </div>
 
     <!-- ── FEED LIST ──────────────────────────────────────────────── -->
@@ -68,10 +130,17 @@
                 {{ item.authorName }}
               </span>
 
-              <!-- time -->
-              <span class="news-date">
-                {{ formatDateTime(item.createdAt) }}
-              </span>
+              <div class="meta-row">
+                <span class="news-date">
+                  {{ formatDateTime(item.createdAt) }}
+                </span>
+                <span
+                  v-if="item.category"
+                  class="cat-pill"
+                  :style="{ background: getCategoryColor(item.category) }"
+                >{{ getCategoryLabel(item.category) }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -99,11 +168,57 @@
           <!-- archivo -->
           <div v-if="item.attachmentUrl" class="news-card__footer">
             <a :href="item.attachmentUrl" target="_blank" class="attachment-link">
-              📎 Ver archivo adjunto
+               Ver archivo adjunto
             </a>
           </div>
 
         </article>
+    </div>
+
+
+    <!----- PAGINACIÓN  -->
+    <div v-if="totalPages > 1 && !loading" class="pagination">
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === 0"
+        @click="goToPage(0)"
+        title="Primera página"
+      >«</button>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === 0"
+        @click="goToPage(currentPage - 1)"
+        title="Página anterior"
+      >‹</button>
+
+      <template v-for="p in visiblePages" :key="p">
+        <span v-if="p === '...'" class="pagination__ellipsis">…</span>
+        <button
+          v-else
+          class="pagination__btn"
+          :class="{ 'pagination__btn--active': p === currentPage }"
+          @click="goToPage(p)"
+        >{{ p + 1 }}</button>
+      </template>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === totalPages - 1"
+        @click="goToPage(currentPage + 1)"
+        title="Página siguiente"
+      >›</button>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === totalPages - 1"
+        @click="goToPage(totalPages - 1)"
+        title="Última página"
+      >»</button>
+
+      <span class="pagination__info">
+        Página {{ currentPage + 1 }} de {{ totalPages }}
+      </span>
     </div>
 
     <!-- ── error ─── -->
@@ -119,8 +234,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { newsService } from '../../services/api.js'
+import { ref, computed, onMounted } from 'vue'
+import { newsService, careerService } from '../../services/api.js'
 
 // ─── Constantes ───
 const CATEGORIES = [
@@ -135,16 +250,109 @@ const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map(c => [c.value, c]))
 
 // ─── Estado ─────────
 const allNews  = ref([])
+const careers  = ref([])
 const loading  = ref(true)
 const errorMsg = ref('')
+
+// ─── Filtros 
+const searchInput      = ref('')
+const selectedCareer   = ref('')
+const selectedCategory = ref('')
+const sortType         = ref('DESC')
+const sortBy           = ref('created_at')
+
+// ─── Paginación ──
+const currentPage   = ref(0)
+const pageSize      = ref(6)
+const totalPages    = ref(0)
+const totalElements = ref(0)
+
+// ─── Debounce para el buscador ───────────────────────────────────────────────
+let searchTimer = null
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    currentPage.value = 0
+    fetchNews()
+  }, 450)
+}
+
+function clearSearch() {
+  searchInput.value = ''
+  currentPage.value = 0
+  fetchNews()
+}
+
+// ─── Filtros activos ─────────────────────────────────────────────────────────
+const hasActiveFilters = computed(() =>
+  searchInput.value.trim() !== '' ||
+  selectedCareer.value !== '' ||
+  selectedCategory.value !== '' ||
+  sortType.value !== 'DESC'
+)
+
+function applyFilters() {
+  currentPage.value = 0
+  fetchNews()
+}
+
+function clearAllFilters() {
+  searchInput.value    = ''
+  selectedCareer.value = ''
+  selectedCategory.value = ''
+  sortType.value       = 'DESC'
+  currentPage.value    = 0
+  fetchNews()
+}
+
+// ─── Paginación ──────────────────────────────────────────────────────────────
+function goToPage(page) {
+  if (page < 0 || page >= totalPages.value) return
+  currentPage.value = page
+  fetchNews()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// Páginas visibles con elipsis
+const visiblePages = computed(() => {
+  const total  = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i)
+
+  const pages = []
+  if (current <= 3) {
+    pages.push(0, 1, 2, 3, 4, '...', total - 1)
+  } else if (current >= total - 4) {
+    pages.push(0, '...', total - 5, total - 4, total - 3, total - 2, total - 1)
+  } else {
+    pages.push(0, '...', current - 1, current, current + 1, '...', total - 1)
+  }
+  return pages
+})
 
 // ─── Carga de datos ──
 async function fetchNews() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const data = await newsService.getAll()
-    allNews.value = Array.isArray(data) ? data : (data.data ?? [])
+    const params = new URLSearchParams({
+      page:     currentPage.value,
+      size:     pageSize.value,
+      sortBy:   sortBy.value,
+      sortType: sortType.value,
+    })
+
+    if (searchInput.value.trim())  params.append('search',   searchInput.value.trim())
+    if (selectedCareer.value)      params.append('careerId',  selectedCareer.value)
+    if (selectedCategory.value)    params.append('category',  selectedCategory.value)
+
+    const data = await newsService.getRecent(params.toString())
+
+    // Spring Page response: { content, totalPages, totalElements, ... }
+    allNews.value      = data.content      ?? []
+    totalPages.value   = data.totalPages   ?? 0
+    totalElements.value = data.totalElements ?? 0
+
   } catch (err) {
     errorMsg.value = 'No se pudieron cargar las noticias. Verifica la conexión.'
     console.error('[NewsFeed] fetchNews:', err)
@@ -153,32 +361,24 @@ async function fetchNews() {
     loading.value = false
   }
 }
-// ─── Formateo de fecha ──
+
+// ─── Carga de carreras para el filtro ──────
+async function fetchCareers() {
+  try {
+    const data = await careerService.getAll()
+    careers.value = Array.isArray(data) ? data : (data.data ?? [])
+  } catch (err) {
+    console.warn('[NewsFeed] No se pudieron cargar carreras:', err)
+  }
+}
+
+// ─── Helpers ───────────────────
 function formatDateTime(date) {
   if (!date) return ''
-
-  const d = new Date(date)
-
-  return d.toLocaleString('es-BO', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  return new Date(date).toLocaleString('es-BO', {
+    weekday: 'short', day: 'numeric', month: 'long',
+    year: 'numeric', hour: '2-digit', minute: '2-digit'
   })
-}
-// ─── Helpers ───────────────────
-function formatDate(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = Math.floor((now - d) / 1000)
-  if (diff < 60)     return 'Hace un momento'
-  if (diff < 3600)   return `Hace ${Math.floor(diff / 60)} min`
-  if (diff < 86400)  return `Hace ${Math.floor(diff / 3600)} h`
-  if (diff < 604800) return `Hace ${Math.floor(diff / 86400)} días`
-  return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 function getInitials(name) {
@@ -189,7 +389,11 @@ function getInitials(name) {
 function getCategoryLabel(val) { return CATEGORY_MAP[val]?.label ?? val }
 function getCategoryColor(val) { return CATEGORY_MAP[val]?.color ?? '#64748b' }
 
-onMounted(fetchNews)
+
+onMounted(() => {
+  fetchCareers()
+  fetchNews()
+})
 </script>
 
 <style scoped>
@@ -259,6 +463,121 @@ onMounted(fetchNews)
   color: var(--slate);
   margin: 0;
 }
+
+/* ── Filtros ──── */
+.filters-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: sticky;
+  top: 77px;
+  z-index: 9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-search__icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.filter-search__input {
+  width: 100%;
+  padding: 0.6rem 2.5rem 0.6rem 2.4rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: #f8fafc;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.filter-search__input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26,58,82,0.08);
+  background: #fff;
+}
+
+.filter-clear-btn {
+  position: absolute;
+  right: 0.65rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.filter-clear-btn:hover { color: var(--ink); }
+
+.filter-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: #f8fafc;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  flex: 1;
+  min-width: 130px;
+}
+
+.filter-select:focus { border-color: var(--navy); }
+.filter-select--sort { max-width: 150px; }
+
+.filter-reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 1.5px solid #fecdd3;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.filter-reset-btn:hover { background: #ffe4e6; }
+
+.filter-result-info {
+  font-size: 0.78rem;
+  color: var(--slate);
+  padding: 0 0.1rem;
+}
+
+.filter-result-info--empty { color: #d97706; font-weight: 600; }
 
 /* ── Feed list ──────── */
 .feed-list {
@@ -505,6 +824,83 @@ onMounted(fetchNews)
   line-height: 1.6;
 }
 
+
+.empty-clear-btn {
+  padding: 0.6rem 1.4rem;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.empty-clear-btn:hover { background: #2e6a8a; }
+
+
+/* ── Paginación ─────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 2rem auto 0;
+  flex-wrap: wrap;
+  padding: 0 1rem;
+}
+
+.pagination__btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.5rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination__btn:hover:not(:disabled):not(.pagination__btn--active) {
+  background: #f0f6ff;
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.pagination__btn--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.pagination__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pagination__ellipsis {
+  font-size: 1rem;
+  color: var(--muted);
+  padding: 0 0.2rem;
+}
+
+.pagination__info {
+  font-size: 0.78rem;
+  color: var(--slate);
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+
 /* ── Toast ────────── */
 .error-toast {
   position: fixed;
@@ -536,5 +932,7 @@ onMounted(fetchNews)
 @media (max-width: 720px) {
   .feed-list { padding: 0 0; }
   .news-card { border-radius: 0; border-left: none; border-right: none; }
+  .filter-select--sort { max-width: 100%; }
+  .filters-bar { top: 65px; }
 }
 </style>

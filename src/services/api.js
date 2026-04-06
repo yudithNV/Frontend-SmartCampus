@@ -98,7 +98,13 @@ export const newsService = {
     apiRequest(`/news/${id}`, 'PUT', data),
 
   delete: (id) =>
-    apiRequest(`/news/${id}`, 'DELETE')
+    apiRequest(`/news/${id}`, 'DELETE'),
+
+   getMy: () =>
+    apiRequest('/news/my', 'GET'),
+
+  getRecent: (queryString) =>
+    apiRequest(`/news/recent?${queryString}`, 'GET'),
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
