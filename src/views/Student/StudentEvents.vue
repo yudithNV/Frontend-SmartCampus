@@ -17,14 +17,73 @@
       </div>
     </div>
 
+    <!----- FILTROS ----->
+    <div class="filters-bar">
+      <!-- Buscador -->
+      <div class="filter-search">
+        <svg class="filter-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          v-model="searchInput"
+          @input="onSearchInput"
+          type="text"
+          placeholder="Buscar eventos..."
+          class="filter-search__input"
+        />
+        <button v-if="searchInput" @click="clearSearch" class="filter-clear-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Fila de selects -->
+      <div class="filter-row">
+        <!-- Carrera -->
+        <select v-model="selectedCareer" @change="applyFilters" class="filter-select">
+          <option value="">Todas las carreras</option>
+          <option v-for="c in careers" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+
+        <!-- Tipo de Evento -->
+        <select v-model="selectedEventType" @change="applyFilters" class="filter-select">
+          <option value="">Todos los tipos</option>
+          <option v-for="type in eventTypes" :key="type" :value="type">{{ type }}</option>
+        </select>
+
+        <!-- Ordenamiento -->
+        <select v-model="sortType" @change="applyFilters" class="filter-select filter-select--sort">
+          <option value="DESC">Más recientes</option>
+          <option value="ASC">Más antiguas</option>
+        </select>
+
+        <!-- Botón limpiar -->
+        <button v-if="hasActiveFilters" @click="clearAllFilters" class="filter-reset-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+          </svg>
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Resultado count -->
+      <div v-if="!loading" class="filter-result-info">
+        <span v-if="filteredEventos.length > 0">
+          {{ filteredEventos.length }} evento{{ filteredEventos.length !== 1 ? 's' : '' }} encontrado{{ filteredEventos.length !== 1 ? 's' : '' }}
+        </span>
+        <span v-else class="filter-result-info--empty">Sin resultados para los filtros aplicados</span>
+      </div>
+    </div>
+
     <!-- ── EMPTY STATE ────────────────────────────────────────────── -->
     <div v-if="loading" class="feed-list">
       <div v-for="i in 3" :key="i" class="event-card skeleton-blink" style="height: 200px; background: #edeff2; border: none;"></div>
     </div>
 
-    <div v-else-if="eventos.length > 0" class="feed-list">
+    <div v-else-if="filteredEventos.length > 0" class="feed-list">
       <article
-        v-for="(evento, i) in eventos"
+        v-for="(evento, i) in filteredEventos"
         :key="evento.id"
         class="event-card"
         :style="{ '--delay': i * 0.08 + 's' }"
@@ -66,27 +125,118 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 
 const router = useRouter()
 const eventos = ref([])
-const loading = ref(true) // <--- AÑADE ESTA LÍNEA1.
+const careers = ref([])
+const loading = ref(true)
+
+// ─── Filtros ───
+const searchInput = ref('')
+const selectedCareer = ref('')
+const selectedEventType = ref('')
+const sortType = ref('DESC')
+
+// Tipos de eventos únicos (se pueden actualizar con datos del backend)
+const eventTypes = computed(() => {
+  const types = [...new Set(eventos.value.map(e => e.eventType))].filter(Boolean)
+  return types
+})
+
+// ─── Debounce para el buscador ───
+let searchTimer = null
+function onSearchInput() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    // El filtrado es reactivo, no necesitamos hacer nada más
+  }, 450)
+}
+
+function clearSearch() {
+  searchInput.value = ''
+}
+
+// ─── Filtros activos ───
+const hasActiveFilters = computed(() =>
+  searchInput.value.trim() !== '' ||
+  selectedCareer.value !== '' ||
+  selectedEventType.value !== '' ||
+  sortType.value !== 'DESC'
+)
+
+function applyFilters() {
+  // Los filtros se aplican automáticamente a través de computed
+}
+
+function clearAllFilters() {
+  searchInput.value = ''
+  selectedCareer.value = ''
+  selectedEventType.value = ''
+  sortType.value = 'DESC'
+}
+
+// ─── Eventos filtrados ───
+const filteredEventos = computed(() => {
+  let result = [...eventos.value]
+
+  // Filtrar por búsqueda
+  if (searchInput.value.trim()) {
+    const search = searchInput.value.toLowerCase()
+    result = result.filter(e => 
+      e.name?.toLowerCase().includes(search) ||
+      e.description?.toLowerCase().includes(search) ||
+      e.authorName?.toLowerCase().includes(search)
+    )
+  }
+
+  // Filtrar por carrera (cuando se implemente en el backend)
+  if (selectedCareer.value) {
+    // TODO: Implementar cuando el backend tenga el campo careerId
+    // result = result.filter(e => e.careerId === selectedCareer.value)
+  }
+
+  // Filtrar por tipo de evento
+  if (selectedEventType.value) {
+    result = result.filter(e => e.eventType === selectedEventType.value)
+  }
+
+  // Ordenar
+  result.sort((a, b) => {
+    const dateA = new Date(a.createdAt)
+    const dateB = new Date(b.createdAt)
+    return sortType.value === 'DESC' ? dateB - dateA : dateA - dateB
+  })
+
+  return result
+})
 
 // PA: Los eventos deben mostrarse en orden descendente (lo más reciente primero)
 // Nota: El orden DESC debe venir preferiblemente desde el Backend en la consulta SQL
 const fetchEventos = async () => {
-  loading.value = true // <--- AÑADE ESTA LÍNEA2.
+  loading.value = true
   try {
     const response = await fetch('http://localhost:8081/api/events')
     const result = await response.json()
     // El endpoint devuelve { success, message, data: [...] }
-    eventos.value = result.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    eventos.value = result.data || []
   } catch (error) {
     console.error("Error al cargar eventos:", error)
   } finally {
-    loading.value = false // <--- AÑADE ESTA LÍNEA3.
+    loading.value = false
+  }
+}
+
+// Cargar carreras para el filtro
+const fetchCareers = async () => {
+  try {
+    const response = await fetch('http://localhost:8081/api/careers')
+    const result = await response.json()
+    careers.value = Array.isArray(result) ? result : (result.data || [])
+  } catch (error) {
+    console.warn("Error al cargar carreras:", error)
   }
 }
 
@@ -120,7 +270,10 @@ const getInitials = (name) => {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
-onMounted(fetchEventos)
+onMounted(() => {
+  fetchCareers()
+  fetchEventos()
+})
 </script>
 
 <style scoped>
@@ -190,6 +343,121 @@ onMounted(fetchEventos)
   color: var(--slate);
   margin: 0;
 }
+
+/* ── Filtros ──── */
+.filters-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  position: sticky;
+  top: 77px;
+  z-index: 9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filter-search__icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.filter-search__input {
+  width: 100%;
+  padding: 0.6rem 2.5rem 0.6rem 2.4rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: #f8fafc;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.filter-search__input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26,58,82,0.08);
+  background: #fff;
+}
+
+.filter-clear-btn {
+  position: absolute;
+  right: 0.65rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.filter-clear-btn:hover { color: var(--ink); }
+
+.filter-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: #f8fafc;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  flex: 1;
+  min-width: 130px;
+}
+
+.filter-select:focus { border-color: var(--navy); }
+.filter-select--sort { max-width: 150px; }
+
+.filter-reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 1.5px solid #fecdd3;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.filter-reset-btn:hover { background: #ffe4e6; }
+
+.filter-result-info {
+  font-size: 0.78rem;
+  color: var(--slate);
+  padding: 0 0.1rem;
+}
+
+.filter-result-info--empty { color: #d97706; font-weight: 600; }
 
 /* ── Feed list ──────── */
 .feed-list {
@@ -378,5 +646,25 @@ onMounted(fetchEventos)
 @media (max-width: 720px) {
   .feed-list { padding: 0; }
   .event-card { border-radius: 0; border-left: none; border-right: none; }
+  
+  .filters-bar {
+    top: 0;
+    padding: 0.75rem 1rem;
+  }
+  
+  .filter-row {
+    flex-direction: column;
+  }
+  
+  .filter-select {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+  
+  .filter-reset-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
