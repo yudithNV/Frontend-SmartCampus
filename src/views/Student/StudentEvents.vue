@@ -46,10 +46,10 @@
           <option v-for="c in careers" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
 
-        <!-- Tipo de Evento -->
-        <select v-model="selectedEventType" @change="applyFilters" class="filter-select">
-          <option value="">Todos los tipos</option>
-          <option v-for="type in eventTypes" :key="type" :value="type">{{ type }}</option>
+        <!-- Categoría -->
+        <select v-model="selectedCategory" @change="applyFilters" class="filter-select">
+          <option value="">Todas las categorías</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
         </select>
 
         <!-- Ordenamiento -->
@@ -69,21 +69,22 @@
 
       <!-- Resultado count -->
       <div v-if="!loading" class="filter-result-info">
-        <span v-if="filteredEventos.length > 0">
-          {{ filteredEventos.length }} evento{{ filteredEventos.length !== 1 ? 's' : '' }} encontrado{{ filteredEventos.length !== 1 ? 's' : '' }}
+        <span v-if="totalElements > 0">
+          {{ totalElements }} evento{{ totalElements !== 1 ? 's' : '' }} encontrado{{ totalElements !== 1 ? 's' : '' }}
         </span>
         <span v-else class="filter-result-info--empty">Sin resultados para los filtros aplicados</span>
       </div>
     </div>
 
-    <!-- ── EMPTY STATE ────────────────────────────────────────────── -->
+    <!-- ── LOADING SKELETONS ──────────────────────────────────────── -->
     <div v-if="loading" class="feed-list">
       <div v-for="i in 3" :key="i" class="event-card skeleton-blink" style="height: 200px; background: #edeff2; border: none;"></div>
     </div>
 
-    <div v-else-if="filteredEventos.length > 0" class="feed-list">
+    <!-- ── FEED LIST ───────────────────────────────────────────────── -->
+    <div v-else-if="eventos.length > 0" class="feed-list">
       <article
-        v-for="(evento, i) in filteredEventos"
+        v-for="(evento, i) in eventos"
         :key="evento.id"
         class="event-card"
         :style="{ '--delay': i * 0.08 + 's' }"
@@ -93,7 +94,14 @@
           <div class="author-avatar">{{ getInitials(evento.authorName) }}</div>
           <div class="author-meta">
             <span class="author-name">{{ evento.authorName }}</span>
-            <span class="event-date">{{ formatDateTime(evento.createdAt) }}</span>
+            <div class="meta-row">
+              <span class="event-date">{{ formatDateTime(evento.createdAt) }}</span>
+              <span
+                v-if="evento.categoryId"
+                class="cat-pill"
+                :style="{ background: getCategoryColor(evento.categoryId) }"
+              >{{ getCategoryName(evento.categoryId) }}</span>
+            </div>
           </div>
         </div>
 
@@ -101,8 +109,19 @@
           <h2 class="event-card__title">{{ evento.name }}</h2>
           <p class="event-card__text">{{ evento.description }}</p>
           <div class="event-meta-info">
-            <span class="meta-tag">📅 {{ formatDate(evento.startDatetime) }}</span>
-            <span class="meta-tag">🎯 {{ evento.eventType }}</span>
+            <span class="meta-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+              </svg>
+            {{ formatDate(evento.startDatetime) }}
+            </span>
+            
+            <span class="meta-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+              </svg>
+              {{ evento.eventType }}</span>
           </div>
         </div>
 
@@ -121,6 +140,51 @@
       <h3>No hay eventos publicados</h3>
       <p>Vuelve pronto para encontrar eventos del campus.</p>
     </div>
+
+    <!-- ── PAGINACIÓN ──────────────────────────────────────────────── -->
+    <div v-if="!loading && totalPages > 1" class="pagination">
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === 0"
+        @click="goToPage(0)"
+        title="Primera página"
+      >«</button>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === 0"
+        @click="goToPage(currentPage - 1)"
+        title="Página anterior"
+      >‹</button>
+
+      <template v-for="p in visiblePages" :key="p">
+        <span v-if="p === '...'" class="pagination__ellipsis">...</span>
+        <button
+          v-else
+          class="pagination__btn"
+          :class="{ 'pagination__btn--active': p === currentPage }"
+          @click="goToPage(p)"
+        >{{ p + 1 }}</button>
+      </template>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === totalPages - 1"
+        @click="goToPage(currentPage + 1)"
+        title="Página siguiente"
+      >›</button>
+
+      <button
+        class="pagination__btn"
+        :disabled="currentPage === totalPages - 1"
+        @click="goToPage(totalPages - 1)"
+        title="Última página"
+      >»</button>
+
+      <span class="pagination__info">
+        Página {{ currentPage + 1 }} de {{ totalPages }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -132,98 +196,111 @@ import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 const router = useRouter()
 const eventos = ref([])
 const careers = ref([])
+const categories = ref([])
 const loading = ref(true)
+
+// ─── Mapa de colores para categorías (por id) ───
+const categoryColorMap = ref({})
 
 // ─── Filtros ───
 const searchInput = ref('')
 const selectedCareer = ref('')
-const selectedEventType = ref('')
+const selectedCategory = ref('')
 const sortType = ref('DESC')
 
-// Tipos de eventos únicos (se pueden actualizar con datos del backend)
-const eventTypes = computed(() => {
-  const types = [...new Set(eventos.value.map(e => e.eventType))].filter(Boolean)
-  return types
-})
+// ─── Paginación ───
+const currentPage = ref(0)
+const pageSize = ref(10)
+const totalPages = ref(0)
+const totalElements = ref(0)
 
 // ─── Debounce para el buscador ───
 let searchTimer = null
 function onSearchInput() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
-    // El filtrado es reactivo, no necesitamos hacer nada más
+    currentPage.value = 0
+    fetchEventos()
   }, 450)
 }
 
 function clearSearch() {
   searchInput.value = ''
+  currentPage.value = 0
+  fetchEventos()
 }
 
 // ─── Filtros activos ───
 const hasActiveFilters = computed(() =>
   searchInput.value.trim() !== '' ||
   selectedCareer.value !== '' ||
-  selectedEventType.value !== '' ||
+  selectedCategory.value !== '' ||
   sortType.value !== 'DESC'
 )
 
 function applyFilters() {
-  // Los filtros se aplican automáticamente a través de computed
+  currentPage.value = 0
+  fetchEventos()
 }
 
 function clearAllFilters() {
   searchInput.value = ''
   selectedCareer.value = ''
-  selectedEventType.value = ''
+  selectedCategory.value = ''
   sortType.value = 'DESC'
+  currentPage.value = 0
+  fetchEventos()
 }
 
-// ─── Eventos filtrados ───
-const filteredEventos = computed(() => {
-  let result = [...eventos.value]
+// ─── Paginación ───
+function goToPage(page) {
+  if (page < 0 || page >= totalPages.value) return
+  currentPage.value = page
+  fetchEventos()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
-  // Filtrar por búsqueda
-  if (searchInput.value.trim()) {
-    const search = searchInput.value.toLowerCase()
-    result = result.filter(e => 
-      e.name?.toLowerCase().includes(search) ||
-      e.description?.toLowerCase().includes(search) ||
-      e.authorName?.toLowerCase().includes(search)
-    )
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i)
+
+  const pages = []
+  if (current <= 3) {
+    pages.push(0, 1, 2, 3, 4, '...', total - 1)
+  } else if (current >= total - 4) {
+    pages.push(0, '...', total - 5, total - 4, total - 3, total - 2, total - 1)
+  } else {
+    pages.push(0, '...', current - 1, current, current + 1, '...', total - 1)
   }
-
-  // Filtrar por carrera (cuando se implemente en el backend)
-  if (selectedCareer.value) {
-    // TODO: Implementar cuando el backend tenga el campo careerId
-    // result = result.filter(e => e.careerId === selectedCareer.value)
-  }
-
-  // Filtrar por tipo de evento
-  if (selectedEventType.value) {
-    result = result.filter(e => e.eventType === selectedEventType.value)
-  }
-
-  // Ordenar
-  result.sort((a, b) => {
-    const dateA = new Date(a.createdAt)
-    const dateB = new Date(b.createdAt)
-    return sortType.value === 'DESC' ? dateB - dateA : dateA - dateB
-  })
-
-  return result
+  return pages
 })
 
-// PA: Los eventos deben mostrarse en orden descendente (lo más reciente primero)
-// Nota: El orden DESC debe venir preferiblemente desde el Backend en la consulta SQL
+// ─── Carga de eventos con filtros del backend ───
 const fetchEventos = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://localhost:8081/api/events')
+    const params = new URLSearchParams({
+      page: currentPage.value,
+      size: pageSize.value,
+    })
+
+    // Agregar parámetros opcionales
+    if (searchInput.value.trim()) params.append('search', searchInput.value.trim())
+    if (selectedCareer.value) params.append('careerId', selectedCareer.value)
+    if (selectedCategory.value) params.append('categoryId', selectedCategory.value)
+
+    const response = await fetch(`http://localhost:8081/api/events/recent?${params.toString()}`)
     const result = await response.json()
-    // El endpoint devuelve { success, message, data: [...] }
-    eventos.value = result.data || []
+
+    // Spring Page response: { content, totalPages, totalElements, ... }
+    eventos.value = result.content || []
+    totalPages.value = result.totalPages || 0
+    totalElements.value = result.totalElements || 0
+
   } catch (error) {
     console.error("Error al cargar eventos:", error)
+    eventos.value = []
   } finally {
     loading.value = false
   }
@@ -237,6 +314,25 @@ const fetchCareers = async () => {
     careers.value = Array.isArray(result) ? result : (result.data || [])
   } catch (error) {
     console.warn("Error al cargar carreras:", error)
+  }
+}
+
+// Cargar categorías para el filtro
+const fetchCategories = async () => {
+  try {
+    const response = await fetch('http://localhost:8081/api/categories')
+    const result = await response.json()
+    const cats = Array.isArray(result) ? result : (result.data || [])
+    categories.value = cats
+    
+    // Construir mapa de colores por ID de categoría
+    const colorMap = {}
+    cats.forEach(cat => {
+      colorMap[cat.id] = cat.color_hex || '#64748b'
+    })
+    categoryColorMap.value = colorMap
+  } catch (error) {
+    console.warn("Error al cargar categorías:", error)
   }
 }
 
@@ -270,8 +366,20 @@ const getInitials = (name) => {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
+const getCategoryColor = (categoryId) => {
+  if (!categoryId) return '#64748b'
+  return categoryColorMap.value[categoryId] || '#64748b'
+}
+
+const getCategoryName = (categoryId) => {
+  if (!categoryId) return ''
+  const category = categories.value.find(c => c.id === categoryId)
+  return category?.name || ''
+}
+
 onMounted(() => {
   fetchCareers()
+  fetchCategories()
   fetchEventos()
 })
 </script>
@@ -536,6 +644,23 @@ onMounted(() => {
   gap: 0.3rem;
 }
 
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cat-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 50px;
+}
+
 /* ── Card Body ──────── */
 .event-card__body {
   padding: 0.5rem 1.1rem 0.9rem;
@@ -640,6 +765,67 @@ onMounted(() => {
   0% { opacity: 1; }
   50% { opacity: 0.4; }
   100% { opacity: 1; }
+}
+
+/* ── Paginación ────────────────────────────────────────────────── */
+.pagination {
+  max-width: 680px;
+  margin: 2rem auto 0;
+  padding: 0 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pagination__btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination__btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.pagination__btn--active {
+  background: var(--navy);
+  color: var(--gold);
+  border-color: var(--navy);
+  font-weight: 700;
+}
+
+.pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination__ellipsis {
+  padding: 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pagination__info {
+  margin-left: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--slate);
+  white-space: nowrap;
 }
 
 /* ── Responsive ──────────── */

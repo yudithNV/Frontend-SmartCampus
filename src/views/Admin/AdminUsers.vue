@@ -25,33 +25,29 @@
       <button class="btn-primary" @click="showModal = true">+ Nuevo Usuario</button>
     </div>
 
-    <!-- Search Bar + Filters -->
-    <div class="search-section">
-      <div class="search-bar">
-        <span class="search-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
-        </span>
-        
+    <!-- Filtros Bar - Nuevo estilo como eventos -->
+    <div class="filters-bar">
+      <!-- Buscador -->
+      <div class="filter-search">
+        <svg class="filter-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
         <input
           v-model="search"
           @input="handleSearch"
           type="text"
           placeholder="Buscar por nombre o email..."
-          class="search-input"
+          class="filter-search__input"
         />
-        <button
-          v-if="search"
-          @click="clearSearch"
-          class="clear-btn"
-          title="Limpiar búsqueda"
-        >
-          ✕
+        <button v-if="search" @click="clearSearch" class="filter-clear-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
-      <div class="filters-row">
+      <!-- Fila de selects -->
+      <div class="filter-row">
         <!-- Filtro Rol -->
         <select
           v-model="roleFilter"
@@ -75,19 +71,21 @@
           <option value="INACTIVO">Inactivo</option>
         </select>
 
-        <!-- Indicador de filtros activos + Botón limpiar -->
-        <div class="filters-status">
-          <span v-if="hasActiveFilters" class="filter-badge">
-            {{ hasActiveFilters ? '⚡ Filtros activos' : '' }}
-          </span>
-          <button
-            v-if="hasActiveFilters"
-            @click="clearAllFilters"
-            class="btn-clear-filters"
-          >
-            Limpiar filtros
-          </button>
-        </div>
+        <!-- Botón limpiar -->
+        <button v-if="hasActiveFilters" @click="clearAllFilters" class="filter-reset-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+          </svg>
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Resultado count -->
+      <div v-if="!loading" class="filter-result-info">
+        <span v-if="usuariosFiltrados && usuariosFiltrados.length > 0">
+          {{ usuariosFiltrados.length }} usuario{{ usuariosFiltrados.length !== 1 ? 's' : '' }} encontrado{{ usuariosFiltrados.length !== 1 ? 's' : '' }}
+        </span>
+        <span v-else class="filter-result-info--empty">Sin resultados para los filtros aplicados</span>
       </div>
     </div>
 
@@ -475,129 +473,135 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(255, 210, 0, 0.3);
 }
 
-/* Search Bar */
-.search-section {
+/* ── Filtros ──── */
+.filters-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.875rem 1.25rem;
+  margin-bottom: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 0.65rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-.search-bar {
+.filter-search {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.search-icon {
+.filter-search__icon {
   position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
+  left: 0.75rem;
   color: #94a3b8;
   pointer-events: none;
 }
 
-.search-input {
+.filter-search__input {
   width: 100%;
-  padding: 0.75rem 2.5rem 0.75rem 2.75rem;
-  border: 1px solid #e2e8f0;
+  padding: 0.6rem 2.5rem 0.6rem 2.4rem;
+  border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.95rem;
-  background: #ffffff;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.search-input:focus {
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #0f1f2e;
+  background: #f8fafc;
+  transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
-  border-color: #FFD200;
-  box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
 }
 
-.clear-btn {
+.filter-search__input:focus {
+  border-color: #1a3a52;
+  box-shadow: 0 0 0 3px rgba(26,58,82,0.08);
+  background: #fff;
+}
+
+.filter-clear-btn {
   position: absolute;
-  right: 1rem;
+  right: 0.65rem;
   background: none;
   border: none;
-  font-size: 1.2rem;
   cursor: pointer;
   color: #94a3b8;
-  transition: color 0.3s ease;
-  padding: 0.25rem 0.5rem;
-}
-
-.clear-btn:hover {
-  color: #1a3a52;
-}
-
-/* Filters Row */
-.filters-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.filter-clear-btn:hover { color: #0f1f2e; }
+
+.filter-row {
+  display: flex;
+  gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .filter-select {
-  padding: 0.65rem 1rem;
-  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem;
-  background: #ffffff;
-  color: #1a3a52;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: #0f1f2e;
+  background: #f8fafc;
   cursor: pointer;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  transition: border-color 0.2s;
+  flex: 1;
   min-width: 160px;
 }
 
-.filter-select:focus {
-  outline: none;
-  border-color: #FFD200;
-  box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
-}
+.filter-select:focus { border-color: #1a3a52; }
 
-.filters-status {
+.filter-reset-btn {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-left: auto;
-}
-
-.filter-badge {
-  background: #fef3c7;
-  color: #92400e;
-  padding: 0.4rem 0.75rem;
-  border-radius: 20px;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border: 1.5px solid #fecdd3;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #be123c;
   font-size: 0.8rem;
   font-weight: 600;
-}
-
-.btn-clear-filters {
-  background: #fee2e2;
-  color: #991b1b;
-  border: none;
-  padding: 0.6rem 1rem;
-  border-radius: 6px;
+  font-family: inherit;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: all 0.3s ease;
+  transition: background 0.15s;
+  white-space: nowrap;
 }
 
-.btn-clear-filters:hover {
-  background: #fecaca;
-  transform: translateY(-2px);
+.filter-reset-btn:hover { background: #ffe4e6; }
+
+.filter-result-info {
+  font-size: 0.78rem;
+  color: #64748b;
+  padding: 0 0.1rem;
 }
 
-/* Responsive */
+.filter-result-info--empty { color: #d97706; font-weight: 600; }
+
+/* Responsive para filtros */
 @media (max-width: 768px) {
-  .filters-row {
+  .filter-row {
     flex-direction: column;
   }
-
+  
   .filter-select {
     width: 100%;
-    min-width: unset;
+    min-width: 100%;
+    max-width: 100%;
   }
+  
+  .filter-reset-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 
   .filters-status {
     width: 100%;
@@ -613,7 +617,7 @@ onMounted(() => {
   .btn-clear-filters {
     width: 100%;
   }
-}
+
 
 /* Table */
 .loading,

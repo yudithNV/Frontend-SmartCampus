@@ -430,8 +430,17 @@ const form = reactive({
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
 
 // Todos los tipos de eventos disponibles (valores exactos de la BD)
-const allEventTypes = ['CHARLA', 'TALLER', 'CONFERENCIA', 'AUDITORIA', 'ACADEMICO', 'CULTURAL']
-
+//const allEventTypes = ['CHARLA', 'TALLER', 'CONFERENCIA', 'AUDITORIA', 'ACADEMICO', 'CULTURAL']
+const allEventTypes = [
+  'CHARLA', 
+  'TALLER', 
+  'CONFERENCIA', 
+  'AUDITORIA', 
+  'FERIA', 
+  'CONCURSO', 
+  'WEBINAR/VIRTUAL', 
+  'VISITA GUIADA'
+];
 const availableEventTypes = computed(() => {
   // Si no hay categoría seleccionada, no mostrar tipos
   if (!form.categoryId) return []
