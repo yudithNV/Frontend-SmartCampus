@@ -99,14 +99,15 @@
       <button @click="loadUsers" class="btn-retry">Reintentar</button>
     </div>
 
-    <div v-else class="table-container">
+    <div v-else class="table-wrapper">
       <!-- Mensaje si no hay resultados -->
       <div v-if="usuariosFiltrados.length === 0" class="empty-state">
         <p>No se encontraron usuarios que coincidan con tu búsqueda.</p>
       </div>
 
-      <!-- Tabla de usuarios -->
-      <table v-else class="users-table">
+      <!-- Tabla de usuarios con scroll horizontal -->
+      <div v-else class="table-container">
+        <table class="users-table">
         <thead>
           <tr>
             <th>Usuario</th>
@@ -144,6 +145,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Paginación -->
@@ -434,12 +436,14 @@ onMounted(() => {
 <style scoped>
 .users-section {
   width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 2rem;
 }
 
@@ -487,9 +491,12 @@ onMounted(() => {
 }
 
 .filter-search {
-  position: relative;
+  position: relative; 
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 200px;
+  max-width: 100%;
 }
 
 .filter-search__icon {
@@ -510,6 +517,7 @@ onMounted(() => {
   background: #f8fafc;
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
+  
 }
 
 .filter-search__input:focus {
@@ -876,7 +884,26 @@ onMounted(() => {
   color: #1a3a52;
 }
 
+/* Table wrapper con scroll horizontal */
+.table-wrapper {
+  width: 100%;
+}
+
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+  .table-container {
+    box-shadow: inset -2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -889,11 +916,13 @@ onMounted(() => {
 
   .users-table {
     font-size: 0.85rem;
+    min-width: 800px; /* Fuerza scroll horizontal */
   }
 
   .users-table th,
   .users-table td {
-    padding: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    white-space: nowrap;
   }
 
   .user-avatar {
@@ -902,8 +931,58 @@ onMounted(() => {
     font-size: 0.8rem;
   }
 
+  .user-info strong {
+    font-size: 0.9rem;
+  }
+
+  .user-info small {
+    font-size: 0.75rem;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
+
+  .pagination-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .pagination-info {
+    text-align: center;
+  }
+
+  .pagination-controls {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 1rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .filter-controls {
+    gap: 0.5rem;
+  }
+
+  .search-input {
+    font-size: 0.9rem;
+  }
+
+  .page-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+/* Esto asegura que el sidebar siempre tape lo que pase por debajo */
+:deep(.sidebar) { 
+  z-index: 999 !important; 
+  position: relative;
 }
 </style>

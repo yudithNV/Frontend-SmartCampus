@@ -451,13 +451,64 @@ defineExpose({ resetForm })
 
 @media (max-width: 768px) {
   .modal-content {
-    max-width: 100%;
-    margin: 0;
-    border-radius: 0;
+    max-width: 95%;
+    width: 95%;
+    margin: 1rem;
+    border-radius: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header h2 {
+    font-size: 1.3rem;
   }
 
   .form {
-    padding: 1.25rem;
+    padding: 1rem;
+  }
+
+  .form-group {
+    gap: 0.4rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-create {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-subtitle {
+    padding: 0 1rem;
+    font-size: 0.85rem;
+  }
+
+  .form {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .form-input,
+  .form-select {
+    font-size: 0.9rem;
+    padding: 0.65rem;
   }
 }
 </style>

@@ -289,6 +289,10 @@ const fetchEventos = async () => {
     if (searchInput.value.trim()) params.append('search', searchInput.value.trim())
     if (selectedCareer.value) params.append('careerId', selectedCareer.value)
     if (selectedCategory.value) params.append('categoryId', selectedCategory.value)
+    
+    // Agregar parámetros de ordenamiento
+    params.append('sortBy', 'createdAt')
+    params.append('sortType', sortType.value)
 
     const response = await fetch(`http://localhost:8081/api/events/recent?${params.toString()}`)
     const result = await response.json()
