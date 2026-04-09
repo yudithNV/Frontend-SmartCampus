@@ -372,7 +372,7 @@ async function fetchCareers() {
   }
 }
 
-// ─── Helpers ───────────────────
+// ─── Helpers ─────────────────
 function formatDateTime(date) {
   if (!date) return ''
   return new Date(date).toLocaleString('es-BO', {

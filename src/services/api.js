@@ -63,11 +63,12 @@ export const userService = {
 // Servicios de Usuarios (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminUserService = {
-  getAll: (page = 0, size = 20, search = '', role = '', status = '') => {
-    const params = new URLSearchParams({ page, size })
+  getAll: (page = 0, size = 10, search = '', role = '', status = '', career = '', sortBy = 'createdAt', sortType = 'DESC') => {
+    const params = new URLSearchParams({ page, size, sortBy, sortType })
     if (search) params.append('search', search)
     if (role) params.append('role', role)
     if (status) params.append('status', status)
+    if (career) params.append('career', career)
     return apiRequest(`/users?${params}`, 'GET')
   },
 

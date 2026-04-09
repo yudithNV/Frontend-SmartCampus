@@ -16,6 +16,7 @@ import AdminSettings from '../views/Admin/AdminSettings.vue'
 // Estudiante
 import StudentLayout from '../views/Student/StudentLayout.vue'
 import StudentEvents from '../views/Student/StudentEvents.vue'
+import EventDetail from '../views/Student/EventDetail.vue'
 import StudentProfile from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints from '../views/Student/StudentComplaints.vue'
@@ -71,6 +72,12 @@ const routes = [
         path: 'eventos',
         name: 'StudentEvents',
         component: StudentEvents
+      },
+      {
+        path: 'eventos/:id',
+        name: 'EventDetail',
+        component: EventDetail,
+        props: true
       },
       {
         path: 'perfil',
