@@ -135,9 +135,9 @@
                   {{ formatDateTime(item.createdAt) }}
                 </span>
                 <span
-                  v-if="item.careerName"
                   class="career-pill"
-                >{{ item.careerName }}</span>
+                  :class="{ 'career-pill--general': !item.careerName }"
+                >{{ item.careerName || 'Toda la comunidad UCB' }}</span>
                 <span
                   v-if="item.category"
                   class="cat-pill"
@@ -693,7 +693,7 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 220px;
 }
 
 /* ── Card Body ──────── */
