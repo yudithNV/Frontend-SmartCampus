@@ -5,27 +5,42 @@
     <div class="logs-header">
       <div class="logs-header__info">
         <p class="logs-header__desc">
-          Registro de intentos de inicio de sesión fallidos. Los correos resaltados en
+          Registro completo de sesiones de usuario. Los correos resaltados en
           <span class="badge badge--danger">rojo</span> tienen 3 o más intentos fallidos.
         </p>
       </div>
 
-      <!-- Buscador -->
-      <div class="logs-search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Buscar por correo o IP..."
-          class="search-input"
-        />
-        <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      <!-- Filtro de estado -->
+      <div class="logs-controls">
+        <div class="filter-tabs">
+          <button
+            v-for="tab in statusTabs"
+            :key="tab.value"
+            class="filter-tab"
+            :class="{ active: activeFilter === tab.value }"
+            @click="activeFilter = tab.value"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <!-- Buscador -->
+        <div class="logs-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-        </button>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Buscar por correo..."
+            class="search-input"
+          />
+          <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -63,7 +78,7 @@
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
-      <p>{{ searchQuery ? 'No se encontraron resultados para tu búsqueda' : 'No hay intentos fallidos registrados' }}</p>
+      <p>{{ searchQuery ? 'No se encontraron resultados para tu búsqueda' : 'No hay registros de acceso' }}</p>
     </div>
 
     <!-- ── TABLA ───────────────────────────────────────────────────────────── -->
@@ -72,7 +87,6 @@
         <thead>
           <tr>
             <th>Correo electrónico</th>
-            <th>Dirección IP</th>
             <th>Fecha y hora</th>
             <th>Estado</th>
           </tr>
@@ -89,14 +103,14 @@
                 <span v-if="log.suspicious" class="badge badge--danger">Sospechoso</span>
               </div>
             </td>
-            <td class="cell-ip">
-              <code class="ip-code">{{ log.ipAddress || '—' }}</code>
-            </td>
             <td class="cell-date">{{ formatDate(log.createdAt) }}</td>
             <td class="cell-status">
-              <span class="status-pill status-pill--failed">
+              <span
+                class="status-pill"
+                :class="log.success ? 'status-pill--success' : 'status-pill--failed'"
+              >
                 <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-                Fallido
+                {{ log.success ? 'Exitoso' : 'Fallido' }}
               </span>
             </td>
           </tr>
@@ -105,7 +119,7 @@
 
       <!-- Contador -->
       <div class="table-footer">
-        <span>{{ filteredLogs.length }} registro(s) {{ searchQuery ? 'filtrados' : 'en total' }}</span>
+        <span>{{ filteredLogs.length }} registro(s) {{ searchQuery || activeFilter !== 'todos' ? 'filtrados' : 'en total' }}</span>
       </div>
     </div>
 
@@ -121,22 +135,36 @@ const logs        = ref([])
 const loading     = ref(true)
 const error       = ref(null)
 const searchQuery = ref('')
+const activeFilter = ref('todos')
+
+const statusTabs = [
+  { label: 'Todos',    value: 'todos' },
+  { label: 'Exitosos', value: 'exitosos' },
+  { label: 'Fallidos', value: 'fallidos' },
+]
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const suspiciousEmails = computed(() => {
   const emails = logs.value
     .filter(l => l.suspicious)
     .map(l => l.email)
-  return [...new Set(emails)]  // sin duplicados
+  return [...new Set(emails)]
 })
 
 const filteredLogs = computed(() => {
-  if (!searchQuery.value.trim()) return logs.value
-  const q = searchQuery.value.toLowerCase()
-  return logs.value.filter(l =>
-    (l.email?.toLowerCase().includes(q)) ||
-    (l.ipAddress?.toLowerCase().includes(q))
-  )
+  let result = logs.value
+
+  // Filtro por estado
+  if (activeFilter.value === 'exitosos') result = result.filter(l => l.success)
+  if (activeFilter.value === 'fallidos') result = result.filter(l => !l.success)
+
+  // Filtro por búsqueda (solo correo, ya no IP)
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(l => l.email?.toLowerCase().includes(q))
+  }
+
+  return result
 })
 
 // ─── Carga de datos ───────────────────────────────────────────────────────────
@@ -194,6 +222,45 @@ onMounted(loadLogs)
   line-height: 1.5;
 }
 
+/* ── Controles (filtro + buscador) ───────────────────────────────────────── */
+.logs-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Tabs de filtro */
+.filter-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.filter-tab {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.filter-tab:hover { color: #1a3a52; }
+
+.filter-tab.active {
+  background: #ffffff;
+  color: #1a3a52;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
 /* ── Buscador ────────────────────────────────────────────────────────────── */
 .logs-search {
   display: flex;
@@ -203,7 +270,7 @@ onMounted(loadLogs)
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   padding: 0.5rem 0.85rem;
-  min-width: 260px;
+  min-width: 220px;
   color: #94a3b8;
   transition: border-color 0.15s;
 }
@@ -318,10 +385,8 @@ onMounted(loadLogs)
 .logs-table tbody tr:last-child { border-bottom: none; }
 .logs-table tbody tr:hover { background: #f8fafc; }
 
-/* Fila sospechosa — resaltado visual */
-.logs-table tbody tr.row--suspicious {
-  background: #fff5f5;
-}
+/* Fila sospechosa */
+.logs-table tbody tr.row--suspicious { background: #fff5f5; }
 .logs-table tbody tr.row--suspicious:hover { background: #fee2e2; }
 
 .logs-table td {
@@ -338,16 +403,6 @@ onMounted(loadLogs)
   flex-wrap: wrap;
 }
 .email-text { font-weight: 500; }
-
-/* IP */
-.ip-code {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: #475569;
-}
 
 /* Fecha */
 .cell-date { color: #64748b; font-size: 0.82rem; }
@@ -374,7 +429,8 @@ onMounted(loadLogs)
   padding: 3px 9px;
   border-radius: 20px;
 }
-.status-pill--failed { background: #fef2f2; color: #dc2626; }
+.status-pill--failed  { background: #fef2f2; color: #dc2626; }
+.status-pill--success { background: #f0fdf4; color: #16a34a; }
 
 /* Footer de tabla */
 .table-footer {
@@ -386,14 +442,13 @@ onMounted(loadLogs)
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .logs-header { flex-direction: column; }
-  .logs-search { min-width: 100%; }
-  .logs-table th:nth-child(3),
-  .logs-table td:nth-child(3) { display: none; }
+  .logs-header  { flex-direction: column; }
+  .logs-controls { width: 100%; }
+  .logs-search  { min-width: 100%; }
 }
 
 @media (max-width: 480px) {
-  .logs-table th:nth-child(2),
-  .logs-table td:nth-child(2) { display: none; }
+  .filter-tabs { width: 100%; }
+  .filter-tab  { flex: 1; text-align: center; }
 }
 </style>
