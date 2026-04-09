@@ -63,11 +63,12 @@ export const userService = {
 // Servicios de Usuarios (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminUserService = {
-  getAll: (page = 0, size = 20, search = '', role = '', status = '') => {
-    const params = new URLSearchParams({ page, size })
+  getAll: (page = 0, size = 10, search = '', role = '', status = '', career = '', sortBy = 'createdAt', sortType = 'DESC') => {
+    const params = new URLSearchParams({ page, size, sortBy, sortType })
     if (search) params.append('search', search)
     if (role) params.append('role', role)
     if (status) params.append('status', status)
+    if (career) params.append('career', career)
     return apiRequest(`/users?${params}`, 'GET')
   },
 
@@ -106,7 +107,34 @@ export const newsService = {
   getRecent: (queryString) =>
     apiRequest(`/news/recent?${queryString}`, 'GET'),
 }
+// ─────────────────────────────────────────────────────────────
+// Normalizador de eventos (Adapter Pattern)
+// ─────────────────────────────────────────────────────────────
+function normalizeEvent(event) {
+  let cleanDescription = event.description
 
+  // Si viene como JSON raro → parsear
+  if (typeof cleanDescription === 'string' && cleanDescription.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(cleanDescription)
+      cleanDescription = parsed.description || ''
+    } catch {
+      cleanDescription = ''
+    }
+  }
+
+  return {
+    id: event.id,
+    name: event.name,
+    date: event.startDatetime,
+    description: cleanDescription || 'Sin descripción',
+    location: event.location
+      ? `${event.location.name} - ${event.location.block}`
+      : 'Por confirmar',
+    eventType: event.eventType,
+    posterUrl: event.posterUrl
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Eventos
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,8 +144,14 @@ export const eventService = {
     apiRequest('/events', 'GET'),
 
   /** Eventos próximos (desde hoy en adelante) */
-  getUpcoming: () =>
-    apiRequest('/events/upcoming', 'GET'),
+  getUpcoming: async () => {
+    const response = await apiRequest('/events/upcoming', 'GET')
+    const list = response?.data ?? response
+
+    return Array.isArray(list)
+      ? list.map(normalizeEvent)
+      : []
+  },
 
   /** Eventos del publicador autenticado */
   getMy: () =>
@@ -284,4 +318,13 @@ export const complaintService = {
     const result = await response.json()
     return result.data || result
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Logs de Acceso (Admin)
+// ─────────────────────────────────────────────────────────────────────────────
+export const accessLogService = {
+  /** Historial de intentos fallidos — GET /api/access-logs */
+  getAll: () =>
+    apiRequest('/access-logs', 'GET')
 }

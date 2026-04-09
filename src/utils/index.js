@@ -1,17 +1,70 @@
-// Funciones de formato de fecha
+// Funciones de formato de fecha - Zona horaria de Bolivia (America/La_Paz)
+const LOCALE = 'es-BO'
+const TIMEZONE = 'America/La_Paz' // Bolivia
+
 export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('es-ES')
+  if (!date) return ''
+  return new Date(date).toLocaleDateString(LOCALE, { timeZone: TIMEZONE })
 }
 
 export const formatDateTime = (date) => {
-  return new Date(date).toLocaleString('es-ES')
-}
-
-export const formatTime = (date) => {
-  return new Date(date).toLocaleTimeString('es-ES', {
+  if (!date) return ''
+  return new Date(date).toLocaleString(LOCALE, {
+    timeZone: TIMEZONE,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+export const formatTime = (date) => {
+  if (!date) return ''
+  return new Date(date).toLocaleTimeString(LOCALE, {
+    timeZone: TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Formato específico para eventos: fecha y hora del evento
+// Extrae la hora directamente del string ISO sin conversión de zona horaria
+export const formatEventDateTime = (startDatetime, endDatetime) => {
+  if (!startDatetime) return 'Fecha por definir'
+  
+  // Parsear directo del string: "2026-04-15T09:00:00Z" → extraer 09:00
+  const getTimeFromISO = (isoString) => {
+    const timeMatch = isoString.match(/T(\d{2}):(\d{2}):(\d{2})/)
+    if (!timeMatch) return null
+    return `${timeMatch[1]}:${timeMatch[2]}`
+  }
+
+  // Parsear fecha: "2026-04-15T..." → 15 abr 2026
+  const getDateFromISO = (isoString) => {
+    const dateMatch = isoString.match(/(\d{4})-(\d{2})-(\d{2})/)
+    if (!dateMatch) return null
+    const date = new Date(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T00:00:00`)
+    const dayNum = dateMatch[3]
+    const monthShort = date.toLocaleDateString(LOCALE, { month: 'short' })
+    const year = dateMatch[1]
+    return `${dayNum} ${monthShort} ${year}`
+  }
+
+  const dateStr = getDateFromISO(startDatetime)
+  const startTimeStr = getTimeFromISO(startDatetime)
+  
+  if (!dateStr || !startTimeStr) return 'Fecha por definir'
+  
+  // Si hay hora fin diferente a hora inicio, mostrar rango
+  if (endDatetime && endDatetime !== startDatetime) {
+    const endTimeStr = getTimeFromISO(endDatetime)
+    if (endTimeStr) {
+      return `${dateStr} · ${startTimeStr} - ${endTimeStr}`
+    }
+  }
+  
+  return `${dateStr} · ${startTimeStr}`
 }
 
 // Funciones de validación

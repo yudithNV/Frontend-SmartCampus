@@ -71,6 +71,18 @@
           <option value="INACTIVO">Inactivo</option>
         </select>
 
+        <!-- Filtro Carrera -->
+        <select
+          v-model="careerFilter"
+          @change="handleCareerChange"
+          class="filter-select"
+        >
+          <option value="">Todas las carreras</option>
+          <option v-for="career in careers" :key="career.id" :value="career.id">
+            {{ career.name }}
+          </option>
+        </select>
+
         <!-- Botón limpiar -->
         <button v-if="hasActiveFilters" @click="clearAllFilters" class="filter-reset-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -99,10 +111,16 @@
       <button @click="loadUsers" class="btn-retry">Reintentar</button>
     </div>
 
+    
     <div v-else class="table-wrapper">
-      <!-- Mensaje si no hay resultados -->
       <div v-if="usuariosFiltrados.length === 0" class="empty-state">
-        <p>No se encontraron usuarios que coincidan con tu búsqueda.</p>
+        <div class="empty-state__visual">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+        </div>
+        <h3>Sin Resultados</h3>
+        <p>Intenta con otros filtros o términos de búsqueda.</p>
       </div>
 
       <!-- Tabla de usuarios con scroll horizontal -->
@@ -198,7 +216,7 @@
 import { ref, computed, onMounted } from 'vue'
 import CreateUserModal from '../../components/Admin/CreateUserModal.vue'
 import Toast from '../../components/Toast.vue'
-import { adminUserService } from '../../services/api'
+import { adminUserService, careerService } from '../../services/api'
 import { getInitials } from '../../utils'
 
 const showModal = ref(false)
@@ -209,6 +227,8 @@ const modalRef = ref(null)
 const search = ref('')
 const roleFilter = ref('')
 const statusFilter = ref('')
+const careerFilter = ref('')
+const careers = ref([])
 let searchTimeout
 
 // Paginación
@@ -244,7 +264,8 @@ const loadUsers = async () => {
       pageSize.value,
       search.value,
       roleFilter.value,
-      statusFilter.value
+      statusFilter.value,
+      careerFilter.value
     )
     // Extraer datos de la respuesta paginada
     const { content, totalElements: total, totalPages: pages } = response
@@ -412,11 +433,18 @@ const handleStatusChange = () => {
   loadUsers()
 }
 
+// Cambiar filtro de carrera
+const handleCareerChange = () => {
+  currentPage.value = 0
+  loadUsers()
+}
+
 // Limpiar todos los filtros
 const clearAllFilters = () => {
   search.value = ''
   roleFilter.value = ''
   statusFilter.value = ''
+  careerFilter.value = ''
   currentPage.value = 0
   clearTimeout(searchTimeout)
   loadUsers()
@@ -424,12 +452,23 @@ const clearAllFilters = () => {
 
 // Computado para saber si hay filtros activos
 const hasActiveFilters = computed(() => {
-  return search.value || roleFilter.value || statusFilter.value
+  return search.value || roleFilter.value || statusFilter.value || careerFilter.value
 })
 
-// Cargar usuarios al montar el componente
-onMounted(() => {
-  loadUsers()
+// Cargar carreras para el filtro
+const loadCareers = async () => {
+  try {
+    const response = await careerService.getAll()
+    careers.value = response
+  } catch (err) {
+    console.error('Error al cargar carreras:', err)
+  }
+}
+
+// Cargar usuarios y carreras al montar el componente
+onMounted(async () => {
+  await loadCareers()
+  await loadUsers()
 })
 </script>
 

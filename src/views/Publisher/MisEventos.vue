@@ -289,6 +289,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { eventService, locationService, categoryService, careerService } from '../../services/api.js'
+import { formatEventDateTime, formatDateTime } from '../../utils/index.js'
 
 const route = useRoute()
 
@@ -321,30 +322,11 @@ function getLocationName(locationId) {
   return location ? `${location.name}` : 'Ubicación no disponible'
 }
 
-function formatEventDate(startDatetime, endDatetime) {
-  if (!startDatetime) return 'Fecha por definir'
+// Usar función centralizada de utils
+const formatEventDate = formatEventDateTime
 
-  const startDate = new Date(startDatetime)
-  const dateStr = startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-  const startTimeStr = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
-
-  // Si hay hora fin diferente a hora inicio, mostrar rango
-  if (endDatetime && endDatetime !== startDatetime) {
-    const endDate = new Date(endDatetime)
-    const endTimeStr = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
-    return `${dateStr} · ${startTimeStr} - ${endTimeStr}`
-  }
-
-  return `${dateStr} · ${startTimeStr}`
-}
-
-function formatUpdatedDate(updatedAt) {
-  if (!updatedAt) return 'Fecha desconocida'
-  const date = new Date(updatedAt)
-  const dateStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-  const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }).substring(0, 5)
-  return `${dateStr} · ${timeStr}`
-}
+// Usar función centralizada de utils
+const formatUpdatedDate = formatDateTime
 
 const filteredEvents = computed(() => {
   let list = [...events.value]

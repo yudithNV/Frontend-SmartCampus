@@ -6,12 +6,12 @@
         <h1 class="logo-text">UCB SmartCampus</h1>
       </div>
       <nav class="nav">
-        <a href="#" class="nav-link">INICIO</a>
-        <a href="#" class="nav-link">ACERCA DE</a>
-        <a href="#" class="nav-link">NOTICIAS</a>
-        <a href="#" class="nav-link">EVENTOS</a>
-        <a href="#" class="nav-link">UNIVERSIDAD</a>
-        <a href="#" class="nav-link">CONTACTOS</a>
+        <a href="#inicio"       class="nav-link" @click.prevent="scrollTo('inicio')">INICIO</a>
+        <a href="#acerca-de"    class="nav-link" @click.prevent="scrollTo('acerca-de')">ACERCA DE</a>
+        <a href="#noticias"     class="nav-link" @click.prevent="scrollTo('noticias')">NOTICIAS</a>
+        <a href="#eventos"      class="nav-link" @click.prevent="scrollTo('eventos')">EVENTOS</a>
+        <a href="#universidad"  class="nav-link" @click.prevent="scrollTo('universidad')">UNIVERSIDAD</a>
+        <a href="#contactos"    class="nav-link" @click.prevent="scrollTo('contactos')">CONTACTOS</a>
         <button @click="goToLogin" class="btn-login">Iniciar sesión</button>
       </nav>
     </div>
@@ -25,6 +25,18 @@ const router = useRouter()
 
 const goToLogin = () => {
   router.push('/login')
+}
+
+// Altura del header sticky para que no tape la sección destino
+const HEADER_OFFSET = 72
+
+function scrollTo(sectionId) {
+  const el = document.getElementById(sectionId)
+  if (!el) return
+
+  const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
+
+  window.scrollTo({ top, behavior: 'smooth' })
 }
 </script>
 

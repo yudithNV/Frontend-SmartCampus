@@ -97,10 +97,10 @@
             <div class="meta-row">
               <span class="event-date">{{ formatDateTime(evento.createdAt) }}</span>
               <span
-                v-if="evento.categoryId"
+                v-if="evento.category"
                 class="cat-pill"
-                :style="{ background: getCategoryColor(evento.categoryId) }"
-              >{{ getCategoryName(evento.categoryId) }}</span>
+                :style="{ background: evento.category.colorHex || '#64748b' }"
+              >{{ evento.category.name }}</span>
             </div>
           </div>
         </div>
@@ -113,14 +113,21 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
               </svg>
-            {{ formatDate(evento.startDatetime) }}
+              {{ formatEventDateTime(evento.startDatetime, evento.endDatetime) }}
             </span>
             
             <span class="meta-tag">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
               </svg>
+              {{ evento.location?.name || 'No especificada' }}
+            </span>
+
+            <span class="meta-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 4px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+            </svg>
               {{ evento.eventType }}</span>
           </div>
         </div>
@@ -137,8 +144,8 @@
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
       </div>
-      <h3>No hay eventos publicados</h3>
-      <p>Vuelve pronto para encontrar eventos del campus.</p>
+      <h3>Sin Resultados</h3>
+      <p>Intenta con otros filtros o términos de búsqueda.</p>
     </div>
 
     <!-- ── PAGINACIÓN ──────────────────────────────────────────────── -->
@@ -192,6 +199,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
+import { formatDateTime, formatEventDateTime } from '../../utils/index.js'
 
 const router = useRouter()
 const eventos = ref([])
@@ -332,7 +340,8 @@ const fetchCategories = async () => {
     // Construir mapa de colores por ID de categoría
     const colorMap = {}
     cats.forEach(cat => {
-      colorMap[cat.id] = cat.color_hex || '#64748b'
+      //colorMap[cat.id] = cat.color_hex || '#64748b'
+      colorMap[cat.id] = cat.colorHex || cat.color_hex || '#64748b'
     })
     categoryColorMap.value = colorMap
   } catch (error) {
@@ -345,17 +354,7 @@ const goToDetail = (id) => {
   router.push(`/estudiante/eventos/${id}`)
 }
 
-const formatDateTime = (date) => {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toLocaleString('es-BO', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+// formatDateTime importado de utils
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -377,7 +376,9 @@ const getCategoryColor = (categoryId) => {
 
 const getCategoryName = (categoryId) => {
   if (!categoryId) return ''
-  const category = categories.value.find(c => c.id === categoryId)
+  // Forzamos la comparación a Number o String dependiendo de tu BD
+  const category = categories.value.find(c => String(c.id) === String(categoryId))
+  //const category = categories.value.find(c => c.id === categoryId)
   return category?.name || ''
 }
 
