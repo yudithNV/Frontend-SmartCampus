@@ -263,7 +263,7 @@ const sortBy           = ref('created_at')
 
 // ─── Paginación ──
 const currentPage   = ref(0)
-const pageSize      = ref(6)
+const pageSize      = ref(10)
 const totalPages    = ref(0)
 const totalElements = ref(0)
 
