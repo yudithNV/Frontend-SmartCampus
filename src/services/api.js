@@ -107,7 +107,34 @@ export const newsService = {
   getRecent: (queryString) =>
     apiRequest(`/news/recent?${queryString}`, 'GET'),
 }
+// ─────────────────────────────────────────────────────────────
+// Normalizador de eventos (Adapter Pattern)
+// ─────────────────────────────────────────────────────────────
+function normalizeEvent(event) {
+  let cleanDescription = event.description
 
+  // Si viene como JSON raro → parsear
+  if (typeof cleanDescription === 'string' && cleanDescription.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(cleanDescription)
+      cleanDescription = parsed.description || ''
+    } catch {
+      cleanDescription = ''
+    }
+  }
+
+  return {
+    id: event.id,
+    name: event.name,
+    date: event.startDatetime,
+    description: cleanDescription || 'Sin descripción',
+    location: event.location
+      ? `${event.location.name} - ${event.location.block}`
+      : 'Por confirmar',
+    eventType: event.eventType,
+    posterUrl: event.posterUrl
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Eventos
 // ─────────────────────────────────────────────────────────────────────────────
@@ -117,8 +144,14 @@ export const eventService = {
     apiRequest('/events', 'GET'),
 
   /** Eventos próximos (desde hoy en adelante) */
-  getUpcoming: () =>
-    apiRequest('/events/upcoming', 'GET'),
+  getUpcoming: async () => {
+    const response = await apiRequest('/events/upcoming', 'GET')
+    const list = response?.data ?? response
+
+    return Array.isArray(list)
+      ? list.map(normalizeEvent)
+      : []
+  },
 
   /** Eventos del publicador autenticado */
   getMy: () =>

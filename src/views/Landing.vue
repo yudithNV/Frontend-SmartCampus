@@ -57,7 +57,7 @@
                 <span class="meta-icon">📍</span> {{ event.location || 'Por confirmar' }}
               </p>
               <p class="card-meta">
-                <span class="meta-icon">🗓</span> {{ formatDate(event.startDatetime) }}
+                <span class="meta-icon">🗓</span> {{ formatDate(event.date) }}
               </p>
               <p class="card-desc">{{ truncate(event.description, 100) }}</p>
               <button class="btn-ver-mas" @click="goToLogin">
@@ -174,8 +174,9 @@ async function fetchEvents() {
     errorEvents.value   = false
     const response = await eventService.getUpcoming()
     // El backend devuelve { success, message, data: [...] }
-    const list = response?.data ?? response
-    events.value = Array.isArray(list) ? list.slice(0, MAX_CARDS) : []
+    events.value = Array.isArray(response)
+      ? response.slice(0, MAX_CARDS)
+      : []
   } catch (e) {
     console.error('Error al cargar eventos:', e)
     errorEvents.value = true
