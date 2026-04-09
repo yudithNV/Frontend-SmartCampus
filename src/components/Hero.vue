@@ -1,5 +1,5 @@
 <template>
-  <section class="hero" :style="{ backgroundImage: 'url(/ucb.jpg)' }">
+  <section class="hero" id="inicio" :style="{ backgroundImage: 'url(/ucb.jpg)' }">
     <div class="hero-overlay"></div>
     <div class="container">
       <div class="hero-content">
@@ -10,8 +10,8 @@
           Plataforma integral de gestión que conecta estudiantes, docentes y administrativos en un ecosistema digital completo y seguro.
         </p>
         <div class="hero-buttons">
-          <button class="btn btn-primary">Explorar plataforma</button>
-          <button class="btn btn-secondary">Conocer Más</button>
+          <button class="btn btn-primary" @click="goToLogin">Explorar plataforma</button>
+          <button class="btn btn-secondary" @click="scrollToFeatures">Conocer Más</button>
         </div>
       </div>
     </div>
@@ -19,6 +19,21 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goToLogin = () => {
+  router.push('/login')
+}
+
+const scrollToFeatures = () => {
+  const el = document.getElementById('features')
+  if (!el) return
+  const HEADER_OFFSET = 72
+  const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
+  window.scrollTo({ top, behavior: 'smooth' })
+}
 </script>
 
 <style scoped>

@@ -6,8 +6,8 @@
       <p>Accede a todas las herramientas y recursos que necesitas para optimizar tu experiencia académica y administrativa.</p>
 
       <div class="cta-buttons">
-        <button class="btn-primary">Acceder al Portal</button>
-        <button class="btn-secondary">Ver Guía de Uso</button>
+        <!-- <button class="btn-primary">Acceder al Portal</button> -->
+        <!-- <button class="btn-secondary">Ver Guía de Uso</button> -->
       </div>
 
       <div class="cta-benefits">

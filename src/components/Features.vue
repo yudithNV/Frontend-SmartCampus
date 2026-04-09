@@ -42,8 +42,8 @@
               <line x1="16" y1="32" x2="32" y2="32" stroke="#f59e0b" stroke-width="2"/>
             </svg>
           </div>
-          <h3>Gestión Académica</h3>
-          <p>Calificaciones, asistencia y seguimiento completo del desempeño estudiantil.</p>
+          <h3>Gestión Informativa</h3>
+          <p>Mantente al día con las últimas noticias, comunicados oficiales y eventos académicos de la universidad en tiempo real.</p>
         </div>
 
         <div class="feature-card">

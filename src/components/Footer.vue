@@ -1,9 +1,13 @@
 <template>
-  <footer class="footer">
+  <footer class="footer" id="footer">
     <div class="container">
       <div class="footer-top">
         <div class="footer-section logo-section">
-          <div class="logo-box">🎓</div>
+          <div class="logo-box" style="display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 40px; height: 40px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+            </svg>
+          </div>
           <h3>UCB SmartCampus</h3>
           <p>Transformando la educación con tecnología inteligente y accesible para todos.</p>
         </div>
@@ -11,20 +15,13 @@
         <div class="footer-section">
           <h4>Enlaces Rápidos</h4>
           <ul>
-            <li><a href="#">Inicio</a></li>
-            <li><a href="#features">Características</a></li>
-            <li><a href="#cta">Acceder</a></li>
+            <li><a href="https://www.ucb.edu.bo/" target="_blank">Portal UCB</a></li>
+            <li><a href="https://lpz.ucb.edu.bo/" target="_blank">Sede La Paz</a></li>
+            <li><a href="https://academia.ucb.edu.bo/Neo" target="_blank">Neo Académico</a></li>
           </ul>
         </div>
 
-        <div class="footer-section">
-          <h4>Soporte</h4>
-          <ul>
-            <li><a href="#">Centro de Ayuda</a></li>
-            <li><a href="#">Documentación</a></li>
-            <li><a href="#">Reportar Problema</a></li>
-          </ul>
-        </div>
+        
 
         <div class="footer-section">
           <h4>Contacto</h4>
@@ -37,12 +34,8 @@
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; 2026 Universidad Católica Boliviana. Todos los derechos reservados.</p>
-        <div class="footer-legal">
-          <a href="#">Privacidad</a>
-          <a href="#">Términos de Uso</a>
-          <a href="#">Cookies</a>
-        </div>
+        <p>&copy; 2026 Universidad Católica Boliviana. GRUPO H. Todos los derechos reservados.</p>
+        
       </div>
     </div>
   </footer>
@@ -90,11 +83,14 @@
 .logo-section {
   display: flex;
   flex-direction: column;
+  color: #FFD200;
+  gap: 10px;
 }
 
 .logo-box {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
+  
 }
 
 .footer-section p {

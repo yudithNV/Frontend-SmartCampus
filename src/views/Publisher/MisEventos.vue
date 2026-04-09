@@ -26,8 +26,8 @@
           <div class="modal-icon-wrap">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </div>
-          <h3>Eliminar evento</h3>
-          <p>¿Estás seguro de eliminar <strong>"{{ deleteModal.title }}"</strong>?<br>Esta acción no se puede deshacer.</p>
+          <h3>¿Estás seguro de que deseas eliminar este evento?</h3>
+          <p>Vas a eliminar permanentemente <strong>"{{ deleteModal.title }}"</strong><br>Esta acción no se puede deshacer.</p>
           <div class="modal-actions">
             <button class="btn-cancel-modal" @click="deleteModal.show = false">Cancelar</button>
             <button class="btn-confirm-delete" @click="confirmDelete" :disabled="deleteModal.loading">
@@ -196,7 +196,7 @@
           <p class="card-excerpt">{{ excerpt(item.description) }}</p>
           <div class="card-location">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {{ getLocationName(item.locationId) }}
+            {{ item.location?.name || 'Ubicación no disponible' }}
           </div>
           <div class="card-updated" v-if="item.updatedAt">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -250,7 +250,7 @@
           <p class="list-excerpt">{{ excerpt(item.description) }}</p>
           <div class="list-meta">
             <time>{{ formatEventDate(item.startDatetime, item.endDatetime) }}</time>
-            <span> · {{ getLocationName(item.locationId) }}</span>
+            <span> · {{ item.location?.name || 'Ubicación no disponible' }}</span>
             <div class="list-updated" v-if="item.updatedAt">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
               <span>Actualizado: {{ formatUpdatedDate(item.updatedAt) }}</span>
@@ -317,10 +317,7 @@ function excerpt(text) {
   return plain.length > 110 ? plain.substring(0, 110) + '...' : plain
 }
 
-function getLocationName(locationId) {
-  const location = locations.value.find(loc => loc.id === locationId)
-  return location ? `${location.name}` : 'Ubicación no disponible'
-}
+
 
 // Usar función centralizada de utils
 const formatEventDate = formatEventDateTime
