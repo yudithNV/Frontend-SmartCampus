@@ -438,8 +438,8 @@ const allEventTypes = [
   'AUDITORIA', 
   'FERIA', 
   'CONCURSO', 
-  'WEBINAR/VIRTUAL', 
-  'VISITA GUIADA'
+  'WEBINAR_VIRTUAL', 
+  'VISITA_GUIADA'
 ];
 const availableEventTypes = computed(() => {
   // Si no hay categoría seleccionada, no mostrar tipos
