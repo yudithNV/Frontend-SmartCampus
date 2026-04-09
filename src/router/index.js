@@ -4,79 +4,85 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Landing from '../views/Landing.vue'
 
 // Auth
-import Login from '../views/Login.vue'
+import Login          from '../views/Login.vue'
 import ChangePassword from '../views/ChangePassword.vue'
 
 // Admin
-import AdminLayout from '../views/Admin/AdminLayout.vue'
-import AdminDashboard from '../views/Admin/AdminDashboard.vue'
-import AdminUsers from '../views/Admin/AdminUsers.vue'
-import AdminSettings from '../views/Admin/AdminSettings.vue'
-import AdminAccessLogs from '../views/Admin/AdminAccessLogs.vue'   // ← NUEVO
+import AdminLayout     from '../views/Admin/AdminLayout.vue'
+import AdminDashboard  from '../views/Admin/AdminDashboard.vue'
+import AdminUsers      from '../views/Admin/AdminUsers.vue'
+import AdminSettings   from '../views/Admin/AdminSettings.vue'
+import AdminAccessLogs from '../views/Admin/AdminAccessLogs.vue'
 
 // Estudiante
-import StudentLayout from '../views/Student/StudentLayout.vue'
-import StudentEvents from '../views/Student/StudentEvents.vue'
-import EventDetail from '../views/Student/EventDetail.vue'
-import StudentProfile from '../views/Student/StudentProfile.vue'
+import StudentLayout      from '../views/Student/StudentLayout.vue'
+import StudentEvents      from '../views/Student/StudentEvents.vue'
+import EventDetail        from '../views/Student/EventDetail.vue'
+import StudentProfile     from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
-import StudentComplaints from '../views/Student/StudentComplaints.vue'
-import NewsFeed from '../views/Student/NewsFeed.vue'
-// import StudentCalendar from '../views/Student/StudentCalendar.vue'  // pendiente
+import StudentComplaints  from '../views/Student/StudentComplaints.vue'
+import NewsFeed           from '../views/Student/NewsFeed.vue'
 
 // Publicador
-import PublisherLayout from '../views/Publisher/PublisherLayout.vue'
-import PublisherDashboard from '../views/Publisher/PublisherDashboard.vue'
-import PublisherCreateNews from '../views/Publisher/CreateNews.vue'
-import PublisherMyNews from '../views/Publisher/MisNoticias.vue'
-import PublisherEditNews from '../views/Publisher/EditNews.vue'
+import PublisherLayout      from '../views/Publisher/PublisherLayout.vue'
+import PublisherDashboard   from '../views/Publisher/PublisherDashboard.vue'
+import PublisherCreateNews  from '../views/Publisher/CreateNews.vue'
+import PublisherMyNews      from '../views/Publisher/MisNoticias.vue'
+import PublisherEditNews    from '../views/Publisher/EditNews.vue'
 import PublisherCreateEvent from '../views/Publisher/CrearEvento.vue'
-import PublisherMyEvents from '../views/Publisher/MisEventos.vue'
-import PublisherEditEvent from '../views/Publisher/EditEvento.vue'
+import PublisherMyEvents    from '../views/Publisher/MisEventos.vue'
+import PublisherEditEvent   from '../views/Publisher/EditEvento.vue'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Rutas
+// meta.public = true  → accesible sin token
+// Sin meta.public     → requiere token (AuthGuard lo verifica)
+// ─────────────────────────────────────────────────────────────────────────────
 const routes = [
   {
     path: '/',
     name: 'Landing',
-    component: Landing
+    component: Landing,
+    meta: { public: true }
   },
   {
     path: '/login',
     name: 'Login',
-    component: Login
+    component: Login,
+    meta: { public: true }
   },
   {
     path: '/change-password',
     name: 'ChangePassword',
-    component: ChangePassword
+    component: ChangePassword,
+    meta: { public: true }
   },
 
-  // ── Admin Routes ─────────────────────────────────────────────────────────────
+  // ── Admin Routes ──────────────────────────────────────────────────────────
   {
     path: '/admin',
     component: AdminLayout,
     redirect: '/admin/dashboard',
     children: [
-      { path: 'dashboard',    name: 'AdminDashboard',    component: AdminDashboard },
-      { path: 'usuarios',     name: 'AdminUsers',        component: AdminUsers },
-      { path: 'configuracion',name: 'AdminSettings',     component: AdminSettings },
-      { path: 'accesos',      name: 'AdminAccessLogs',   component: AdminAccessLogs }  // ← NUEVO
+      { path: 'dashboard',     name: 'AdminDashboard',  component: AdminDashboard },
+      { path: 'usuarios',      name: 'AdminUsers',      component: AdminUsers },
+      { path: 'configuracion', name: 'AdminSettings',   component: AdminSettings },
+      { path: 'accesos',       name: 'AdminAccessLogs', component: AdminAccessLogs }
     ]
   },
 
-  // ── Estudiante Routes ─────────────────────────────────────────────────────────
+  // ── Estudiante Routes ─────────────────────────────────────────────────────
   {
     path: '/estudiante',
     component: StudentLayout,
     redirect: '/estudiante/eventos',
     children: [
-      { path: 'eventos',          name: 'StudentEvents',       component: StudentEvents },
-      { path: 'eventos/:id',      name: 'EventDetail',         component: EventDetail, props: true },
-      { path: 'perfil',           name: 'StudentProfile',      component: StudentProfile },
-      { path: 'sugerencias',      name: 'StudentSuggestions',  component: StudentSuggestions },
-      { path: 'reclamos',         name: 'StudentComplaints',   component: StudentComplaints },
-      { path: 'noticias',         name: 'StudentNewsFeed',     component: NewsFeed },
-      // { path: 'calendario', name: 'StudentCalendar', component: StudentCalendar }, // pendiente
+      { path: 'eventos',         name: 'StudentEvents',      component: StudentEvents },
+      { path: 'eventos/:id',     name: 'EventDetail',        component: EventDetail, props: true },
+      { path: 'perfil',          name: 'StudentProfile',     component: StudentProfile },
+      { path: 'sugerencias',     name: 'StudentSuggestions', component: StudentSuggestions },
+      { path: 'reclamos',        name: 'StudentComplaints',  component: StudentComplaints },
+      { path: 'noticias',        name: 'StudentNewsFeed',    component: NewsFeed },
       {
         path: 'reservar',
         name: 'StudentReserve',
@@ -95,7 +101,7 @@ const routes = [
     ]
   },
 
-  // ── Publicador Routes ─────────────────────────────────────────────────────────
+  // ── Publicador Routes ─────────────────────────────────────────────────────
   {
     path: '/publicador',
     component: PublisherLayout,
@@ -109,12 +115,41 @@ const routes = [
       { path: 'mis-eventos',        name: 'PublisherMyEvents',    component: PublisherMyEvents },
       { path: 'editar-evento/:id',  name: 'PublisherEditEvent',   component: PublisherEditEvent, props: true }
     ]
+  },
+
+  // ── Catch-all: redirige a landing ─────────────────────────────────────────
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AuthGuard: si la ruta no es pública y no hay token → redirige a /
+// ─────────────────────────────────────────────────────────────────────────────
+router.beforeEach((to, _from, next) => {
+  const isPublic = to.meta?.public === true
+  const token    = localStorage.getItem('ucb_token')
+
+  if (isPublic) {
+    // Rutas públicas: pasan siempre
+    next()
+    return
+  }
+
+  if (!token) {
+    // Sin token y ruta protegida → redirige a landing
+    next({ name: 'Landing' })
+    return
+  }
+
+  // Con token → pasa normalmente
+  next()
 })
 
 export default router
