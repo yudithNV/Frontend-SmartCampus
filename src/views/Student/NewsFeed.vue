@@ -45,7 +45,7 @@
         <!-- Carrera -->
         <select v-model="selectedCareer" @change="applyFilters" class="filter-select">
           <option value="">Todas las carreras</option>
-          <option v-for="c in careers" :key="c.id" :value="c.id">{{ c.name }}</option>
+          <option v-for="c in careers" :key="c.id" :value="c.name">{{ c.name }}</option>
         </select>
 
         <!-- Categoría -->
@@ -107,7 +107,7 @@
       </div>
       <h3>{{ hasActiveFilters ? 'Sin resultados' : 'No hay noticias publicadas' }}</h3>
       <p>{{ hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Vuelve pronto para encontrar novedades del campus.' }}</p>
-      <button v-if="hasActiveFilters" @click="clearAllFilters" class="empty-clear-btn">Limpiar filtros</button>
+      <!-- <button v-if="hasActiveFilters" @click="clearAllFilters" class="empty-clear-btn">Limpiar filtros</button> -->
     </div>
 
     <!-- ── FEED LIST ──────────────────────────────────────────────── -->
@@ -335,6 +335,7 @@ async function fetchNews() {
   loading.value = true
   errorMsg.value = ''
   try {
+    // Construir params SIN careerName
     const params = new URLSearchParams({
       page:     currentPage.value,
       size:     pageSize.value,
@@ -343,14 +344,18 @@ async function fetchNews() {
     })
 
     if (searchInput.value.trim())  params.append('search',   searchInput.value.trim())
-    if (selectedCareer.value)      params.append('careerId',  selectedCareer.value)
     if (selectedCategory.value)    params.append('category',  selectedCategory.value)
 
-    const data = await newsService.getRecent(params.toString())
+    // ✅ Agregar careerName SIN codificar acentos
+    let queryString = params.toString()
+    if (selectedCareer.value) {
+      queryString += '&careerName=' + selectedCareer.value.replace(/ /g, '+')
+    }
 
-    // Spring Page response: { content, totalPages, totalElements, ... }
-    allNews.value      = data.content      ?? []
-    totalPages.value   = data.totalPages   ?? 0
+    const data = await newsService.getRecent(queryString)
+
+    allNews.value       = data.content       ?? []
+    totalPages.value    = data.totalPages    ?? 0
     totalElements.value = data.totalElements ?? 0
 
   } catch (err) {
