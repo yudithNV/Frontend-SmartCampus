@@ -135,6 +135,10 @@
                   {{ formatDateTime(item.createdAt) }}
                 </span>
                 <span
+                  v-if="item.careerName"
+                  class="career-pill"
+                >{{ item.careerName }}</span>
+                <span
                   v-if="item.category"
                   class="cat-pill"
                   :style="{ background: getCategoryColor(item.category) }"
@@ -675,6 +679,21 @@ onMounted(() => {
   color: #fff;
   padding: 0.2rem 0.6rem;
   border-radius: 50px;
+}
+.career-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--navy);
+  padding: 0.2rem 0.6rem;
+  border-radius: 50px;
+  border: 1.5px solid var(--navy);
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 /* ── Card Body ──────── */
