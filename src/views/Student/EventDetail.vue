@@ -131,7 +131,9 @@
             </div>
             <div class="detail-text">
               <p class="detail-label">Capacidad</p>
-              <p class="detail-value">{{ evento.maxCapacity || 'Sin límite' }}</p>
+              <p class="detail-value">
+                {{ registrado ? (evento.maxCapacity - 1) : evento.maxCapacity }} / {{ evento.maxCapacity }}
+              </p>
             </div>
           </div>
         </div>
@@ -160,12 +162,17 @@
             </svg>
             Volver al muro
           </button>
-          <button class="btn btn-primary" disabled style="opacity: 0.6; cursor: not-allowed;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            Participar (Próximamente)
+          <button 
+            @click="registrado = !registrado" 
+            class="btn" 
+            :style="registrado 
+              ? 'background: #ecfdf5; color: #059669; border: 1px solid #10b981; font-weight: 600;' 
+              : 'background: #2563eb; color: white;'"
+          >
+            <span v-if="!registrado">Inscribirme ahora</span>
+            <span v-else>✅ ¡Inscrito! (Click para cancelar)</span>
           </button>
+          
         </div>
       </div>
     </div>
@@ -186,6 +193,7 @@ const eventId = route.params.id
 const evento = ref(null)
 const loading = ref(true)
 const error = ref('')
+const registrado = ref(false) // Nueva variable de estado para controlar si el usuario ya se ha registrado en el evento
 
 // Obtener detalles del evento
 const fetchEventDetail = async () => {
