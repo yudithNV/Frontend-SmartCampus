@@ -1,9 +1,9 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
-    <div class="modal-content">
+    <div class="modal-container">
       <div class="modal-header">
-        <h2>Enviar Nuevo Reclamo</h2>
-        <button class="close-btn" @click="closeModal">×</button>
+        <h3>Nuevo Reclamo</h3>
+        <button class="close-btn" @click="$emit('close')">✕</button>
       </div>
 
       <p class="modal-subtitle">Complete los datos para enviar su reclamo a la institución</p>
@@ -19,11 +19,10 @@
             class="form-input"
             :class="{ 'input-error': errors.title }"
             required
-            maxlength="100"
+            maxlength="120"
           />
           <span v-if="errors.title" class="error-message">{{ errors.title }}</span>
-          <small class="field-hint">{{ formData.title.length }}/100 caracteres</small>
-        </div>
+            <small class="field-hint">{{ formData.title.length }}/120 caracteres</small>        </div>
 
         <!-- Categoría -->
         <div class="form-group">
@@ -177,7 +176,7 @@ const closeModal = () => {
 const submitForm = () => {
   // Validación final
   if (!formData.value.title.trim()) {
-    errors.value.title = 'El título es obligatorio'
+    errors.value.title = 'El título es requerido'
     return
   }
 
