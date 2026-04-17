@@ -45,12 +45,15 @@ const pageTitle = computed(() => {
   const path = route.path.split('/').pop()
   const titles = {
     dashboard: 'Dashboard',
+    eventos: 'Muro de Eventos',
     calendario: 'Mi Calendario',
     perfil: 'Mi Perfil',
+    noticias: 'Muro de Noticias',
     reservar: 'Reservar',
     'buscar-material': 'Buscar Material',
     historial: 'Historial',
-    sugerencias: 'Sugerencias'
+    sugerencias: 'Sugerencias',
+    reclamos: 'Reclamos'
   }
   return titles[path] || 'Estudiante'
 })
