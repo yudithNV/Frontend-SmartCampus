@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
-    <div class="modal-container">
+    <div class="modal-content">
       <div class="modal-header">
         <h3>Nuevo Reclamo</h3>
         <button class="close-btn" @click="$emit('close')">✕</button>
@@ -61,30 +61,46 @@
         <!-- Evidencia (Archivo opcional) -->
         <div class="form-group">
           <label>Evidencia (Opcional)</label>
-          <div class="file-upload-area">
+
+          <div
+            class="drop-zone"
+            :class="{ dragging: isDragging }"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="handleDrop"
+            @click="$refs.fileInput.click()"
+          >
             <input
-              type="file"
               ref="fileInput"
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.docx"
+              style="display:none"
               @change="handleFileChange"
-              accept="image/*,.pdf"
-              class="file-input"
-              id="evidence-file"
             />
-            <label for="evidence-file" class="file-label">
-              <span class="file-icon">📎</span>
-              <span v-if="!selectedFileName">Seleccionar archivo (imagen o PDF)</span>
-              <span v-else class="selected-file">{{ selectedFileName }}</span>
-            </label>
-            <button
-              v-if="selectedFileName"
-              type="button"
-              class="btn-remove-file"
-              @click="removeFile"
-            >
-              ×
-            </button>
+
+            <div class="upload-content">
+              <p><strong>Haz clic o arrastra archivos aquí</strong></p>
+              <small>Máximo 5 archivos</small>
+            </div>
           </div>
-          <small class="field-hint">Formatos aceptados: JPG, PNG, PDF (máx. 5MB)</small>
+
+          <small class="field-hint">
+            Formatos aceptados: JPG, PNG, WEBP, GIF, PDF, DOCX (máx. 10MB)
+          </small>
+
+          <!-- lista -->
+          <ul v-if="attachments.length > 0">
+            <li v-for="(file, index) in attachments" :key="index">
+              {{ file.name }}
+              <button type="button" @click="attachments.splice(index, 1)">✕</button>
+            </li>
+          </ul>
+
+          <!-- error -->
+          <span v-if="fileError" class="error-message">
+            {{ fileError }}
+          </span>
         </div>
 
         <!-- Botones -->
@@ -117,7 +133,6 @@ const formData = ref({
   title: '',
   category: '',
   description: '',
-  evidence: null
 })
 
 const errors = ref({
@@ -126,39 +141,42 @@ const errors = ref({
 })
 
 const fileInput = ref(null)
-const selectedFileName = ref('')
+const attachments = ref([])
+const isDragging = ref(false)
+const fileError = ref('')
+const MAX_FILES = 5
+const MAX_SIZE = 10 * 1024 * 1024
 
-const handleFileChange = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    // Validar tamaño (máx 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      errors.value.evidence = 'El archivo no debe superar los 5MB'
-      fileInput.value.value = ''
+const validateAndAddFiles = (files) => {
+  fileError.value = ''
+  const incoming = Array.from(files)
+
+  if (attachments.value.length + incoming.length > MAX_FILES) {
+    fileError.value = `Máximo ${MAX_FILES} archivos`
+    return
+  }
+
+  for (const file of incoming) {
+
+    if (file.size > MAX_SIZE) {
+      fileError.value = `${file.name} supera 10MB`
       return
     }
 
-    // Validar tipo de archivo
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
-    if (!validTypes.includes(file.type)) {
-      errors.value.evidence = 'Solo se aceptan imágenes (JPG, PNG) o PDF'
-      fileInput.value.value = ''
-      return
-    }
-
-    formData.value.evidence = file
-    selectedFileName.value = file.name
-    errors.value.evidence = ''
+    attachments.value.push(file)
   }
 }
 
-const removeFile = () => {
-  formData.value.evidence = null
-  selectedFileName.value = ''
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
+const handleFileChange = (e) => {
+  validateAndAddFiles(e.target.files)
+  e.target.value = ''
 }
+
+const handleDrop = (e) => {
+  isDragging.value = false
+  validateAndAddFiles(e.dataTransfer.files)
+}
+
 
 const isFormValid = computed(() => {
   return (
@@ -174,7 +192,7 @@ const closeModal = () => {
 }
 
 const submitForm = () => {
-  // Validación final
+
   if (!formData.value.title.trim()) {
     errors.value.title = 'El título es requerido'
     return
@@ -186,7 +204,18 @@ const submitForm = () => {
   }
 
   if (isFormValid.value) {
-    emit('submit', { ...formData.value })
+
+    const form = new FormData()
+
+    form.append('title', formData.value.title)
+    form.append('category', formData.value.category)
+    form.append('description', formData.value.description)
+
+    attachments.value.forEach(file => {
+      form.append('files', file)
+    })
+
+    emit('submit', form)
   }
 }
 
@@ -194,16 +223,16 @@ const resetForm = () => {
   formData.value = {
     title: '',
     category: '',
-    description: '',
-    evidence: null
+    description: ''
   }
+
+attachments.value = []
+fileError.value = ''
+isDragging.value = false
+
   errors.value = {
     title: '',
     description: ''
-  }
-  selectedFileName.value = ''
-  if (fileInput.value) {
-    fileInput.value.value = ''
   }
 }
 
@@ -216,6 +245,8 @@ defineExpose({ resetForm })
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
+  height: 100%;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -235,6 +266,27 @@ defineExpose({ resetForm })
   animation: slideIn 0.3s ease-out;
   max-height: 90vh;
   overflow-y: auto;
+}
+.drop-zone {
+  border: 2px dashed #cbd5e1;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.drop-zone:hover {
+  border-color: #FFD200;
+  background: #fffef0;
+}
+
+.drop-zone.dragging {
+  border-color: #1a3a52;
+  background: #eef6ff;
 }
 
 @keyframes slideIn {
