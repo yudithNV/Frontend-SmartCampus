@@ -69,12 +69,69 @@
       </form>
     </div>
 
+    <!-- ── HISTORIAL DE SUGERENCIAS ───────────────────────────────────────── -->
+    <div class="history-card">
+      <div class="card-header">
+        <div class="card-header__icon">📋</div>
+        <div>
+          <h2 class="card-header__title">Mis sugerencias enviadas</h2>
+          <p class="card-header__subtitle">Seguimiento de tus sugerencias anteriores</p>
+        </div>
+      </div>
+
+      <div class="profile-divider"></div>
+
+      <!-- Cargando -->
+      <div v-if="loadingHistory" class="history-state">
+        <svg class="spin" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 2a10 10 0 0110 10"/>
+        </svg>
+        <span>Cargando historial...</span>
+      </div>
+
+      <!-- Error -->
+      <div v-else-if="historyError" class="history-state history-state--error">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{{ historyError }}</span>
+      </div>
+
+      <!-- Vacío — PA: mensaje específico -->
+      <div v-else-if="history.length === 0" class="history-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>Aún no has enviado ninguna sugerencia.</span>
+      </div>
+
+      <!-- Lista — PA: categoría, vista previa, fecha, ordenadas de más reciente -->
+      <div v-else class="history-list">
+        <div
+          v-for="item in history"
+          :key="item.id"
+          class="history-item"
+        >
+          <div class="history-item__left">
+            <span class="history-item__cat">{{ formatCategory(item.category) }}</span>
+            <p class="history-item__body">{{ truncate(item.body, 120) }}</p>
+          </div>
+          <span class="history-item__date">{{ formatDate(item.createdAt) }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ── MODAL DE ÉXITO ─────────────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showSuccessModal" class="modal-overlay" @click.self="closeModal">
           <div class="modal">
-            <div class="modal-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#059669"/><polyline points="20,6 9,17 4,12"/></svg></div>
+            <div class="modal-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#059669"/>
+                <polyline points="20,6 9,17 4,12"/>
+              </svg>
+            </div>
             <h3 class="modal-title">Sugerencia enviada</h3>
             <p class="modal-body">Tu sugerencia fue recibida correctamente. ¡Gracias por contribuir a mejorar la UCB!</p>
             <button class="btn-primary btn-primary--full" @click="closeModal">Aceptar</button>
@@ -87,10 +144,10 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { suggestionService } from '../../services/api.js'
 
-// ─── Categorías — valores coinciden exactamente con el enum de la BD ──────────
+// ─── Categorías ───────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { value: 'INFRAESTRUCTURA', label: 'Infraestructura' },
   { value: 'TRAMITES',        label: 'Trámites' },
@@ -98,28 +155,71 @@ const CATEGORIES = [
   { value: 'OTRO',            label: 'Otro' },
 ]
 
-// ─── Estado ───────────────────────────────────────────────────────────────────
+const CATEGORY_LABELS = {
+  INFRAESTRUCTURA: 'Infraestructura',
+  TRAMITES: 'Trámites',
+  CLASES: 'Clases',
+  OTRO: 'Otro',
+}
+
+// ─── Estado formulario ────────────────────────────────────────────────────────
 const form = reactive({ category: '', body: '' })
 const errors = reactive({ category: '', body: '' })
 const sending = ref(false)
 const showSuccessModal = ref(false)
+
+// ─── Estado historial ─────────────────────────────────────────────────────────
+const history = ref([])
+const loadingHistory = ref(true)
+const historyError = ref(null)
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function truncate(text, max) {
+  if (!text) return ''
+  return text.length > max ? text.slice(0, max) + '...' : text
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  try {
+    return new Date(dateStr).toLocaleDateString('es-BO', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    })
+  } catch { return '—' }
+}
+
+function formatCategory(cat) {
+  return CATEGORY_LABELS[cat] || cat || '—'
+}
+
+// ─── Cargar historial ─────────────────────────────────────────────────────────
+async function loadHistory() {
+  loadingHistory.value = true
+  historyError.value = null
+  try {
+    const res = await suggestionService.getMy()
+    // El backend devuelve ApiResponse<List> → datos en res.data
+    const data = res.data ?? res
+    history.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    historyError.value = 'No se pudo cargar el historial.'
+    console.error('[StudentSuggestions] loadHistory:', err)
+  } finally {
+    loadingHistory.value = false
+  }
+}
 
 // ─── Validación ───────────────────────────────────────────────────────────────
 function validate() {
   errors.category = ''
   errors.body = ''
   let valid = true
-
-  if (!form.category) {
-    errors.category = 'Selecciona una categoría'
-    valid = false
-  }
+  if (!form.category) { errors.category = 'Selecciona una categoría'; valid = false }
   if (!form.body.trim()) {
-    errors.body = 'La descripción es obligatoria'
-    valid = false
+    errors.body = 'La descripción es obligatoria'; valid = false
   } else if (form.body.length > 500) {
-    errors.body = 'La descripción no puede superar los 500 caracteres'
-    valid = false
+    errors.body = 'La descripción no puede superar los 500 caracteres'; valid = false
   }
   return valid
 }
@@ -127,13 +227,9 @@ function validate() {
 // ─── Enviar sugerencia ────────────────────────────────────────────────────────
 async function handleSubmit() {
   if (!validate()) return
-
   sending.value = true
   try {
-    await suggestionService.create({
-      category: form.category,
-      body: form.body.trim(),
-    })
+    await suggestionService.create({ category: form.category, body: form.body.trim() })
     showSuccessModal.value = true
   } catch (err) {
     errors.body = err.message || 'No se pudo enviar la sugerencia. Intenta de nuevo.'
@@ -143,25 +239,30 @@ async function handleSubmit() {
   }
 }
 
-// ─── Cerrar modal y limpiar formulario ───────────────────────────────────────
+// ─── Cerrar modal y recargar historial ────────────────────────────────────────
 function closeModal() {
   showSuccessModal.value = false
-  // Limpia los campos automáticamente tras confirmar (PA)
   form.category = ''
   form.body = ''
   errors.category = ''
   errors.body = ''
+  loadHistory()  // refresca la lista para mostrar la nueva sugerencia
 }
+
+onMounted(loadHistory)
 </script>
 
 <style scoped>
-/* ── Layout ─────────────────────────────────────────────────────────────── */
 .suggestions-page {
   max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-/* ── Card ────────────────────────────────────────────────────────────────── */
-.suggestions-card {
+/* ── Cards base ──────────────────────────────────────────────────────────── */
+.suggestions-card,
+.history-card {
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
@@ -175,10 +276,7 @@ function closeModal() {
   padding: 1.75rem 2rem;
 }
 
-.card-header__icon {
-  font-size: 2rem;
-  line-height: 1;
-}
+.card-header__icon { font-size: 2rem; line-height: 1; }
 
 .card-header__title {
   font-size: 1.15rem;
@@ -203,22 +301,11 @@ function closeModal() {
   gap: 1.25rem;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; }
 
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #374151;
-}
+.form-label { font-size: 0.82rem; font-weight: 600; color: #374151; }
 
-/* ── Select ──────────────────────────────────────────────────────────────── */
-.select-wrapper {
-  position: relative;
-}
+.select-wrapper { position: relative; }
 
 .form-select {
   width: 100%;
@@ -234,24 +321,14 @@ function closeModal() {
   font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-
-.form-select:focus {
-  border-color: #1a3a52;
-  box-shadow: 0 0 0 3px rgba(26, 58, 82, 0.08);
-}
-
+.form-select:focus { border-color: #1a3a52; box-shadow: 0 0 0 3px rgba(26,58,82,0.08); }
 .form-select--error { border-color: #ef4444; }
 
 .select-arrow {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #64748b;
+  position: absolute; right: 0.75rem; top: 50%;
+  transform: translateY(-50%); pointer-events: none; color: #64748b;
 }
 
-/* ── Textarea ────────────────────────────────────────────────────────────── */
 .form-textarea {
   padding: 0.7rem 0.875rem;
   border: 1.5px solid #e2e8f0;
@@ -268,42 +345,17 @@ function closeModal() {
   width: 100%;
   box-sizing: border-box;
 }
-
-.form-textarea:focus {
-  border-color: #1a3a52;
-  box-shadow: 0 0 0 3px rgba(26, 58, 82, 0.08);
-}
-
+.form-textarea:focus { border-color: #1a3a52; box-shadow: 0 0 0 3px rgba(26,58,82,0.08); }
 .form-textarea--error { border-color: #ef4444; }
 
-.textarea-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 1.2rem;
-}
+.textarea-footer { display: flex; justify-content: space-between; align-items: center; min-height: 1.2rem; }
 
-.char-count {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-left: auto;
-}
-
+.char-count { font-size: 0.75rem; color: #94a3b8; margin-left: auto; }
 .char-count--limit { color: #f59e0b; font-weight: 600; }
 
-.form-error {
-  font-size: 0.78rem;
-  color: #dc2626;
-  font-weight: 500;
-}
+.form-error { font-size: 0.78rem; color: #dc2626; font-weight: 500; }
 
-/* ── Acciones ────────────────────────────────────────────────────────────── */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 0.25rem;
-  border-top: 1px solid #f1f5f9;
-}
+.form-actions { display: flex; justify-content: flex-end; padding-top: 0.25rem; border-top: 1px solid #f1f5f9; }
 
 .btn-primary {
   display: inline-flex;
@@ -327,11 +379,71 @@ function closeModal() {
 .btn-spinner { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Modal de éxito ──────────────────────────────────────────────────────── */
+/* ── Historial ───────────────────────────────────────────────────────────── */
+.history-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+.history-state--error { color: #dc2626; }
+
+.spin { animation: spin 0.8s linear infinite; }
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 2rem;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.1s;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: #f8fafc; }
+
+.history-item__left { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+
+.history-item__cat {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #2e7d9f;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.history-item__body {
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.history-item__date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0,0,0,0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -346,38 +458,23 @@ function closeModal() {
   max-width: 360px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.modal-icon { font-size: 2.5rem; line-height: 1; }
+.modal-title { font-size: 1.15rem; font-weight: 700; color: #1a3a52; margin: 0; }
+.modal-body  { font-size: 0.875rem; color: #64748b; margin: 0; line-height: 1.6; }
 
-.modal-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1a3a52;
-  margin: 0;
-}
-
-.modal-body {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* ── Transición modal ────────────────────────────────────────────────────── */
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-active .modal, .modal-leave-active .modal { transition: transform 0.2s; }
 .modal-enter-from .modal { transform: scale(0.95) translateY(8px); }
 .modal-leave-to .modal   { transform: scale(0.95) translateY(8px); }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .suggestions-form { padding: 1.25rem; }
-  .card-header { padding: 1.25rem; }
+  .suggestions-form, .card-header { padding: 1.25rem; }
+  .history-item { padding: 1rem 1.25rem; }
 }
 </style>
