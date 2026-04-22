@@ -76,11 +76,16 @@
         <span class="stat-txt">Total</span>
       </button>
       <button class="stat-pill stat-pub" :class="{ active: activeFilter === 'published' }" @click="activeFilter = 'published'">
-        <span class="stat-num">{{ news.filter(n => n.published).length }}</span>
+        <span class="stat-num">{{ countByStatus('PUBLICADO') }}</span>
         <span class="stat-txt">Publicadas</span>
       </button>
+      <!-- SCRUM-391: nuevo filtro "Programadas" -->
+      <button class="stat-pill stat-scheduled" :class="{ active: activeFilter === 'scheduled' }" @click="activeFilter = 'scheduled'">
+        <span class="stat-num">{{ countByStatus('PROGRAMADO') }}</span>
+        <span class="stat-txt">Programadas</span>
+      </button>
       <button class="stat-pill stat-draft" :class="{ active: activeFilter === 'draft' }" @click="activeFilter = 'draft'">
-        <span class="stat-num">{{ news.filter(n => !n.published).length }}</span>
+        <span class="stat-num">{{ countByStatus('BORRADOR') }}</span>
         <span class="stat-txt">Borradores</span>
       </button>
     </div>
@@ -165,61 +170,32 @@
       <button class="btn-retry" @click="loadNews">Reintentar</button>
     </div>
 
-    <!-- Empty total -->
-    <div v-else-if="news.length === 0" class="state-box state-empty">
-      <div class="state-icon-wrap">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/></svg>
-      </div>
-      <h3>No has publicado noticias aún</h3>
-      <p>Crea tu primera noticia para que aparezca aquí.</p>
-      <router-link to="/publicador/crear-noticia" class="btn-new-empty">
-        Crear primera noticia
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </router-link>
-    </div>
+    <!-- ══════════════════════════════════════════
+         FEED VIEW
+    ══════════════════════════════════════════ -->
+    <div v-else-if="viewMode === 'feed'" class="feed-list">
+      <article v-for="item in filteredNews" :key="item.id" class="fb-card" :class="cardClass(item)">
 
-    <!-- No results -->
-    <div v-else-if="filteredNews.length === 0" class="state-box state-empty">
-      <div class="state-icon-wrap">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </div>
-      <h3>Sin resultados</h3>
-      <p>No se encontraron noticias con ese criterio.</p>
-      <button class="btn-retry" @click="clearAllFilters">Limpiar filtros</button>
-    </div>
-
-    <!-- ══════════════════════════ FEED ══════════════════════════ -->
-     <div v-else-if="viewMode === 'feed'" class="feed-list">
-      <article v-for="item in filteredNews" :key="item.id" class="fb-card" :class="{ 'is-draft': !item.published }">
-
-        <!-- Header: author row -->
         <div class="fb-card-header">
           <div class="fb-avatar">{{ getItemInitials(item) }}</div>
           <div class="fb-author-info">
-            <div class="fb-author-name">
-                {{ item.authorName || (item._isOwn ? authorName : 'Publicador') }}
-              <span class="fb-author-role">· Publicador UCB</span>
-            </div>
+            <div class="fb-author-name">{{ item.authorName || 'Publicador' }}<span class="fb-author-role">· Publicador UCB</span></div>
             <div class="fb-meta-row">
               <time class="fb-time">{{ formatDateRelative(item.createdAt) }}</time>
-              <template v-if="item.updatedAt && item.updatedAt !== item.createdAt">
-                <span class="fb-dot">·</span>
-                <span class="fb-edited-badge">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  Ultima actualización: {{ formatDateFull(item.updatedAt) }}
-                </span>
-              </template>
               <span class="fb-dot">·</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-              <span class="fb-audience">{{ item.careerId ? getCareerName(String(item.careerId)) : 'Toda la comunidad' }}</span>
-              <span class="fb-dot">·</span>
-              <span class="fb-status-badge" :class="item.published ? 'fb-pub' : 'fb-draft'">
+              <span class="fb-status-badge" :class="statusBadgeClass(item)">
                 <span class="fb-status-dot"></span>
-                {{ item.published ? 'Publicada' : 'Borrador' }}
+                {{ statusBadgeLabel(item) }}
               </span>
+              <template v-if="item.newsStatus === 'PROGRAMADO' && item.scheduledAt">
+                <span class="fb-dot">·</span>
+               <!-- <span class="fb-scheduled-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {{ formatScheduledAt(item.scheduledAt) }}
+                </span> -->
+              </template>
             </div>
           </div>
-          <!-- Menu -->
           <div class="fb-menu-wrap">
             <button class="fb-menu-btn" @click="toggleMenu(item.id)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
@@ -227,191 +203,129 @@
             <Transition name="menu-drop">
               <div v-if="openMenu === item.id" class="fb-dropdown">
                 <template v-if="item._isOwn">
-                  <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-dd-item" @click="closeMenu(item.id)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Editar noticia
-                  </router-link>
-                  <button class="fb-dd-item" @click="togglePublish(item); closeMenu(item.id)" :disabled="item._saving">
-                    <svg v-if="item.published" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
-                    <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    {{ item.published ? 'Despublicar' : 'Publicar ahora' }}
-                  </button>
+                  <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-dd-item" @click="closeMenu(item.id)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar noticia</router-link>
+                  <!-- SCRUM-391: acción diferente según estado -->
+                  <button v-if="item.newsStatus !== 'PUBLICADO'" class="fb-dd-item" @click="publishNow(item); closeMenu(item.id)" :disabled="item._saving"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Publicar ahora</button>
+                  <button v-else class="fb-dd-item" @click="unpublish(item); closeMenu(item.id)" :disabled="item._saving"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>Despublicar</button>
                   <div class="fb-dd-divider"></div>
                   <button class="fb-dd-item fb-dd-danger" @click="askDelete(item); closeMenu(item.id)">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                     Eliminar noticia
                   </button>
                 </template>
-                <span v-else class="fb-dd-item" style="cursor:default; color:#94a3b8; font-size:0.78rem;">
-                  Sin acciones disponibles
-                </span>
               </div>
             </Transition>
           </div>
         </div>
 
-        <!-- Category -->
-        <div class="fb-cat-row">
-          <span class="fb-cat-tag">{{ getCategoryLabel(item.category) }}</span>
+        <div v-if="item.newsStatus === 'PROGRAMADO'" class="fb-scheduled-chip">
+          <div class="chip-left">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="chip-label">Se publicará automáticamente el</span>
+          </div>
+          <span class="chip-date">{{ formatScheduledAt(item.scheduledAt) }}</span>
         </div>
 
-        <!-- Title -->
+        <div class="fb-cat-row"><span class="fb-cat-tag">{{ getCategoryLabel(item.category) }}</span></div>
         <h2 class="fb-title">{{ item.title }}</h2>
 
-        <!-- Body with See more / less -->
         <div class="fb-body-container">
-          <div class="fb-body" :class="{ 'fb-body-expanded': item._expanded }">
-            <div v-html="renderBody(item.body)"></div>
-          </div>
+          <div class="fb-body" :class="{ 'fb-body-expanded': item._expanded }"><div v-html="renderBody(item.body)"></div></div>
           <div v-if="!item._expanded && needsTruncation(item.body)" class="fb-body-gradient"></div>
-          <button
-            v-if="needsTruncation(item.body)"
-            class="fb-see-more-btn"
-            @click="item._expanded = !item._expanded"
-          >
+          <button v-if="needsTruncation(item.body)" class="fb-see-more-btn" @click="item._expanded = !item._expanded">
             <span>{{ item._expanded ? 'Ver menos' : 'Ver más' }}</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              :style="{ transform: item._expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s' }">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="{ transform: item._expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s' }"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
 
-        <!-- Cover image — below text like Facebook -->
-        <div class="fb-image-wrap" v-if="item.coverUrl">
-          <img :src="item.coverUrl" :alt="item.title" class="fb-image" @error="item.coverUrl = null" />
-        </div>
+        <div class="fb-image-wrap" v-if="item.coverUrl"><img :src="item.coverUrl" :alt="item.title" class="fb-image" @error="item.coverUrl = null" /></div>
 
-        <!-- Attachment -->
-        <div class="fb-attachment" v-if="item.attachmentUrl">
-          <div class="fb-attach-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-          <div class="fb-attach-info">
-            <span class="fb-attach-label">Documento adjunto</span>
-            <a :href="item.attachmentUrl" target="_blank" rel="noopener" class="fb-attach-link">Ver documento →</a>
-          </div>
-        </div>
-
-        <!-- Divider -->
         <div class="fb-divider"></div>
 
-        <!-- Footer action bar -->
         <div class="fb-action-bar">
-          <router-link
-            v-if="item._isOwn"
-            :to="`/publicador/editar-noticia/${item.id}`"
-            class="fb-act-btn fb-act-edit"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar
-          </router-link>
-          <button
-            v-if="item._isOwn"
-            class="fb-act-btn"
-            :class="item.published ? 'fb-act-unpub' : 'fb-act-pub'"
-            @click="togglePublish(item)"
-            :disabled="item._saving"
-          >
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="fb-act-btn fb-act-edit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</router-link>
+          <!-- SCRUM-391: botón contextual según estado -->
+          <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="fb-act-btn fb-act-pub" @click="publishNow(item)" :disabled="item._saving">
             <span class="spinner-xs" v-if="item._saving"></span>
-            <template v-else>
-              <svg v-if="item.published" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              {{ item.published ? 'Despublicar' : 'Publicar' }}
-            </template>
+            <template v-else><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Publicar ahora</template>
           </button>
-          <button v-if="item._isOwn" class="fb-act-btn fb-act-del" @click="askDelete(item)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-            Eliminar
+          <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="fb-act-btn fb-act-unpub" @click="unpublish(item)" :disabled="item._saving">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <template v-else><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>Despublicar</template>
           </button>
-          <!-- Si no es tuya, solo muestra autor -->
-          <span v-if="!item._isOwn" class="fb-other-author">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            {{ item.authorName || 'Otro publicador' }}
-          </span>
+          <button v-if="item._isOwn" class="fb-act-btn fb-act-del" @click="askDelete(item)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>Eliminar</button>
         </div>
 
-        <!-- Draft watermark -->
-        <div class="draft-watermark" v-if="!item.published">BORRADOR</div>
+        <!-- SCRUM-391: watermarks para los 3 estados -->
+        <div class="draft-watermark" v-if="item.newsStatus === 'BORRADOR'">BORRADOR</div>
+        <div class="scheduled-watermark" v-if="item.newsStatus === 'PROGRAMADO'">PROGRAMADO</div>
       </article>
     </div>
 
     <!-- ══════════ GRID ══════════ -->
     <div v-else-if="viewMode === 'grid'" class="news-grid">
-      <article v-for="item in filteredNews" :key="item.id" class="news-card" :class="{ 'is-draft': !item.published }">
+      <article v-for="item in filteredNews" :key="item.id" class="news-card" :class="cardClass(item)">
         <div class="card-img-wrap">
           <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" class="card-img" @error="item.coverUrl = null" />
-          <div v-else class="card-img-placeholder">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/></svg>
-          </div>
+          <div v-else class="card-img-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/></svg></div>
           <div class="card-overlay-top">
             <span class="badge-cat">{{ getCategoryLabel(item.category) }}</span>
-            <span class="badge-status" :class="item.published ? 'status-pub' : 'status-draft'">
-              <span class="status-dot"></span>{{ item.published ? 'Publicada' : 'Borrador' }}
+            <!-- SCRUM-385/391: badge con 3 estados -->
+            <span class="badge-status" :class="statusBadgeClass(item)">
+              <span class="status-dot"></span>{{ statusBadgeLabel(item) }}
             </span>
+          </div>
+          <!-- SCRUM-391: chip de fecha sobre la imagen -->
+          <div v-if="item.newsStatus === 'PROGRAMADO'" class="card-scheduled-chip">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ formatScheduledAt(item.scheduledAt) }}
           </div>
         </div>
         <div class="card-content">
-        <div class="card-meta-row">
-          <time class="card-date">{{ formatDate(item.createdAt) }}</time>
-          <span v-if="item.updatedAt && item.updatedAt !== item.createdAt" class="card-edited">
-             Ultima actualización: {{ formatDateFull(item.updatedAt) }}
-          </span>
-            <span v-if="item.careerId" class="card-career">{{ getCareerName(String(item.careerId)) }}</span>
+          <div class="card-meta-row">
+            <time class="card-date">{{ formatDate(item.createdAt) }}</time>
           </div>
           <h3 class="card-title">{{ item.title }}</h3>
           <p class="card-excerpt">{{ excerpt(item.body) }}</p>
         </div>
         <div class="card-actions">
           <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="action-btn btn-edit">Editar</router-link>
-          <button v-if="item._isOwn" class="action-btn" :class="item.published ? 'btn-unpublish' : 'btn-publish-action'" @click="togglePublish(item)" :disabled="item._saving">
-            <span class="spinner-xs" v-if="item._saving"></span>
-            <template v-else>{{ item.published ? 'Despublicar' : 'Publicar' }}</template>
-          </button>
+          <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="action-btn btn-publish-action" @click="publishNow(item)" :disabled="item._saving"><span class="spinner-xs" v-if="item._saving"></span><template v-else>Publicar</template></button>
+          <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="action-btn btn-unpublish" @click="unpublish(item)" :disabled="item._saving">Despublicar</button>
           <button v-if="item._isOwn" class="action-btn btn-delete" @click="askDelete(item)">Eliminar</button>
-          <span v-if="!item._isOwn" class="action-btn" style="cursor:default; color:#94a3b8; font-size:0.71rem; justify-content:center;">Solo lectura</span>
         </div>
       </article>
     </div>
 
     <!-- ══════════ LIST ══════════ -->
     <div v-else class="news-list">
-      <div v-for="item in filteredNews" :key="item.id" class="list-row" :class="{ 'is-draft': !item.published }">
+      <div v-for="item in filteredNews" :key="item.id" class="list-row" :class="cardClass(item)">
         <div class="list-img">
           <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" @error="item.coverUrl = null" />
-          <div v-else class="list-img-placeholder">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/></svg>
-          </div>
+          <div v-else class="list-img-placeholder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/></svg></div>
         </div>
         <div class="list-content">
           <div class="list-badges">
             <span class="badge-cat small">{{ getCategoryLabel(item.category) }}</span>
-            <span class="badge-status small" :class="item.published ? 'status-pub' : 'status-draft'">
-              <span class="status-dot"></span>{{ item.published ? 'Publicada' : 'Borrador' }}
+            <!-- SCRUM-385/391: badge con los 3 estados -->
+            <span class="badge-status small" :class="statusBadgeClass(item)">
+              <span class="status-dot"></span>{{ statusBadgeLabel(item) }}
             </span>
-            <span v-if="item.careerId" class="badge-career">{{ getCareerName(String(item.careerId)) }}</span>
           </div>
           <h3 class="list-title">{{ item.title }}</h3>
+          <!-- SCRUM-391: fecha programada en vista lista -->
+          <p v-if="item.newsStatus === 'PROGRAMADO' && item.scheduledAt" class="list-scheduled">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Se publicará el {{ formatScheduledAt(item.scheduledAt) }}
+          </p>
           <p class="list-excerpt">{{ excerpt(item.body) }}</p>
-          <div class="list-meta">
-            <time>{{ formatDate(item.createdAt) }}</time>
-            <template v-if="item.updatedAt && item.updatedAt !== item.createdAt">
-              <span class="list-edited">· Ultima actualización: {{ formatDateFull(item.updatedAt) }}</span>
-            </template>
-          </div>
+          <div class="list-meta"><time>{{ formatDate(item.createdAt) }}</time></div>
         </div>
         <div class="list-actions">
-          <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </router-link>
-          <button v-if="item._isOwn" class="icon-btn" :class="item.published ? 'ico-unpublish' : 'ico-publish'" @click="togglePublish(item)" :disabled="item._saving" :title="item.published ? 'Despublicar' : 'Publicar'">
-            <span class="spinner-xs" v-if="item._saving"></span>
-            <svg v-else-if="item.published" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>
-            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-          <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          </button>
+          <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></router-link>
+          <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="icon-btn ico-publish" @click="publishNow(item)" :disabled="item._saving" title="Publicar ahora"><span class="spinner-xs" v-if="item._saving"></span><svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="icon-btn ico-unpublish" @click="unpublish(item)" :disabled="item._saving" title="Despublicar"><span class="spinner-xs" v-if="item._saving"></span><svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg></button>
+          <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
         </div>
       </div>
     </div>
@@ -423,7 +337,6 @@
 import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { careerService } from '../../services/api.js'
 
-// ── State ──────────────────────────────────────────────────────────────────
 const news             = ref([])
 const loading          = ref(false)
 const error            = ref('')
@@ -437,7 +350,7 @@ const openMenu         = ref(null)
 const availableCareers = ref([])
 
 const authorEmail = localStorage.getItem('ucb_email') || ''
-const authorName  = localStorage.getItem('ucb_name') || localStorage.getItem('ucb_username') || authorEmail.split('@')[0] || 'Publicador'
+const authorName  = localStorage.getItem('ucb_name') || authorEmail.split('@')[0] || 'Publicador'
 
 const toast       = reactive({ show:false, type:'success', title:'', message:'' })
 const deleteModal = reactive({ show:false, id:null, title:'', loading:false })
@@ -449,32 +362,58 @@ const categories = [
   { value:'CULTURA',   label:'Cultura'   }, { value:'OTRO',     label:'Otro'     }
 ]
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function getCategoryLabel(val)   { return categories.find(c=>c.value===val)?.label || val || '—' }
-function getCareerName(idStr)    { if(!idStr||idStr==='null') return 'General'; return availableCareers.value.find(c=>String(c.id)===idStr)?.name || `Carrera ${idStr}` }
-function getItemInitials(item)   { const name=item.authorName||(item._isOwn?authorName:'PU'); return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() }
-function excerpt(text)           { if(!text) return ''; const p=text.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').replace(/\n/g,' ').trim(); return p.length>120?p.substring(0,120)+'...':p }
-function formatDate(d)           { if(!d) return ''; return new Date(d).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) }
-function formatDateFull(d)       { return formatDate(d) }
-function formatDateRelative(d)   { if(!d) return ''; const diff=Date.now()-new Date(d).getTime(); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),dy=Math.floor(diff/86400000); if(m<1) return 'Ahora mismo'; if(m<60) return `Hace ${m} min`; if(h<24) return `Hace ${h}h`; if(dy<7) return `Hace ${dy} días`; return formatDate(d) }
-function needsTruncation(body)   { return body&&body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').length>350 }
-function renderBody(text)        { if(!text) return ''; return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^## (.+)$/gm,'<h3 class="body-h3">$1</h3>').replace(/^> (.+)$/gm,'<blockquote class="body-quote">$1</blockquote>').replace(/^- (.+)$/gm,'<li class="body-li">$1</li>').replace(/---/g,'<hr class="body-hr"/>').replace(/\n/g,'<br/>') }
-function clearAllFilters()       { search.value=''; categoryFilter.value=''; careerFilter.value=''; activeFilter.value='all' }
-function toggleMenu(id)  { openMenu.value = openMenu.value === id ? null : id }
-function closeMenu()     { openMenu.value = null }
-function handleOutsideClick(e) { if (!e.target.closest('.fb-menu-wrap')) openMenu.value = null 
-  else if (e.target.closest('a[href]'))   openMenu.value = null
+// ── Helpers ──────────────────────────────────────────────────────────
+function getCategoryLabel(val) { return categories.find(c=>c.value===val)?.label||val||'—' }
+function getCareerName(idStr) { if(!idStr||idStr==='null') return 'General'; return availableCareers.value.find(c=>String(c.id)===idStr)?.name||`Carrera ${idStr}` }
+function getItemInitials(item) { const n=item.authorName||(item._isOwn?authorName:'PU'); return n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() }
+function excerpt(text) { if(!text) return ''; const p=text.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').replace(/\n/g,' ').trim(); return p.length>120?p.substring(0,120)+'...':p }
+function formatDate(d) { if(!d) return ''; return new Date(d).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) }
+function formatDateRelative(d) { if(!d) return ''; const diff=Date.now()-new Date(d).getTime(); const m=Math.floor(diff/60000),h=Math.floor(diff/3600000),dy=Math.floor(diff/86400000); if(m<1) return 'Ahora mismo'; if(m<60) return `Hace ${m} min`; if(h<24) return `Hace ${h}h`; if(dy<7) return `Hace ${dy} días`; return formatDate(d) }
+
+// SCRUM-391: formatear fecha programada
+function formatScheduledAt(val) { if(!val) return ''; return new Date(val).toLocaleString('es-ES',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) }
+function needsTruncation(body) { return body&&body.replace(/\*\*|__|\*|_|#{1,6}\s?|`/g,'').length>350 }
+function renderBody(text) { if(!text) return ''; return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^## (.+)$/gm,'<h3 class="body-h3">$1</h3>').replace(/^> (.+)$/gm,'<blockquote class="body-quote">$1</blockquote>').replace(/^- (.+)$/gm,'<li class="body-li">$1</li>').replace(/---/g,'<hr class="body-hr"/>').replace(/\n/g,'<br/>') }
+function clearAllFilters() { search.value=''; categoryFilter.value=''; careerFilter.value=''; activeFilter.value='all' }
+function toggleMenu(id) { openMenu.value = openMenu.value === id ? null : id }
+function closeMenu() { openMenu.value = null }
+function handleOutsideClick(e) { if(!e.target.closest('.fb-menu-wrap')) openMenu.value=null; else if(e.target.closest('a[href]')) openMenu.value=null }
+
+// SCRUM-391: contar por newsStatus (no por published)
+function countByStatus(status) { return news.value.filter(n => n.newsStatus === status).length }
+
+// SCRUM-385/391: clases y labels de estado
+function statusBadgeClass(item) {
+  return {
+    'fb-pub':       item.newsStatus === 'PUBLICADO',
+    'fb-scheduled': item.newsStatus === 'PROGRAMADO',
+    'fb-draft':     item.newsStatus === 'BORRADOR',
+    'status-pub':   item.newsStatus === 'PUBLICADO',
+    'status-scheduled': item.newsStatus === 'PROGRAMADO',
+    'status-draft': item.newsStatus === 'BORRADOR',
+  }
+}
+function statusBadgeLabel(item) {
+  return { PUBLICADO:'Publicada', PROGRAMADO:'Programada', BORRADOR:'Borrador' }[item.newsStatus] || (item.published ? 'Publicada' : 'Borrador')
 }
 
-// ── Filtrado y ordenado ────────────────────────────────────────────────────
+// clase de card según estado
+function cardClass(item) {
+  return {
+    'is-draft':     item.newsStatus === 'BORRADOR',
+    'is-scheduled': item.newsStatus === 'PROGRAMADO',
+  }
+}
+
 const filteredNews = computed(() => {
-  let list=[...news.value]
-  if(activeFilter.value==='published') list=list.filter(n=>n.published)
-  if(activeFilter.value==='draft')     list=list.filter(n=>!n.published)
-  if(categoryFilter.value)             list=list.filter(n=>n.category===categoryFilter.value)
-  if(careerFilter.value==='null')      list=list.filter(n=>!n.careerId)
-  else if(careerFilter.value)          list=list.filter(n=>String(n.careerId)===careerFilter.value)
-  if(search.value.trim())              { const q=search.value.toLowerCase(); list=list.filter(n=>n.title?.toLowerCase().includes(q)) }
+  let list = [...news.value]
+  if (activeFilter.value === 'published')  list = list.filter(n => n.newsStatus === 'PUBLICADO')
+  if (activeFilter.value === 'scheduled')  list = list.filter(n => n.newsStatus === 'PROGRAMADO')
+  if (activeFilter.value === 'draft')      list = list.filter(n => n.newsStatus === 'BORRADOR')
+  if (categoryFilter.value)                list = list.filter(n => n.category === categoryFilter.value)
+  if (careerFilter.value === 'null')       list = list.filter(n => !n.careerId)
+  else if (careerFilter.value)             list = list.filter(n => String(n.careerId) === careerFilter.value)
+  if (search.value.trim()) { const q=search.value.toLowerCase(); list=list.filter(n=>n.title?.toLowerCase().includes(q)) }
   if(sortBy.value==='newest') list.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
   if(sortBy.value==='oldest') list.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
   if(sortBy.value==='title')  list.sort((a,b)=>a.title?.localeCompare(b.title))
@@ -504,36 +443,58 @@ async function loadNews() {
     const allNews=resAll.ok?await resAll.json():[]
     const myNews =reMy.ok ?await reMy.json() :[]
     const myIds  =new Set(myNews.map(n=>n.id))
-    const merged =[
-      ...myNews.map(n=>({...n,_isOwn:true, _saving:false,_expanded:false,_deleting:false})),
-      ...allNews.filter(n=>!myIds.has(n.id)).map(n=>({...n,_isOwn:false,_saving:false,_expanded:false,_deleting:false}))
+
+    const normalize = (n, isOwn) => ({
+      ...n,
+      newsStatus: n.newsStatus || (n.published ? 'PUBLICADO' : 'BORRADOR'),
+      scheduledAt: n.scheduledAt || null,
+      _isOwn: isOwn, _saving: false, _expanded: false
+    })
+
+    const merged = [
+      ...myNews.map(n => normalize(n, true)),
+      ...allNews.filter(n => !myIds.has(n.id)).map(n => normalize(n, false))
     ]
-    const seen=new Set()
-    news.value=merged.filter(n=>{if(seen.has(n.id))return false;seen.add(n.id);return true})
+    const seen = new Set()
+    news.value = merged.filter(n=>{ if(seen.has(n.id)) return false; seen.add(n.id); return true })
   } catch(err) { error.value=err.name==='TypeError'?'No se pudo conectar con el servidor.':err.message }
   finally { loading.value=false }
 }
 
-// ── Publicar/Despublicar ───────────────────────────────────────────────────
-async function togglePublish(item) {
+// SCRUM-391: Publicar ahora (cambia a PUBLICADO)
+async function publishNow(item) {
   item._saving=true
   try {
-    const res=await fetch(`http://localhost:8081/api/news/${item.id}`,{method:'PUT',headers:getHeaders(),mode:'cors',body:JSON.stringify({published:!item.published})})
+    const res=await fetch(`http://localhost:8081/api/news/${item.id}`,{method:'PUT',headers:getHeaders(),mode:'cors',body:JSON.stringify({newsStatus:'PUBLICADO'})})
     if(!res.ok) throw new Error()
-    item.published=(await res.json()).published
-    showToast('success',item.published?'Noticia publicada':'Noticia despublicada',`"${item.title}" fue actualizada.`)
-  } catch { showToast('error','Error','No se pudo actualizar el estado.') }
-  finally  { item._saving=false }
+    const updated=await res.json()
+    item.newsStatus=updated.newsStatus||'PUBLICADO'
+    item.published=true
+    item.scheduledAt=null
+    showToast('success','Noticia publicada',`"${item.title}" ya está visible para todos.`)
+  } catch { showToast('error','Error','No se pudo publicar la noticia.') }
+  finally { item._saving=false }
 }
 
-function askDelete(item) {
-  Object.assign(deleteModal,{show:true,id:item.id,title:item.title,loading:false})
+// Despublicar (vuelve a BORRADOR)
+async function unpublish(item) {
+  item._saving=true
+  try {
+    const res=await fetch(`http://localhost:8081/api/news/${item.id}`,{method:'PUT',headers:getHeaders(),mode:'cors',body:JSON.stringify({newsStatus:'BORRADOR'})})
+    if(!res.ok) throw new Error()
+    const updated=await res.json()
+    item.newsStatus=updated.newsStatus||'BORRADOR'
+    item.published=false
+    showToast('success','Noticia despublicada',`"${item.title}" fue movida a borrador.`)
+  } catch { showToast('error','Error','No se pudo despublicar la noticia.') }
+  finally { item._saving=false }
 }
 
 function cancelDelete() {
   if(deleteModal.loading) return
   deleteModal.show=false
 }
+function askDelete(item) { Object.assign(deleteModal,{show:true,id:item.id,title:item.title,loading:false}) }
 
 async function confirmDelete() {
   deleteModal.loading=true
@@ -969,6 +930,69 @@ onBeforeUnmount(()=>{ document.removeEventListener('click',handleOutsideClick) }
 .fb-act-unpub:hover  { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
 .fb-act-del:hover    { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
 .fb-act-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* ── Scheduled chip ── */
+.fb-scheduled-chip {
+  margin: 0.7rem 1.2rem 0;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1px solid #c4b5fd;
+  border-left: 3px solid #7c3aed;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chip-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #6d28d9;
+}
+
+.chip-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6d28d9;
+}
+
+.chip-date {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4c1d95;
+  background: #fff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #c4b5fd;
+  white-space: nowrap;
+}
+
+/* ── Badge programada en fb-status-badge ── */
+.fb-scheduled { background: #f5f3ff; color: #6d28d9; }
+
+/* ── Watermark programado ── */
+.scheduled-watermark {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800;
+  color: rgba(124,58,237,0.05); letter-spacing: 6px;
+  transform: rotate(-12deg); user-select: none;
+}
+
+/* ── Card scheduled border ── */
+.fb-card.is-scheduled {
+  border-color: #c4b5fd;
+  background: linear-gradient(to bottom, #faf8ff, #fff);
+}
+.fb-card.is-scheduled .fb-body-gradient {
+  background: linear-gradient(transparent, #faf8ff);
+}
+
+/* ── status-scheduled en grid/list ── */
+.status-scheduled { background: rgba(245,243,255,0.92); color: #6d28d9; }
+
+
 
 /* Draft watermark */
 .draft-watermark {

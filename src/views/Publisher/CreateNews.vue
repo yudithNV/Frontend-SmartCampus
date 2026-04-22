@@ -57,7 +57,6 @@
         <button class="btn-primary" @click="submitNews" :disabled="saving || uploading || !isValid">
           <template v-if="!saving && !uploading">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Publicar
             {{ form.newsStatus === 'PROGRAMADO' ? 'Programar' : 'Publicar' }}
           </template>
           <template v-else>
