@@ -336,7 +336,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { careerService } from '../../services/api.js'
-
+let pollingInterval = null
 const news             = ref([])
 const loading          = ref(false)
 const error            = ref('')
@@ -461,7 +461,39 @@ async function loadNews() {
   finally { loading.value=false }
 }
 
-// SCRUM-391: Publicar ahora (cambia a PUBLICADO)
+
+// polling 
+async function checkScheduledNews() {
+  const scheduled = news.value.filter(n => n.newsStatus === 'PROGRAMADO')
+  if (scheduled.length === 0) return  // nada que revisar
+
+  const now = new Date()
+  const dueItems = scheduled.filter(n => n.scheduledAt && new Date(n.scheduledAt) <= now)
+  
+  if (dueItems.length === 0) return  // ninguna ha vencido aún
+
+  // Hay noticias que ya deberían estar publicadas → recargar del backend
+  try {
+    const reMy = await fetch('http://localhost:8081/api/news/my', {
+      headers: getHeaders(), mode: 'cors'
+    })
+    if (!reMy.ok) return
+    const myNews = await reMy.json()
+
+    // Actualizar solo las que cambiaron
+    myNews.forEach(updated => {
+      const existing = news.value.find(n => n.id === updated.id)
+      if (existing && existing.newsStatus !== updated.newsStatus) {
+        existing.newsStatus = updated.newsStatus || (updated.published ? 'PUBLICADO' : 'BORRADOR')
+        existing.published = updated.published
+        existing.scheduledAt = updated.scheduledAt || null
+        showToast('success', 'Noticia publicada automáticamente', 
+          `"${existing.title}" ya está visible para todos.`)
+      }
+    })
+  } catch { /* silencioso */ }
+}
+
 async function publishNow(item) {
   item._saving=true
   try {
@@ -529,8 +561,12 @@ onMounted(async()=>{
   document.addEventListener('click',handleOutsideClick)
   await loadNews()
   try { availableCareers.value=await careerService.getAll() } catch {}
+
+  pollingInterval = setInterval(checkScheduledNews, 30_000)
+
 })
 onBeforeUnmount(()=>{ document.removeEventListener('click',handleOutsideClick) })
+  
 </script>
 
 <style scoped>
