@@ -320,11 +320,3 @@ export const complaintService = {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Logs de Acceso (Admin)
-// ─────────────────────────────────────────────────────────────────────────────
-export const accessLogService = {
-  /** Historial de intentos fallidos — GET /api/access-logs */
-  getAll: () =>
-    apiRequest('/access-logs', 'GET')
-}
