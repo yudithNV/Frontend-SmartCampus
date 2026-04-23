@@ -171,7 +171,15 @@ export const eventService = {
     apiRequest(`/events/${id}`, 'PUT', data),
 
   delete: (id) =>
-    apiRequest(`/events/${id}`, 'DELETE')
+    apiRequest(`/events/${id}`, 'DELETE'),
+
+  /** Registrarse en un evento */
+  register: (eventId) =>
+    apiRequest(`/events/${eventId}/register`, 'POST'),
+
+  /** Cancelar inscripción en un evento */
+  unregister: (eventId) =>
+    apiRequest(`/events/${eventId}/unregister`, 'DELETE')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

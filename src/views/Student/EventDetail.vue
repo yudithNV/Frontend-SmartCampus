@@ -34,6 +34,24 @@
     <!-- ── CONTENT ───────── -->
     <div v-else-if="evento" class="detail-container">
 
+      <!-- ── Success Message ────── -->
+      <div v-if="successMessage" class="alert alert-success">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ successMessage }}
+      </div>
+
+      <!-- ── Error Message ────── -->
+      <div v-if="error" class="alert alert-error">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ error }}
+      </div>
+
       <!-- ── Poster Image ────── -->
       <div class="detail-hero">
         <img v-if="evento.posterUrl" :src="evento.posterUrl" :alt="evento.name" class="detail-hero__img">
@@ -163,14 +181,16 @@
             Volver al muro
           </button>
           <button 
-            @click="registrado = !registrado" 
+            @click="toggleRegistration" 
             class="btn" 
+            :disabled="loadingRegistration"
             :style="registrado 
               ? 'background: #ecfdf5; color: #059669; border: 1px solid #10b981; font-weight: 600;' 
               : 'background: #2563eb; color: white;'"
           >
-            <span v-if="!registrado">Inscribirme ahora</span>
-            <span v-else>✅ ¡Inscrito! (Click para cancelar)</span>
+            <span v-if="!registrado && !loadingRegistration">Inscribirme ahora</span>
+            <span v-else-if="registrado && !loadingRegistration">✅ ¡Inscrito! (Click para cancelar)</span>
+            <span v-else class="loading-spinner">Procesando...</span>
           </button>
           
         </div>
@@ -193,7 +213,9 @@ const eventId = route.params.id
 const evento = ref(null)
 const loading = ref(true)
 const error = ref('')
-const registrado = ref(false) // Nueva variable de estado para controlar si el usuario ya se ha registrado en el evento
+const registrado = ref(false)
+const loadingRegistration = ref(false)
+const successMessage = ref('')
 
 // Obtener detalles del evento
 const fetchEventDetail = async () => {
@@ -212,6 +234,52 @@ const fetchEventDetail = async () => {
   }
 }
 
+// Manejar registro/desregistro del evento
+const toggleRegistration = async () => {
+  loadingRegistration.value = true
+  successMessage.value = ''
+  
+  try {
+    if (!registrado.value) {
+      // Registrarse en el evento
+      await eventService.register(eventId)
+      registrado.value = true
+      successMessage.value = 'Inscripción realizada con éxito'
+    } else {
+      // Cancelar inscripción
+      await eventService.unregister(eventId)
+      registrado.value = false
+      successMessage.value = 'Inscripción cancelada con éxito'
+    }
+    
+    // Limpiar mensaje de éxito después de 3 segundos
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (err) {
+    console.error('Error al procesar registro:', err)
+    const errorMsg = err.message || 'Error al procesar la solicitud'
+    
+    // Mostrar mensaje de error específico
+    if (errorMsg.includes('inscrito')) {
+      error.value = 'Ya estás inscrito en este evento'
+    } else if (errorMsg.includes('Cupo')) {
+      error.value = 'Cupo lleno'
+    } else if (errorMsg.includes('no encontrado')) {
+      error.value = 'Evento no encontrado'
+    } else {
+      error.value = errorMsg
+    }
+    
+    // Limpiar mensaje de error después de 5 segundos
+    setTimeout(() => {
+      error.value = ''
+    }, 5000)
+  } finally {
+    loadingRegistration.value = false
+  }
+}
+
 // Helpers
 const getInitials = (name) => {
   if (!name) return '?'
@@ -220,11 +288,6 @@ const getInitials = (name) => {
 
 const goBack = () => {
   router.back()
-}
-
-const confirmParticipation = () => {
-  // TODO: Implementar lógica de participación
-  alert('Función de participación próximamente disponible')
 }
 
 onMounted(() => {
@@ -657,6 +720,27 @@ onMounted(() => {
   background: #cbd5e1;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* ── Responsive ────── */
 @media (max-width: 640px) {
   .detail-main {
@@ -689,5 +773,51 @@ onMounted(() => {
   .metadata-label {
     min-width: unset;
   }
+}
+
+/* ── Alerts ────── */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+}
+
+.alert-success svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+
+.alert-error svg {
+  color: #ef4444;
+  flex-shrink: 0;
 }
 </style>
