@@ -49,7 +49,18 @@
               <div class="detail-row">
                 <span class="detail-label">Estado</span>
                 <span class="status" :class="`status-${selectedComplaint.statusClass}`">
-                  <span class="status-icon">{{ selectedComplaint.statusIcon }}</span>
+                  <!-- Pendiente: reloj -->
+                  <svg v-if="selectedComplaint.statusIcon === 'clock'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <!-- En revisión: ojo -->
+                  <svg v-else-if="selectedComplaint.statusIcon === 'eye'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <!-- Resuelto: check -->
+                  <svg v-else-if="selectedComplaint.statusIcon === 'check'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
                   {{ selectedComplaint.status }}
                 </span>
               </div>
@@ -61,27 +72,68 @@
                 <span class="detail-label">Descripción</span>
                 <p class="detail-description">{{ selectedComplaint.description || 'Sin descripción.' }}</p>
               </div>
-              <div v-if="selectedComplaint.evidenceUrl" class="detail-row detail-row--col">
+
+              <!-- Adjuntos con previsualización -->
+              <div class="detail-row detail-row--col">
                 <span class="detail-label">Adjuntos</span>
-                <div class="attachment-list">
-                  <a
+
+                <div v-if="selectedComplaint.evidenceUrl" class="attachment-grid">
+                  <div
                     v-for="(url, i) in selectedComplaint.evidenceUrl.split(',')"
                     :key="i"
-                    :href="url.trim()"
-                    target="_blank"
-                    rel="noopener"
-                    class="attachment-link"
+                    class="attachment-card"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48"/>
-                    </svg>
-                    Adjunto {{ i + 1 }}
-                  </a>
+                    <!-- Previsualización si es imagen -->
+                    <div class="attachment-preview">
+                      <img
+                        v-if="isImage(url.trim())"
+                        :src="url.trim()"
+                        :alt="`Adjunto ${i + 1}`"
+                        class="preview-img"
+                        @error="e => e.target.style.display='none'"
+                      />
+                      <!-- Ícono para PDF -->
+                      <div v-else-if="isPdf(url.trim())" class="preview-icon preview-icon--pdf">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <text x="6" y="18" font-size="5" fill="currentColor" stroke="none" font-weight="bold">PDF</text>
+                        </svg>
+                      </div>
+                      <!-- Ícono para DOCX u otro -->
+                      <div v-else class="preview-icon preview-icon--doc">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="8" y1="13" x2="16" y2="13"/>
+                          <line x1="8" y1="17" x2="16" y2="17"/>
+                        </svg>
+                      </div>
+                    </div>
+
+                    <!-- Nombre y botón descargar -->
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ getFileName(url.trim(), i) }}</span>
+                      <a
+                        :href="url.trim()"
+                        target="_blank"
+                        rel="noopener"
+                        download
+                        class="btn-download"
+                        title="Descargar"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                          <polyline points="7 10 12 15 17 10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Descargar
+                      </a>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div v-else class="detail-row">
-                <span class="detail-label">Adjuntos</span>
-                <span class="detail-value detail-value--muted">Sin adjuntos</span>
+
+                <p v-else class="detail-value detail-value--muted">Sin adjuntos</p>
               </div>
             </div>
 
@@ -220,22 +272,35 @@ const modalRef = ref(null)
 const search = ref('')
 const selectedComplaint = ref(null)
 
-// Sistema de notificaciones
-const toast = ref({
-  show: false,
-  type: 'success',
-  title: '',
-  message: ''
-})
-
+const toast = ref({ show: false, type: 'success', title: '', message: '' })
 const showToast = (type, title, message) => {
-  toast.value = {
-    show: true,
-    type,
-    title,
-    message
+  toast.value = { show: true, type, title, message }
+}
+
+// ── helpers de adjuntos ────────────────────────────────────────────────────
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+const getExt = (url) => url.split('?')[0].split('.').pop().toLowerCase()
+const isImage = (url) => IMAGE_EXTS.includes(getExt(url))
+const isPdf   = (url) => getExt(url) === 'pdf'
+
+const getFileName = (url, index) => {
+  try {
+    const decoded = decodeURIComponent(url.split('?')[0])
+    const parts = decoded.split('/')
+    const raw = parts[parts.length - 1]
+    // quitar UUID del nombre si el backend lo genera así: uuid.ext
+    // si tiene guiones y parece UUID, mostrar "Adjunto N.ext"
+    const uuidPattern = /^[0-9a-f-]{36}\./i
+    if (uuidPattern.test(raw)) {
+      const ext = raw.split('.').pop()
+      return `Adjunto ${index + 1}.${ext}`
+    }
+    return raw
+  } catch {
+    return `Adjunto ${index + 1}`
   }
 }
+// ──────────────────────────────────────────────────────────────────────────
 
 const loadComplaints = async () => {
   loading.value = true
@@ -281,7 +346,6 @@ const formatDate = (dateString) => {
   const date = new Date(dateString)
   return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`
 }
-
 const truncateText = (text, maxLength) => {
   if (!text) return ''
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
@@ -304,11 +368,9 @@ const reclamosFiltrados = computed(() => {
 const handleCreateComplaint = async ({ dto, files }) => {
   try {
     const created = await complaintService.create(dto)
-
     if (files && files.length > 0) {
       await complaintService.addAttachments(created.id, files)
     }
-
     modalRef.value?.resetForm()
     showModal.value = false
     showToast('success', 'Reclamo enviado exitosamente', `Número de seguimiento: ${created.trackingNumber}`)
@@ -331,10 +393,8 @@ onMounted(() => { loadComplaints() })
 .complaints-section { width: 100%; }
 
 .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 2rem;
 }
 .header-info h2 { font-size: 2rem; color: #1a3a52; margin: 0 0 0.5rem 0; font-weight: 700; }
 .header-info p  { color: #64748b; margin: 0; font-size: 0.95rem; }
@@ -488,32 +548,32 @@ onMounted(() => { loadComplaints() })
   background: #f1f5f9;
   color: #475569;
 }
+.title-cell strong { display: block; color: #1a3a52; margin-bottom: 0.25rem; }
+.title-cell small  { color: #64748b; font-size: 0.8rem; display: block; }
 
 .badge-academico {
   background: #dbeafe;
   color: #0c4a6e;
 }
 
-.badge-infraestructura {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badge-tramites {
-  background: #f3e8ff;
-  color: #6b21a8;
-}
-
-/* Status */
 .status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
 }
+.status svg { flex-shrink: 0; }
+.status-pendiente  { background: #fef9c3; color: #854d0e; }
+.status-en-revision{ background: #dbeafe; color: #0c4a6e; }
+.status-resuelto   { background: #dcfce7; color: #166534; }
+
+.actions-cell { text-align: center; }
+.action-btn {
+  background: none; border: 1px solid #e2e8f0;
+  border-radius: 6px; padding: 0.4rem 0.6rem;
+  cursor: pointer; color: #64748b;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+}
+.action-btn:hover { background: #e0f2fe; border-color: #1a3a52; color: #1a3a52; }
 
 /* Stats */
 .stats-grid {
@@ -548,7 +608,6 @@ onMounted(() => { loadComplaints() })
   from { opacity: 0; transform: scale(0.94); }
   to   { opacity: 1; transform: scale(1); }
 }
-
 .detail-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0;
@@ -570,28 +629,68 @@ onMounted(() => { loadComplaints() })
 .detail-row--col { flex-direction: column; align-items: flex-start; }
 
 .detail-label {
-  font-size: 0.8rem; font-weight: 600; color: #94a3b8;
-  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+  font-size: 0.78rem; font-weight: 600; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;
 }
 .detail-value { font-size: 0.95rem; color: #1a3a52; }
-.detail-value--muted { color: #94a3b8; font-style: italic; }
+.detail-value--muted { color: #94a3b8; font-style: italic; font-size: 0.9rem; margin-top: 0.25rem; }
 .detail-description {
   margin: 0.4rem 0 0 0; font-size: 0.95rem; color: #334155;
-  line-height: 1.6; background: #f8fafc; border-radius: 8px; padding: 0.75rem 1rem;
-  width: 100%; box-sizing: border-box;
+  line-height: 1.6; background: #f8fafc; border-radius: 8px;
+  padding: 0.75rem 1rem; width: 100%; box-sizing: border-box;
 }
 
-.attachment-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
-.attachment-link {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.35rem 0.75rem; border-radius: 6px;
-  background: #e0f2fe; color: #0c4a6e; font-size: 0.82rem; font-weight: 600;
-  text-decoration: none; transition: background 0.2s ease;
+/* ── Adjuntos grid ─────────────────────────────────────────────────────────── */
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.4rem;
 }
-.attachment-link:hover { background: #bae6fd; }
+.attachment-card {
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  overflow: hidden; background: #f8fafc;
+  display: flex; flex-direction: column;
+  transition: box-shadow 0.2s ease;
+}
+.attachment-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
+.attachment-preview {
+  width: 100%; height: 100px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f1f5f9; overflow: hidden;
+}
+.preview-img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.preview-icon {
+  justify-content: center; gap: 0.25rem; width: 100%; height: 100%;
+}
+.preview-icon--pdf  { color: #dc2626; }
+.preview-icon--doc  { color: #2563eb; }
+
+.attachment-info {
+  padding: 0.5rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  border-top: 1px solid #e2e8f0;
+}
+.attachment-name {
+  font-size: 0.75rem; color: #475569; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.btn-download {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.75rem; font-weight: 600; color: #1a3a52;
+  background: #e0f2fe; border-radius: 5px; padding: 0.3rem 0.5rem;
+  text-decoration: none; transition: background 0.2s ease; width: fit-content;
+}
+.btn-download:hover { background: #bae6fd; }
+
+/* Detail footer */
 .detail-footer {
-  padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;
+  padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0;
+  display: flex; justify-content: flex-end;
 }
 .btn-close-detail {
   padding: 0.6rem 1.5rem; background: #1a3a52; color: #fff;
@@ -600,11 +699,10 @@ onMounted(() => { loadComplaints() })
 }
 .btn-close-detail:hover { background: #0f2438; }
 
-/* Transition */
+/* Transitions */
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
-/* Responsive */
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
