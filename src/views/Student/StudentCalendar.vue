@@ -2,80 +2,106 @@
   <div class="calendar-wrapper">
     <div class="calendar-container">
       <div class="calendar-header">
-        <button @click="previousMonth" class="nav-btn" title="Mes anterior">
+        <button @click="previousMonth" class="nav-btn" title="Mes anterior" :disabled="loading">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
         <div class="month-year">{{ monthYear }}</div>
-        <button @click="nextMonth" class="nav-btn" title="Siguiente mes">
+        <button @click="nextMonth" class="nav-btn" title="Siguiente mes" :disabled="loading">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </button>
       </div>
 
-      <div class="weekdays">
-        <div class="weekday" v-for="day in weekDays" :key="day">{{ day }}</div>
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando eventos...</p>
       </div>
 
-      <div class="calendar-grid">
-        <div
-          v-for="(date, index) in filteredCalendarDays"
-          :key="index"
-          class="calendar-day"
-          :class="{
-            'other-month': !date.isCurrentMonth,
-            'today': date.isToday,
-            'has-events': date.events.length > 0,
-            'has-filtered-events': date.filteredEvents.length > 0
-          }"
-          @click="selectDate(date)"
-        >
-          <div class="day-number">{{ date.day }}</div>
-          <div class="events-indicator" v-if="date.filteredEvents.length > 0">
-            <span class="event-count">{{ date.filteredEvents.length }}</span>
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <h3>Error al cargar eventos</h3>
+        <p>{{ error }}</p>
+        <button @click="loadCalendarEvents" class="btn-retry">Reintentar</button>
+      </div>
+
+      <!-- Calendar Content -->
+      <template v-else>
+        <div class="weekdays">
+          <div class="weekday" v-for="day in weekDays" :key="day">{{ day }}</div>
+        </div>
+
+        <div class="calendar-grid">
+          <div
+            v-for="(date, index) in calendarDays"
+            :key="index"
+            class="calendar-day"
+            :class="{
+              'other-month': !date.isCurrentMonth,
+              'today': date.isToday,
+              'has-events': date.events.length > 0,
+              'has-filtered-events': date.filteredEvents.length > 0
+            }"
+            @click="selectDate(date)"
+          >
+            <div class="day-number">{{ date.day }}</div>
+            <div class="events-indicator" v-if="date.filteredEvents.length > 0">
+              <span class="event-count">{{ date.filteredEvents.length }}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
-    <!-- Panel lateral con filtros y eventos -->
+    <!-- Sidebar -->
     <div class="sidebar">
       <div class="filters-section">
         <h3 class="filters-title">Filtros</h3>
         
         <div class="filter-group">
           <label class="filter-label">Carrera</label>
-          <select v-model="selectedCareer" class="filter-select">
+          <select v-model="selectedCareerId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
             <option value="">Todas las carreras</option>
-            <option value="informatica">Ingeniería Informática</option>
-            <option value="sistemas">Ingeniería de Sistemas</option>
-            <option value="administracion">Administración de Empresas</option>
-            <option value="contabilidad">Contabilidad</option>
+            <option v-for="career in careers" :key="career.id" :value="career.id">
+              {{ career.name }}
+            </option>
           </select>
         </div>
 
         <div class="filter-group">
           <label class="filter-label">Categoría</label>
-          <select v-model="selectedCategory" class="filter-select">
+          <select v-model="selectedCategoryId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
             <option value="">Todas las categorías</option>
-            <option value="conferencia">Conferencia</option>
-            <option value="taller">Taller</option>
-            <option value="examen">Examen</option>
-            <option value="reunion">Reunión</option>
-            <option value="tutoria">Tutoría</option>
+            <option v-for="category in categories" :key="category.id" :value="category.id">
+              {{ category.name }}
+            </option>
           </select>
         </div>
 
-        <button @click="clearFilters" class="clear-filters-btn">Limpiar filtros</button>
+        <button @click="clearFilters" class="clear-filters-btn" :disabled="loadingFilters">Limpiar filtros</button>
       </div>
 
       <!-- Evento seleccionado -->
       <transition name="fade">
         <div class="selected-date-section" v-if="selectedDate">
           <h3 class="selected-date-title">{{ formatDateTitle(selectedDate) }}</h3>
-          <div v-if="selectedDate.filteredEvents.length === 0" class="no-events">
+          
+          <!-- Loading eventos del día -->
+          <div v-if="loadingDayEvents" class="loading-day">
+            <div class="spinner-small"></div>
+            <p>Cargando eventos...</p>
+          </div>
+
+          <!-- No hay eventos -->
+          <div v-else-if="selectedDate.filteredEvents.length === 0" class="no-events">
             <p v-if="selectedDate.events.length > 0">
               No hay eventos que coincidan con los filtros
             </p>
@@ -83,14 +109,23 @@
               No hay eventos programados para esta fecha
             </p>
           </div>
+
+          <!-- Lista de eventos -->
           <div v-else class="events-list">
-            <div v-for="event in selectedDate.filteredEvents" :key="event.id" class="event-item">
-              <div class="event-time">{{ event.time }}</div>
+            <div 
+              v-for="event in selectedDate.filteredEvents" 
+              :key="event.id" 
+              class="event-item"
+              @click="goToEventDetail(event.id)"
+            >
+              <div class="event-time">{{ formatEventTime(event.startDatetime, event.endDatetime) }}</div>
               <div class="event-content">
-                <h4>{{ event.title }}</h4>
-                <p v-if="event.category" class="event-category">🏷️ {{ event.category }}</p>
-                <p v-if="event.career" class="event-career">📚 {{ event.career }}</p>
-                <p v-if="event.location" class="event-location">📍 {{ event.location }}</p>
+                <h4>{{ event.name }}</h4>
+                <p v-if="event.category" class="event-category" :style="{ color: event.category.colorHex }">
+                  🏷️ {{ event.category.name }}
+                </p>
+                <p v-if="event.career" class="event-career">📚 {{ event.career.name }}</p>
+                <p v-if="event.location" class="event-location">📍 {{ event.location.name }} ({{ event.location.block }})</p>
                 <p v-if="event.description" class="event-description">{{ event.description }}</p>
               </div>
             </div>
@@ -102,47 +137,26 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { eventService, careerService, categoryService } from '../../services/api'
+
+const router = useRouter()
 
 const currentDate = ref(new Date())
 const selectedDate = ref(null)
-const selectedCareer = ref('')
-const selectedCategory = ref('')
+const selectedCareerId = ref('')
+const selectedCategoryId = ref('')
+
+const loading = ref(false)
+const error = ref(null)
+const loadingFilters = ref(false)
+const loadingDayEvents = ref(false)
 
 const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-
-// Mock data - Eventos de ejemplo con carrera y categoría
-const mockEvents = {
-  '2026-4-9': [
-    { id: 1, title: 'Conferencia sobre Ciberseguridad 9', time: '09:13 - 11:13', location: 'Auditorio 2', description: 'Conferencia académica sobre ciberseguridad', career: 'Ingeniería Informática', category: 'Conferencia' }
-  ],
-  '2026-4-15': [
-    { id: 2, title: 'Taller de Programación', time: '14:00 - 16:00', location: 'Lab 3', description: 'Desarrollo de aplicaciones web', career: 'Ingeniería Sistemas', category: 'Taller' }
-  ],
-  '2026-4-20': [
-    { id: 3, title: 'Reunión de Estudiantes', time: '10:00 - 11:00', location: 'Sala 101', description: 'Planificación del semestre', career: 'Administración de Empresas', category: 'Reunión' },
-    { id: 4, title: 'Tutoría', time: '15:00 - 16:30', location: 'Oficina 5', description: 'Revisión de trabajos', career: 'Ingeniería Informática', category: 'Tutoría' }
-  ],
-  '2026-4-25': [
-    { id: 5, title: 'Examen Parcial', time: '08:00 - 10:00', location: 'Auditorio 1', description: 'Matemáticas II', career: 'Ingeniería Sistemas', category: 'Examen' }
-  ]
-}
-
-// Mapeo de carreras a valores cortos para filtrado
-const careerMap = {
-  'informatica': 'Ingeniería Informática',
-  'sistemas': 'Ingeniería de Sistemas',
-  'administracion': 'Administración de Empresas',
-  'contabilidad': 'Contabilidad'
-}
-
-const categoryMap = {
-  'conferencia': 'Conferencia',
-  'taller': 'Taller',
-  'examen': 'Examen',
-  'reunion': 'Reunión',
-  'tutoria': 'Tutoría'
-}
+const events = ref([])
+const careers = ref([])
+const categories = ref([])
 
 const monthYear = computed(() => {
   const options = { year: 'numeric', month: 'long' }
@@ -155,7 +169,6 @@ const calendarDays = computed(() => {
 
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
-  const prevLastDay = new Date(year, month, 0)
 
   const startDate = new Date(firstDay)
   startDate.setDate(startDate.getDate() - firstDay.getDay())
@@ -164,7 +177,10 @@ const calendarDays = computed(() => {
   let date = new Date(startDate)
 
   while (date <= lastDay || days.length % 7 !== 0) {
-    const dateStr = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+    const year = date.getFullYear()
+    const month_padded = String(date.getMonth() + 1).padStart(2, '0')
+    const day_padded = String(date.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month_padded}-${day_padded}`
     const isCurrentMonth = date.getMonth() === month
     const isToday = isDateToday(date)
 
@@ -187,23 +203,20 @@ const calendarDays = computed(() => {
   return days
 })
 
-const filteredCalendarDays = computed(() => {
-  return calendarDays.value.map(day => ({
-    ...day,
-    filteredEvents: filterEvents(day.events)
-  }))
-})
-
-function filterEvents(events) {
-  return events.filter(event => {
-    const careerMatch = !selectedCareer.value || event.career === careerMap[selectedCareer.value]
-    const categoryMatch = !selectedCategory.value || event.category === categoryMap[selectedCategory.value]
-    return careerMatch && categoryMatch
+function getEventsForDate(dateStr) {
+  return events.value.filter(event => {
+    // Extraer fecha del string ISO (YYYY-MM-DD) evitando problemas de zona horaria
+    const eventDatePart = event.startDatetime.split('T')[0]
+    return eventDatePart === dateStr
   })
 }
 
-function getEventsForDate(dateStr) {
-  return mockEvents[dateStr] || []
+function filterEvents(eventsList) {
+  return eventsList.filter(event => {
+    const careerMatch = !selectedCareerId.value || (event.career && event.career.id === parseInt(selectedCareerId.value))
+    const categoryMatch = !selectedCategoryId.value || (event.category && event.category.id === parseInt(selectedCategoryId.value))
+    return careerMatch && categoryMatch
+  })
 }
 
 function isDateToday(date) {
@@ -215,29 +228,93 @@ function isDateToday(date) {
   )
 }
 
+function formatDateTitle(date) {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+  return date.date.toLocaleDateString('es-ES', options).replace(/^\w/, (c) => c.toUpperCase())
+}
+
+function formatEventTime(start, end) {
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const startTime = startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  const endTime = endDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  return `${startTime} - ${endTime}`
+}
+
+async function loadCalendarEvents() {
+  loading.value = true
+  error.value = null
+  try {
+    const year = currentDate.value.getFullYear()
+    const month = currentDate.value.getMonth() + 1
+    const data = await eventService.getCalendarEvents(year, month, null, selectedCareerId.value || null, selectedCategoryId.value || null)
+    events.value = Array.isArray(data) ? data : []
+    
+    // Actualizar selectedDate con eventos filtrados si está seleccionada
+    if (selectedDate.value) {
+      const updatedDate = calendarDays.value.find(d => d.dateStr === selectedDate.value.dateStr)
+      if (updatedDate) {
+        selectedDate.value = updatedDate
+      }
+    }
+  } catch (err) {
+    error.value = err.message || 'No se pudieron cargar los eventos'
+    console.error('Error loading calendar events:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadFiltersData() {
+  loadingFilters.value = true
+  try {
+    const [careersData, categoriesData] = await Promise.all([
+      careerService.getAll(),
+      categoryService.getAll()
+    ])
+    careers.value = careersData?.data ?? careersData ?? []
+    categories.value = categoriesData?.data ?? categoriesData ?? []
+  } catch (err) {
+    console.error('Error loading filter data:', err)
+  } finally {
+    loadingFilters.value = false
+  }
+}
+
 function previousMonth() {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)
   selectedDate.value = null
+  loadCalendarEvents()
 }
 
 function nextMonth() {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
   selectedDate.value = null
+  loadCalendarEvents()
 }
 
 function selectDate(date) {
   selectedDate.value = date
 }
 
-function clearFilters() {
-  selectedCareer.value = ''
-  selectedCategory.value = ''
+async function applyFilters() {
+  await loadCalendarEvents()
 }
 
-function formatDateTitle(date) {
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  return date.date.toLocaleDateString('es-ES', options).replace(/^\w/, (c) => c.toUpperCase())
+function clearFilters() {
+  selectedCareerId.value = ''
+  selectedCategoryId.value = ''
+  loadCalendarEvents()
 }
+
+function goToEventDetail(eventId) {
+  router.push({ name: 'EventDetail', params: { id: eventId } })
+}
+
+onMounted(() => {
+  loadFiltersData()
+  loadCalendarEvents()
+})
 </script>
 
 <style scoped>
@@ -277,10 +354,15 @@ function formatDateTitle(date) {
   justify-content: center;
 }
 
-.nav-btn:hover {
+.nav-btn:hover:not(:disabled) {
   background: #FFD200;
   border-color: #FFD200;
   color: #1a3a52;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .month-year {
@@ -289,6 +371,74 @@ function formatDateTitle(date) {
   color: #1a3a52;
   min-width: 200px;
   text-align: center;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  min-height: 300px;
+}
+
+.loading-state {
+  color: #64748b;
+}
+
+.error-state {
+  color: #ef4444;
+  text-align: center;
+}
+
+.error-state h3 {
+  margin: 0.5rem 0;
+}
+
+.error-state p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.spinner {
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #FFD200;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-small {
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #FFD200;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.btn-retry {
+  padding: 0.75rem 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+}
+
+.btn-retry:hover {
+  background: #dc2626;
 }
 
 .weekdays {
@@ -441,7 +591,7 @@ function formatDateTitle(date) {
   transition: border-color 0.3s ease;
 }
 
-.filter-select:hover {
+.filter-select:hover:not(:disabled) {
   border-color: #FFD200;
 }
 
@@ -449,6 +599,11 @@ function formatDateTitle(date) {
   outline: none;
   border-color: #FFD200;
   box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
+}
+
+.filter-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .clear-filters-btn {
@@ -463,9 +618,14 @@ function formatDateTitle(date) {
   font-size: 0.9rem;
 }
 
-.clear-filters-btn:hover {
+.clear-filters-btn:hover:not(:disabled) {
   background: #FFD200;
   border-color: #FFD200;
+}
+
+.clear-filters-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .selected-date-section {
@@ -481,6 +641,21 @@ function formatDateTitle(date) {
   font-size: 1rem;
   font-weight: 700;
   word-break: break-word;
+}
+
+.loading-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0;
+  color: #64748b;
+  text-align: center;
+}
+
+.loading-day p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .no-events {
@@ -509,6 +684,13 @@ function formatDateTitle(date) {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.event-item:hover {
+  background: #e2e8f0;
+  transform: translateX(4px);
 }
 
 .event-time {
@@ -525,8 +707,8 @@ function formatDateTitle(date) {
 
 .event-category {
   margin: 0.25rem 0;
-  color: #8b5cf6;
   font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .event-career {
@@ -545,6 +727,7 @@ function formatDateTitle(date) {
   margin: 0.5rem 0 0 0;
   color: #475569;
   font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .fade-enter-active,

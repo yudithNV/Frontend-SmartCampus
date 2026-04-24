@@ -161,6 +161,17 @@ export const eventService = {
   getByCareer: (careerId) =>
     apiRequest(`/events/career/${careerId}`, 'GET'),
 
+  /** Eventos del calendario por mes (y opcionalmente por día y filtros) */
+  getCalendarEvents: async (year, month, day = null, careerId = null, categoryId = null) => {
+    const params = new URLSearchParams({ year, month })
+    if (day) params.append('day', day)
+    if (careerId) params.append('careerId', careerId)
+    if (categoryId) params.append('categoryId', categoryId)
+    
+    const response = await apiRequest(`/events/calendar?${params}`, 'GET')
+    return response?.data ?? response
+  },
+
   getById: (id) =>
     apiRequest(`/events/${id}`, 'GET'),
 
