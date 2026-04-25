@@ -50,24 +50,29 @@
       <!-- ── Main Content ────── -->
       <div class="detail-main">
 
-        <!-- ── Header Info ────── -->
-        <div class="detail-header-info">
-          <div class="badge-row">
-            <span class="badge badge-type">{{ evento.eventType }}</span>
-            <span v-if="evento.category" class="badge badge-category" :style="{ background: evento.category.colorHex || '#64748b' }">
-                {{ evento.category.name }}
-            </span>
-          </div>
+        <!-- Badges -->
+        <div class="badge-row">
+          <!-- Badge recomendado (SCRUM-404) -->
+          <span v-if="evento.recommended" class="badge badge-recommended">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            Recomendado para ti
+          </span>
+          <span class="badge badge-type">{{ evento.eventType }}</span>
+          <span v-if="evento.category" class="badge badge-category" :style="{ background: evento.category.colorHex || '#64748b' }">
+            {{ evento.category.name }}
+          </span>
+        </div>
 
           <h1 class="detail-title">{{ evento.name }}</h1>
 
-          <!-- ── Author Info ────── -->
-          <div class="author-section">
-            <div class="author-avatar">{{ getInitials(evento.authorName) }}</div>
-            <div class="author-details">
-              <p class="author-name">{{ evento.authorName }}</p>
-              <p class="author-date">Publicado {{ formatDateTime(evento.createdAt) }}</p>
-            </div>
+        <!-- Autor -->
+        <div class="author-section">
+          <div class="author-avatar">{{ getInitials(evento.authorName) }}</div>
+          <div class="author-details">
+            <p class="author-name">{{ evento.authorName }}</p>
+            <p class="author-date">Publicado {{ formatDateTime(evento.createdAt) }}</p>
           </div>
         </div>
 
@@ -105,11 +110,10 @@
             </div>
           </div>
 
-          <!-- Carrera -->
           <div class="detail-card">
             <div class="detail-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 10v6m0 0v6m0-6H2m0 0v6m0-6V10m0 0a2 2 0 012-2h16a2 2 0 012 2m0 6a2 2 0 01-2 2H4a2 2 0 01-2-2"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
               </svg>
             </div>
             <div class="detail-text">
@@ -122,11 +126,9 @@
           <!-- Capacidad -->
           <div class="detail-card">
             <div class="detail-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-                <path d="M16 3.13a4 4 0 010 7.75"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
               </svg>
             </div>
             <div class="detail-text">
@@ -177,7 +179,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 import { formatDateTime, formatEventDateTime } from '../../utils/index.js'
-import { eventService } from '../../services/api.js'
+import { eventService, userService } from '../../services/api.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -193,9 +195,26 @@ const fetchEventDetail = async () => {
   error.value = ''
   try {
     const data = await eventService.getById(eventId)
-    
-    // Manejar estructura de respuesta con 'data' o directa
-    evento.value = data.data || data
+    const raw  = data.data || data
+
+    // Marcar recomendado si el backend no lo devuelve
+    if (raw.recommended === undefined || raw.recommended === null) {
+      try {
+        const prefs = await userService.getPreferences()
+        const hasPrefs = prefs.eventTypes.length > 0 || prefs.categoryIds.length > 0
+        if (hasPrefs) {
+          const matchType     = prefs.eventTypes.includes(raw.eventType)
+          const matchCategory = raw.category?.id != null && prefs.categoryIds.includes(raw.category.id)
+          raw.recommended = matchType || matchCategory
+        } else {
+          raw.recommended = false
+        }
+      } catch {
+        raw.recommended = false
+      }
+    }
+
+    evento.value = raw
   } catch (err) {
     console.error('Error al cargar evento:', err)
     error.value = err.message || 'Error desconocido'
@@ -242,6 +261,9 @@ onMounted(() => {
 }
 
 .event-detail-page {
+  --navy: #1a3a52; --navy2: #1e4d6b; --gold: #FFD200;
+  --ink: #0f1f2e; --slate: #64748b; --muted: #94a3b8;
+  --surface: #ffffff; --bg: #f0f2f5; --border: #e2e8f0;
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   min-height: 100vh;
@@ -258,7 +280,6 @@ onMounted(() => {
   z-index: 10;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-
 .back-btn {
   display: flex;
   align-items: center;
@@ -274,6 +295,7 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.15s;
 }
+.back-btn:hover { background: #f8fafc; border-color: var(--navy); color: var(--navy); }
 
 .back-btn:hover {
   background: #f8fafc;
@@ -336,6 +358,7 @@ onMounted(() => {
 .btn-retry:hover {
   background: #0f2a3d;
 }
+.btn-retry:hover { background: #0f2a3d; }
 
 /* ── Detail Container ────── */
 .detail-container {
@@ -369,6 +392,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
 }
+.detail-hero__img { width: 100%; height: 100%; object-fit: cover; }
+.detail-hero__placeholder { color: #7fa8c4; }
 
 /* ── Main Content ────── */
 .detail-main {
@@ -526,6 +551,9 @@ onMounted(() => {
   font-weight: 700;
   margin: 0 0 0.4rem;
 }
+.detail-label { font-size: 0.7rem; color: var(--slate); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin: 0 0 0.35rem; }
+.detail-value { font-size: 0.9rem; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.3; }
+.detail-subtext { font-size: 0.75rem; color: var(--muted); margin: 0.25rem 0 0; }
 
 .detail-value {
   font-size: 0.95rem;
@@ -565,6 +593,8 @@ onMounted(() => {
   white-space: pre-wrap;
   margin: 0;
 }
+.section-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 0 0 0.65rem; }
+.description-text { font-size: 0.925rem; color: #374151; line-height: 1.75; white-space: pre-wrap; margin: 0; }
 
 /* ── Metadata Section ────── */
 .metadata-section {
@@ -612,7 +642,12 @@ onMounted(() => {
   gap: 1rem;
   flex-wrap: wrap;
 }
+.metadata-item { display: flex; align-items: center; gap: 1rem; }
+.metadata-label { font-size: 0.78rem; color: var(--slate); font-weight: 600; min-width: 160px; }
+.metadata-value { font-size: 0.82rem; color: var(--ink); font-weight: 500; }
 
+/* ── CTA ──────────────────────────────────────────────────────────────────── */
+.cta-buttons { display: flex; gap: 0.875rem; flex-wrap: wrap; }
 .btn {
   display: flex;
   align-items: center;

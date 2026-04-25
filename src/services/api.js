@@ -56,7 +56,15 @@ export const userService = {
     apiRequest('/profile', 'GET'),
 
   updateProfile: (data) =>
-    apiRequest('/profile', 'PUT', data)
+    apiRequest('/profile', 'PUT', data),
+
+  // ── Preferencias de eventos ──────────────────────────────────────────────
+
+  getPreferences: () =>
+    apiRequest('/profile/preferences', 'GET'),
+
+  savePreferences: (dto) =>
+    apiRequest('/profile/preferences', 'PUT', dto),
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -280,8 +288,7 @@ export const complaintService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null)
-        const errorMessage = errorData?.message || errorData?.error || `Error ${response.status}`
-        throw new Error(errorMessage)
+        throw new Error(errorData?.message || errorData?.error || `Error ${response.status}`)
       }
 
       const result = await response.json()
@@ -290,14 +297,11 @@ export const complaintService = {
 
     // Si HAY evidencia → usar endpoint multipart
     const formData = new FormData()
-
-    const complaintData = {
+    formData.append('complaint', JSON.stringify({
       title: data.title,
       category: data.category,
       body: data.description
-    }
-
-    formData.append('complaint', JSON.stringify(complaintData))
+    }))
     formData.append('evidence', data.evidence)
 
     const response = await fetch(`${API_BASE_URL}/complaints/with-evidence`, {
@@ -311,8 +315,7 @@ export const complaintService = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
-      const errorMessage = errorData?.message || errorData?.error || `Error ${response.status}`
-      throw new Error(errorMessage)
+      throw new Error(errorData?.message || errorData?.error || `Error ${response.status}`)
     }
 
     const result = await response.json()
