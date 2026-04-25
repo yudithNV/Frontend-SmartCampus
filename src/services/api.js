@@ -1,28 +1,26 @@
 // Configuración base de API
 const API_BASE_URL = 'http://localhost:8081/api'
 
-// Función genérica para hacer peticiones
-async function apiRequest(endpoint, method = 'GET', data = null) {
+// ─────────────────────────────────────────────────────────────────────────────
+// apiRequest (forma nueva correcta)
+// ─────────────────────────────────────────────────────────────────────────────
+async function apiRequest(endpoint, options = {}) {
   try {
     const token = localStorage.getItem('ucb_token')
+    const isFormData = options.body instanceof FormData
 
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      mode: 'cors'
+    const headers = {
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options.headers
     }
 
-    if (token) {
-      options.headers['Authorization'] = `Bearer ${token}`
-    }
-
-    if (data) {
-      options.body = JSON.stringify(data)
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, options)
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      mode: 'cors',
+      method: 'GET',
+      ...options,
+      headers
+    })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
@@ -42,29 +40,35 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 // ─────────────────────────────────────────────────────────────────────────────
 export const userService = {
   login: (email, password) =>
-    apiRequest('/auth/login', 'POST', { email, password }),
+    apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    }),
 
   logout: () =>
-    apiRequest('/auth/logout', 'POST'),
+    apiRequest('/auth/logout', { method: 'POST' }),
 
-  // Obtener información del usuario autenticado (para sidebars)
   getMe: () =>
-    apiRequest('/auth/me', 'GET'),
+    apiRequest('/auth/me'),
 
-  // ✅ Corregido: el backend usa /api/profile (ProfileController)
   getProfile: () =>
-    apiRequest('/profile', 'GET'),
+    apiRequest('/profile'),
 
   updateProfile: (data) =>
-    apiRequest('/profile', 'PUT', data),
+    apiRequest('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
 
-  // ── Preferencias de eventos ──────────────────────────────────────────────
-
+  // Preferencias
   getPreferences: () =>
-    apiRequest('/profile/preferences', 'GET'),
+    apiRequest('/profile/preferences'),
 
   savePreferences: (dto) =>
-    apiRequest('/profile/preferences', 'PUT', dto),
+    apiRequest('/profile/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(dto)
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,54 +78,40 @@ export const adminUserService = {
   getAll: (page = 0, size = 10, search = '', role = '', status = '', career = '', sortBy = 'createdAt', sortType = 'DESC') => {
     const params = new URLSearchParams({ page, size, sortBy, sortType })
     if (search) params.append('search', search)
-    if (role) params.append('role', role)
+    if (role)   params.append('role', role)
     if (status) params.append('status', status)
     if (career) params.append('career', career)
-    return apiRequest(`/users?${params}`, 'GET')
+    return apiRequest(`/users?${params}`)
   },
 
   create: (data) =>
-    apiRequest('/users', 'POST', data),
+    apiRequest('/users', { method: 'POST', body: JSON.stringify(data) }),
 
   update: (id, data) =>
-    apiRequest(`/users/${id}`, 'PUT', data),
+    apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   delete: (id) =>
-    apiRequest(`/users/${id}`, 'DELETE')
+    apiRequest(`/users/${id}`, { method: 'DELETE' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Noticias
 // ─────────────────────────────────────────────────────────────────────────────
 export const newsService = {
-  getAll: () =>
-    apiRequest('/news', 'GET'),
-
-  getById: (id) =>
-    apiRequest(`/news/${id}`, 'GET'),
-
-  create: (data) =>
-    apiRequest('/news', 'POST', data),
-
-  update: (id, data) =>
-    apiRequest(`/news/${id}`, 'PUT', data),
-
-  delete: (id) =>
-    apiRequest(`/news/${id}`, 'DELETE'),
-
-   getMy: () =>
-    apiRequest('/news/my', 'GET'),
-
-  getRecent: (queryString) =>
-    apiRequest(`/news/recent?${queryString}`, 'GET'),
+  getAll: () => apiRequest('/news'),
+  getById: (id) => apiRequest(`/news/${id}`),
+  create: (data) => apiRequest('/news', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/news/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => apiRequest(`/news/${id}`, { method: 'DELETE' }),
+  getMy: () => apiRequest('/news/my'),
+  getRecent: (queryString) => apiRequest(`/news/recent?${queryString}`)
 }
-// ─────────────────────────────────────────────────────────────
-// Normalizador de eventos (Adapter Pattern)
-// ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Normalizador de eventos
+// ─────────────────────────────────────────────────────────────────────────────
 function normalizeEvent(event) {
   let cleanDescription = event.description
-
-  // Si viene como JSON raro → parsear
   if (typeof cleanDescription === 'string' && cleanDescription.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(cleanDescription)
@@ -130,7 +120,6 @@ function normalizeEvent(event) {
       cleanDescription = ''
     }
   }
-
   return {
     id: event.id,
     name: event.name,
@@ -143,191 +132,97 @@ function normalizeEvent(event) {
     posterUrl: event.posterUrl
   }
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Eventos
 // ─────────────────────────────────────────────────────────────────────────────
 export const eventService = {
-  /** Todos los eventos publicados */
-  getAll: () =>
-    apiRequest('/events', 'GET'),
+  getAll: () => apiRequest('/events'),
 
-  /** Eventos próximos (desde hoy en adelante) */
   getUpcoming: async () => {
-    const response = await apiRequest('/events/upcoming', 'GET')
+    const response = await apiRequest('/events/upcoming')
     const list = response?.data ?? response
-
-    return Array.isArray(list)
-      ? list.map(normalizeEvent)
-      : []
+    return Array.isArray(list) ? list.map(normalizeEvent) : []
   },
 
-  /** Eventos del publicador autenticado */
-  getMy: () =>
-    apiRequest('/events/my', 'GET'),
-
-  /** Eventos filtrados por carrera — usado por el calendario del estudiante */
-  getByCareer: (careerId) =>
-    apiRequest(`/events/career/${careerId}`, 'GET'),
-
-  getById: (id) =>
-    apiRequest(`/events/${id}`, 'GET'),
-
-  create: (data) =>
-    apiRequest('/events', 'POST', data),
-
-  update: (id, data) =>
-    apiRequest(`/events/${id}`, 'PUT', data),
-
-  delete: (id) =>
-    apiRequest(`/events/${id}`, 'DELETE')
+  getMy: () => apiRequest('/events/my'),
+  getByCareer: (careerId) => apiRequest(`/events/career/${careerId}`),
+  getById: (id) => apiRequest(`/events/${id}`),
+  create: (data) => apiRequest('/events', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => apiRequest(`/events/${id}`, { method: 'DELETE' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Calendario Académico (tareas personales del estudiante)
-// Usa la tabla academic_calendar de la BD
+// Servicios de Calendario Académico
 // ─────────────────────────────────────────────────────────────────────────────
 export const academicCalendarService = {
-  /** Obtiene todas las tareas del estudiante autenticado */
-  getMy: () =>
-    apiRequest('/academic-calendar', 'GET'),
-
-  /** Crea una nueva tarea personal */
-  create: (data) =>
-    apiRequest('/academic-calendar', 'POST', data),
-
-  /** Actualiza una tarea existente */
-  update: (id, data) =>
-    apiRequest(`/academic-calendar/${id}`, 'PUT', data),
-
-  /** Elimina una tarea */
-  delete: (id) =>
-    apiRequest(`/academic-calendar/${id}`, 'DELETE')
+  getMy: () => apiRequest('/academic-calendar'),
+  create: (data) => apiRequest('/academic-calendar', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => apiRequest(`/academic-calendar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => apiRequest(`/academic-calendar/${id}`, { method: 'DELETE' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Reservas
 // ─────────────────────────────────────────────────────────────────────────────
 export const reservationService = {
-  getAll: () =>
-    apiRequest('/reservations', 'GET'),
-
-  create: (data) =>
-    apiRequest('/reservations', 'POST', data),
-
-  cancel: (id) =>
-    apiRequest(`/reservations/${id}/cancel`, 'POST')
+  getAll: () => apiRequest('/reservations'),
+  create: (data) => apiRequest('/reservations', { method: 'POST', body: JSON.stringify(data) }),
+  cancel: (id) => apiRequest(`/reservations/${id}/cancel`, { method: 'POST' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Carreras
+// Servicios básicos
 // ─────────────────────────────────────────────────────────────────────────────
-export const careerService = {
-  getAll: () =>
-    apiRequest('/careers', 'GET')
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Categorías
-// ─────────────────────────────────────────────────────────────────────────────
-export const categoryService = {
-  getAll: () =>
-    apiRequest('/categories', 'GET')
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Ubicaciones
-// ─────────────────────────────────────────────────────────────────────────────
-export const locationService = {
-  getAll: () =>
-    apiRequest('/locations', 'GET')
-}
+export const careerService   = { getAll: () => apiRequest('/careers') }
+export const categoryService = { getAll: () => apiRequest('/categories') }
+export const locationService = { getAll: () => apiRequest('/locations') }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Servicios de Sugerencias
 // ─────────────────────────────────────────────────────────────────────────────
 export const suggestionService = {
-  /** Envía una nueva sugerencia — POST /api/suggestions */
-  create: (data) =>
-    apiRequest('/suggestions', 'POST', data),
-
-  /** Historial de sugerencias del estudiante — GET /api/suggestions/my */
-  getMy: () =>
-    apiRequest('/suggestions/my', 'GET')
+  create: (data) => apiRequest('/suggestions', { method: 'POST', body: JSON.stringify(data) }),
+  getMy: () => apiRequest('/suggestions/my')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Reclamos
+// Servicios de Reclamos (VERSIÓN CORRECTA)
 // ─────────────────────────────────────────────────────────────────────────────
 export const complaintService = {
-  /** Obtiene todos los reclamos del estudiante autenticado — GET /api/complaints/my */
   getMy: async () => {
-    const response = await apiRequest('/complaints/my', 'GET')
-    // El backend devuelve { success, message, data: [...] }
+    const response = await apiRequest('/complaints/my')
     return response.data || response
   },
 
-  /** Crea un nuevo reclamo con evidencia opcional */
-  create: async (data) => {
-    const token = localStorage.getItem('ucb_token')
-
-    // Si NO hay evidencia → usar endpoint JSON simple
-    if (!data.evidence) {
-      const response = await fetch(`${API_BASE_URL}/complaints`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: data.title,
-          category: data.category,
-          body: data.description
-        }),
-        mode: 'cors'
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(errorData?.message || errorData?.error || `Error ${response.status}`)
-      }
-
-      const result = await response.json()
-      return result.data || result
-    }
-
-    // Si HAY evidencia → usar endpoint multipart
-    const formData = new FormData()
-    formData.append('complaint', JSON.stringify({
-      title: data.title,
-      category: data.category,
-      body: data.description
-    }))
-    formData.append('evidence', data.evidence)
-
-    const response = await fetch(`${API_BASE_URL}/complaints/with-evidence`, {
+  create: async (dto) => {
+    const response = await apiRequest('/complaints', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData,
-      mode: 'cors'
+      body: JSON.stringify({
+        title: dto.title,
+        category: dto.category,
+        body: dto.body
+      })
     })
+    return response.data || response
+  },
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.message || errorData?.error || `Error ${response.status}`)
-    }
+  addAttachments: async (id, files) => {
+    const formData = new FormData()
+    files.forEach(file => formData.append('files', file))
 
-    const result = await response.json()
-    return result.data || result
+    const response = await apiRequest(`/complaints/${id}/adjuntos`, {
+      method: 'POST',
+      body: formData
+    })
+    return response.data || response
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Logs de Acceso (Admin)
+// Logs
 // ─────────────────────────────────────────────────────────────────────────────
 export const accessLogService = {
-  /** Historial de intentos fallidos — GET /api/access-logs */
-  getAll: () =>
-    apiRequest('/access-logs', 'GET')
+  getAll: () => apiRequest('/access-logs')
 }

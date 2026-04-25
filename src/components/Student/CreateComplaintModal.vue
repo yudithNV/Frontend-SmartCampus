@@ -147,6 +147,12 @@ const fileError = ref('')
 const MAX_FILES = 5
 const MAX_SIZE = 10 * 1024 * 1024
 
+const ALLOWED_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+])
+
 const validateAndAddFiles = (files) => {
   fileError.value = ''
   const incoming = Array.from(files)
@@ -159,7 +165,11 @@ const validateAndAddFiles = (files) => {
   for (const file of incoming) {
 
     if (file.size > MAX_SIZE) {
-      fileError.value = `${file.name} supera 10MB`
+      fileError.value = `"${file.name}" supera el límite de 10MB`
+      return
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      fileError.value = `"${file.name}" no es un formato válido. Se aceptan: JPG, PNG, WEBP, GIF, PDF, DOCX`
       return
     }
 
@@ -202,21 +212,16 @@ const submitForm = () => {
     errors.value.description = 'La descripción debe tener al menos 10 caracteres'
     return
   }
+  if (!isFormValid.value) return
 
-  if (isFormValid.value) {
-
-    const form = new FormData()
-
-    form.append('title', formData.value.title)
-    form.append('category', formData.value.category)
-    form.append('description', formData.value.description)
-
-    attachments.value.forEach(file => {
-      form.append('files', file)
-    })
-
-    emit('submit', form)
-  }
+  emit('submit', {
+    dto: {
+      title: formData.value.title.trim(),
+      category: formData.value.category,
+      body: formData.value.description.trim(), 
+    },
+    files: [...attachments.value]
+  })
 }
 
 const resetForm = () => {

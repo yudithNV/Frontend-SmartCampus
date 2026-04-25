@@ -59,12 +59,9 @@
           <button class="btn-primary" @click="submitNews" :disabled="saving || !isValid">
             <template v-if="!saving">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              {{ form.published ? 'Publicar Cambios' : 'Guardar y Publicar' }}
+              {{ form.newsStatus === 'PROGRAMADO' ? 'Guardar Programación' : (form.newsStatus === 'PUBLICADO' ? 'Publicar Cambios' : 'Guardar Borrador') }}
             </template>
-            <template v-else>
-              <span class="spinner-sm"></span>
-              Guardando...
-            </template>
+            <template v-else><span class="spinner-sm"></span>Guardando...</template>
           </button>
         </div>
       </div>
@@ -214,98 +211,48 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-
-              <!-- File mode -->
-              <div v-else class="file-drop-zone" :class="{ dragging: coverDragging }"
-                @dragover.prevent="coverDragging = true"
-                @dragleave="coverDragging = false"
-                @drop.prevent="onCoverDrop">
-                <input ref="coverFileInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden-input" @change="onCoverFileChange" />
+              <div v-else class="file-drop-zone" :class="{ dragging: coverDragging }" @dragover.prevent="coverDragging=true" @dragleave="coverDragging=false" @drop.prevent="onCoverDrop">
+                <input ref="coverFileInput" type="file" accept="image/*" class="hidden-input" @change="onCoverFileChange" />
                 <div v-if="!coverPreviewUrl" class="drop-content" @click="coverFileInput.click()">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  <p>Arrastra una imagen aquí o <span class="drop-link">haz clic para seleccionar</span></p>
-                  <small>JPG, PNG, WEBP, GIF — máx. 5MB</small>
+                  <p>Arrastra o <span class="drop-link">haz clic</span></p><small>JPG, PNG, WEBP — máx. 5MB</small>
                 </div>
-                <div v-else class="drop-preview">
-                  <img :src="coverPreviewUrl" alt="Preview" />
-                  <button type="button" class="cover-remove" @click="clearCover">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+                <div v-else class="drop-preview" style="position:relative;height:180px">
+                  <img :src="coverPreviewUrl" style="width:100%;height:100%;object-fit:cover;display:block" />
+                  <button type="button" class="cover-remove" @click="clearCover"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               </div>
-
-              <!-- Preview (URL mode) -->
               <Transition name="fade">
-                <div class="cover-preview-wrap" v-if="coverMode === 'url' && coverPreviewUrl">
-                  <img :src="coverPreviewUrl" alt="Vista previa portada" @error="coverPreviewUrl=''" />
-                  <button type="button" class="cover-remove" @click="clearCover">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+                <div class="cover-preview-url" v-if="coverMode === 'url' && coverPreviewUrl">
+                  <img :src="coverPreviewUrl" alt="Vista previa" @error="coverPreviewUrl=''" />
+                  <button type="button" class="cover-remove" @click="clearCover"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               </Transition>
             </div>
 
-            <!-- Attachment -->
             <div class="field-block">
-              <div class="field-label">
-                <span class="field-num">06</span>
-                <label>Archivo Adjunto (PDF / Documento)</label>
-                <span class="optional-tag">Opcional</span>
-              </div>
-
-              <!-- Tab selector -->
+              <div class="field-label"><span class="field-num">06</span><label>Archivo Adjunto</label><span class="optional-tag">Opcional</span></div>
               <div class="upload-tabs">
-                <button type="button" class="upload-tab" :class="{ active: attachMode === 'url' }" @click="attachMode = 'url'">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                  URL
-                </button>
-                <button type="button" class="upload-tab" :class="{ active: attachMode === 'file' }" @click="attachMode = 'file'">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Subir archivo
-                </button>
+                <button type="button" class="upload-tab" :class="{ active: attachMode === 'url' }" @click="attachMode = 'url'">URL</button>
+                <button type="button" class="upload-tab" :class="{ active: attachMode === 'file' }" @click="attachMode = 'file'">Subir</button>
               </div>
-
-              <!-- URL mode -->
               <div v-if="attachMode === 'url'" class="input-icon-wrap">
                 <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-                <input
-                  v-model="form.attachmentUrl"
-                  type="url"
-                  class="form-input with-icon"
-                  placeholder="https://ejemplo.com/documento.pdf"
-                  @input="markChanged"
-                />
-                <button v-if="form.attachmentUrl" type="button" class="input-clear" @click="clearAttachment">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+                <input v-model="form.attachmentUrl" type="url" class="form-input with-icon" placeholder="https://..." @input="markChanged" />
+                <button v-if="form.attachmentUrl" type="button" class="input-clear" @click="clearAttachment"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
               </div>
-
-              <!-- File mode -->
-              <div v-else class="file-drop-zone file-drop-doc" :class="{ dragging: attachDragging }"
-                @dragover.prevent="attachDragging = true"
-                @dragleave="attachDragging = false"
-                @drop.prevent="onAttachDrop">
-                <input ref="attachFileInput" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" class="hidden-input" @change="onAttachFileChange" />
+              <div v-else class="file-drop-zone" :class="{ dragging: attachDragging }" @dragover.prevent="attachDragging=true" @dragleave="attachDragging=false" @drop.prevent="onAttachDrop">
+                <input ref="attachFileInput" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" class="hidden-input" @change="onAttachFileChange" />
                 <div v-if="!attachFileName" class="drop-content" @click="attachFileInput.click()">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  <p>Arrastra un documento aquí o <span class="drop-link">haz clic para seleccionar</span></p>
-                  <small>PDF, DOC, DOCX, XLS, XLSX, PPT, TXT — máx. 10MB</small>
+                  <p>Arrastra o <span class="drop-link">haz clic</span></p><small>PDF, DOC — máx. 10MB</small>
                 </div>
                 <div v-else class="attach-file-info">
-                  <div class="attach-icon-wrap">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  </div>
-                  <div class="attach-details">
-                    <span class="attach-name">{{ attachFileName }}</span>
-                    <span class="attach-size">{{ attachFileSize }}</span>
-                  </div>
-                  <button type="button" class="attach-remove" @click="clearAttachment">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+                  <div class="attach-icon-wrap icon-file"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <div class="attach-details"><span class="attach-name">{{ attachFileName }}</span><span class="attach-size">{{ attachFileSize }}</span></div>
+                  <button type="button" class="attach-remove" @click="clearAttachment"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               </div>
-
-              <!-- Existing attachment link -->
               <div v-if="form.attachmentUrl && attachMode === 'url'" class="existing-attach">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
                 <a :href="form.attachmentUrl" target="_blank" rel="noopener">Ver adjunto actual</a>
@@ -314,21 +261,53 @@
 
             <!-- Publish toggle -->
             <div class="field-block publish-block">
-              <div class="toggle-row">
-                <div class="toggle-left">
-                  <div class="toggle-icon" :class="form.published ? 'icon-pub' : 'icon-draft'">
-                    <svg v-if="form.published" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                  </div>
-                  <div>
-                    <span class="toggle-title">{{ form.published ? 'Publicar inmediatamente' : 'Guardar como borrador' }}</span>
-                    <span class="toggle-desc">{{ form.published ? 'La noticia será visible para todos los usuarios.' : 'Solo tú podrás ver esta noticia.' }}</span>
-                  </div>
-                </div>
-                <button type="button" class="toggle-switch" :class="{ on: form.published }" @click="form.published = !form.published; markChanged()">
-                  <span class="toggle-knob"></span>
+              <div class="field-label" style="margin-bottom:1rem">
+                <span class="field-num">07</span>
+                <label>Estado de Publicación <span class="req">*</span></label>
+              </div>
+
+              <div class="status-selector">
+                <button type="button" class="status-opt" :class="{ active: form.newsStatus === 'BORRADOR' }" @click="setStatus('BORRADOR')">
+                  <div class="status-opt-icon icon-draft"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></div>
+                  <div class="status-opt-text"><span class="status-opt-title">Borrador</span><span class="status-opt-desc">Solo visible para ti</span></div>
+                  <span class="status-check" v-if="form.newsStatus === 'BORRADOR'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </button>
+
+                <button type="button" class="status-opt" :class="{ active: form.newsStatus === 'PROGRAMADO' }" @click="setStatus('PROGRAMADO')">
+                  <div class="status-opt-icon icon-scheduled"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                  <div class="status-opt-text"><span class="status-opt-title">Programado</span><span class="status-opt-desc">{{ originalNewsStatus === 'PROGRAMADO' ? 'Reprogramar fecha de publicación' : 'Cambiar a publicación programada' }}</span></div>
+                  <span class="status-check" v-if="form.newsStatus === 'PROGRAMADO'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </button>
+
+                <button type="button" class="status-opt" :class="{ active: form.newsStatus === 'PUBLICADO' }" @click="setStatus('PUBLICADO')">
+                  <div class="status-opt-icon icon-pub"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+                  <div class="status-opt-text"><span class="status-opt-title">Publicado</span><span class="status-opt-desc">Visible para todos de inmediato</span></div>
+                  <span class="status-check" v-if="form.newsStatus === 'PUBLICADO'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>
                 </button>
               </div>
+
+              <Transition name="slide-down">
+                <div v-if="showCancelScheduledWarning" class="cancel-scheduled-banner">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  La programación será cancelada. La noticia volverá a estado <strong>Borrador</strong> y no se publicará automáticamente.
+                </div>
+              </Transition>
+
+              <!-- SCRUM-384/386: selector datetime cuando PROGRAMADO -->
+              <Transition name="slide-down">
+                <div v-if="form.newsStatus === 'PROGRAMADO'" class="scheduled-picker">
+                  <div class="scheduled-picker-label">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Fecha y hora de publicación automática
+                  </div>
+                  <input v-model="form.scheduledAt" type="datetime-local" class="form-input scheduled-input" :min="minScheduledAt" @change="clearFieldError('scheduledAt'); markChanged()" />
+                  <span class="field-error" v-if="fieldErrors.scheduledAt">{{ fieldErrors.scheduledAt }}</span>
+                  <p class="scheduled-hint">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Debe ser al menos 5 minutos en el futuro.
+                  </p>
+                </div>
+              </Transition>
             </div>
 
           </form>
@@ -358,22 +337,19 @@
                 <span class="meta-cat">{{ getCategoryLabel(form.category) }}</span>
                 <time class="meta-date">{{ todayFormatted }}</time>
               </div>
-              <h2 class="preview-title">{{ form.title || 'Título de la noticia...' }}</h2>
-              <div class="preview-body">
-                <p v-if="!form.body" class="preview-empty">El contenido aparecerá aquí...</p>
-                <div v-else v-html="renderBody(form.body)"></div>
-              </div>
-              <div class="preview-attachment" v-if="form.attachmentUrl || attachFileName">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-                <span>{{ attachFileName || 'Ver adjunto' }}</span>
-              </div>
+              <h2 class="preview-title">{{ form.title || 'Título...' }}</h2>
+              <div class="preview-body"><p v-if="!form.body" class="preview-empty">El contenido aparecerá aquí...</p><div v-else v-html="renderBody(form.body)"></div></div>
             </div>
           </div>
 
-          <div class="preview-status" :class="form.published ? 'status-pub' : 'status-draft'">
-            <svg v-if="form.published" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <div class="preview-status" :class="statusPreviewClass">
+            <svg v-if="form.newsStatus === 'PUBLICADO'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg v-else-if="form.newsStatus === 'PROGRAMADO'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
-            {{ form.published ? 'Se publicará al guardar' : 'Se guardará como borrador' }}
+            {{ statusPreviewLabel }}
+            <span v-if="form.newsStatus === 'PROGRAMADO' && form.scheduledAt" class="scheduled-preview-date">
+              · {{ formatScheduledAt(form.scheduledAt) }}
+            </span>
           </div>
 
           <!-- Edit meta info -->
@@ -393,9 +369,14 @@
             </div>
             <div class="meta-item">
               <span class="meta-key">Estado</span>
-              <span class="meta-val" :class="form.published ? 'val-pub' : 'val-draft'">
-                {{ form.published ? '● Publicada' : '● Borrador' }}
+              <span class="meta-val" :class="statusMetaClass">
+                <span class="meta-dot"></span>{{ statusMetaLabel }}
               </span>
+            </div>
+            <!-- SCRUM-385: fecha programada en el panel de info -->
+            <div class="meta-item" v-if="originalNewsStatus === 'PROGRAMADO' && originalScheduledAt">
+              <span class="meta-key">Programada para</span>
+              <span class="meta-val scheduled-val">{{ formatDate(originalScheduledAt) }}</span>
             </div>
           </div>
         </div>
@@ -405,7 +386,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { careerService } from '../../services/api.js'
 
@@ -434,171 +415,104 @@ const coverFileObj    = ref(null)
 
 const originalCreatedAt = ref('')
 const originalUpdatedAt = ref('')
+const originalNewsStatus = ref('PUBLICADO')   // SCRUM-385/389
+const originalScheduledAt = ref(null)          // SCRUM-385
 
 const careers = ref([])
 
 const form = reactive({
   title: '', body: '', category: '',
-  careerId: null, coverUrl: '', attachmentUrl: '', published: true
+  careerId: null, coverUrl: '', attachmentUrl: '',
+  newsStatus: 'PUBLICADO',
+  scheduledAt: ''
 })
 
-const fieldErrors = reactive({ title: '', body: '', category: '' })
+const fieldErrors = reactive({ title: '', body: '', category: '', scheduledAt: '' })
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
-
-// Original snapshot for change detection
 let originalSnapshot = ''
 
+const showCancelScheduledWarning = computed(() =>
+  originalNewsStatus.value === 'PROGRAMADO' && form.newsStatus === 'BORRADOR'
+)
+
+const minScheduledAt = computed(() => {
+  const d = new Date(Date.now() + 5 * 60 * 1000)
+  return d.toISOString().slice(0, 16)
+})
+
+const statusPreviewClass = computed(() => ({
+  'status-pub':       form.newsStatus === 'PUBLICADO',
+  'status-scheduled': form.newsStatus === 'PROGRAMADO',
+  'status-draft':     form.newsStatus === 'BORRADOR',
+}))
+const statusPreviewLabel = computed(() => ({
+  PUBLICADO:  'Se publicará al guardar',
+  PROGRAMADO: 'Publicación programada',
+  BORRADOR:   'Se guardará como borrador',
+}[form.newsStatus]))
+const statusMetaClass = computed(() => ({
+  'val-pub':       form.newsStatus === 'PUBLICADO',
+  'val-scheduled': form.newsStatus === 'PROGRAMADO',
+  'val-draft':     form.newsStatus === 'BORRADOR',
+}))
+const statusMetaLabel = computed(() => ({
+  PUBLICADO:  'Publicada',
+  PROGRAMADO: 'Programada',
+  BORRADOR:   'Borrador',
+}[form.newsStatus]))
+
+// SCRUM-389: cambiar a BORRADOR limpia scheduledAt
+function setStatus(s) {
+  form.newsStatus = s
+  if (s !== 'PROGRAMADO') form.scheduledAt = ''
+  markChanged()
+}
+
+function formatScheduledAt(val) {
+  if (!val) return ''
+  return new Date(val).toLocaleString('es-ES', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+}
+
 const categories = [
-  { value: 'ACADEMICO', label: 'Académico',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M22 10v6M2 10l10-5 10 5-10 5z' }, { d:'M6 12v5c3 3 9 3 12 0v-5' }]
-  },
-  { value: 'EVENTOS', label: 'Eventos',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M8 2v4M16 2v4' }, { d:'M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' }]
-  },
-  { value: 'AVISOS', label: 'Avisos',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9' }, { d:'M13.73 21a2 2 0 01-3.46 0' }]
-  },
-  { value: 'DEPORTES', label: 'Deportes',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M12 22a10 10 0 110-20 10 10 0 010 20z' }]
-  },
-  { value: 'CULTURA', label: 'Cultura',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' }]
-  },
-  { value: 'OTRO', label: 'Otro',
-    svgAttrs: { width:'18', height:'18', viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', 'stroke-width':'2' },
-    paths: [{ d:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z' }, { d:'M14 2v6h6M16 13H8M16 17H8M10 9H8' }]
-  }
+  { value:'ACADEMICO', label:'Académico', svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M22 10v6M2 10l10-5 10 5-10 5z'},{d:'M6 12v5c3 3 9 3 12 0v-5'}] },
+  { value:'EVENTOS',   label:'Eventos',   svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M8 2v4M16 2v4'},{d:'M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'}] },
+  { value:'AVISOS',    label:'Avisos',    svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9'},{d:'M13.73 21a2 2 0 01-3.46 0'}] },
+  { value:'DEPORTES',  label:'Deportes',  svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M12 22a10 10 0 110-20 10 10 0 010 20z'}] },
+  { value:'CULTURA',   label:'Cultura',   svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'}] },
+  { value:'OTRO',      label:'Otro',      svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'},{d:'M14 2v6h6M16 13H8M16 17H8M10 9H8'}] }
 ]
 
-const todayFormatted = computed(() =>
-  new Date().toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' })
-)
-
-const isValid = computed(() =>
-  form.title.trim().length > 0 && form.body.trim().length > 0 && form.category !== ''
-)
-
-function getCategoryLabel(val) { return categories.find(c => c.value === val)?.label || 'Sin categoría' }
-
-function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function renderBody(text) {
-  if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^## (.+)$/gm, '<h3 style="font-size:1rem;font-weight:700;margin:0.75rem 0 0.25rem">$1</h3>')
-    .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #FFD200;padding-left:0.75rem;color:#64748b;margin:0.5rem 0">$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li style="margin-left:1rem">$1</li>')
-    .replace(/---/g, '<hr style="border:none;border-top:1px solid #e2e8f0;margin:0.75rem 0"/>')
-    .replace(/\n/g, '<br/>')
-}
-
+// ─── Validation ───
+const todayFormatted = computed(() => new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}))
+const isValid = computed(() => form.title.trim().length > 0 && form.body.trim().length > 0 && form.category !== '')
+function getCategoryLabel(val) { return categories.find(c=>c.value===val)?.label||'Sin categoría' }
+function formatDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) }
+function renderBody(text) { if(!text) return ''; return text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^## (.+)$/gm,'<h3 style="font-size:1rem;font-weight:700;margin:0.75rem 0 0.25rem">$1</h3>').replace(/^> (.+)$/gm,'<blockquote style="border-left:3px solid #FFD200;padding-left:0.75rem;color:#64748b;margin:0.5rem 0">$1</blockquote>').replace(/^- (.+)$/gm,'<li style="margin-left:1rem">$1</li>').replace(/\n/g,'<br/>') }
 function markChanged() { hasChanges.value = true }
 function clearFieldError(field) { fieldErrors[field] = '' }
+function updateCoverPreview() { coverPreviewUrl.value = (form.coverUrl&&form.coverUrl.startsWith('http'))?form.coverUrl:''; markChanged() }
+function clearCover() { form.coverUrl=''; coverPreviewUrl.value=''; coverFileObj.value=null; if(coverFileInput.value) coverFileInput.value.value=''; markChanged() }
+function clearAttachment() { form.attachmentUrl=''; attachFileName.value=''; attachFileSize.value=''; attachFileObj.value=null; if(attachFileInput.value) attachFileInput.value.value=''; markChanged() }
+function onCoverFileChange(e) { const f=e.target.files[0]; if(!f) return; coverFileObj.value=f; coverPreviewUrl.value=URL.createObjectURL(f); markChanged() }
+function onCoverDrop(e) { coverDragging.value=false; const f=e.dataTransfer.files[0]; if(!f||!f.type.startsWith('image/')) return; coverFileObj.value=f; coverPreviewUrl.value=URL.createObjectURL(f); markChanged() }
+function onAttachFileChange(e) { const f=e.target.files[0]; if(!f) return; attachFileObj.value=f; attachFileName.value=f.name; attachFileSize.value=formatFileSize(f.size); markChanged() }
+function onAttachDrop(e) { attachDragging.value=false; const f=e.dataTransfer.files[0]; if(!f) return; attachFileObj.value=f; attachFileName.value=f.name; attachFileSize.value=formatFileSize(f.size); markChanged() }
+function formatFileSize(b) { if(b<1024) return `${b} B`; if(b<1048576) return `${(b/1024).toFixed(1)} KB`; return `${(b/1048576).toFixed(1)} MB` }
+function insertFormat(prefix,suffix) { const ta=bodyRef.value; if(!ta) return; const s=ta.selectionStart,e=ta.selectionEnd; const sel=form.body.substring(s,e); form.body=form.body.substring(0,s)+prefix+sel+suffix+form.body.substring(e); setTimeout(()=>{ta.focus();ta.setSelectionRange(s+prefix.length,e+prefix.length)},0); markChanged() }
 
-// ─── Cover handlers ───
-function updateCoverPreview() {
-  coverPreviewUrl.value = (form.coverUrl && form.coverUrl.startsWith('http')) ? form.coverUrl : ''
-  markChanged()
-}
-
-function clearCover() {
-  form.coverUrl = ''
-  coverPreviewUrl.value = ''
-  coverFileObj.value = null
-  if (coverFileInput.value) coverFileInput.value.value = ''
-  markChanged()
-}
-
-function onCoverFileChange(e) {
-  const file = e.target.files[0]
-  if (!file) return
-  if (file.size > 5 * 1024 * 1024) {
-    showToastMsg('error', 'Archivo demasiado grande', 'La imagen no debe superar 5MB.')
-    return
-  }
-  coverFileObj.value = file
-  coverPreviewUrl.value = URL.createObjectURL(file)
-  markChanged()
-}
-
-function onCoverDrop(e) {
-  coverDragging.value = false
-  const file = e.dataTransfer.files[0]
-  if (!file || !file.type.startsWith('image/')) return
-  coverFileObj.value = file
-  coverPreviewUrl.value = URL.createObjectURL(file)
-  markChanged()
-}
-
-// ─── Attachment handlers ───
-function clearAttachment() {
-  form.attachmentUrl = ''
-  attachFileName.value = ''
-  attachFileSize.value = ''
-  attachFileObj.value = null
-  if (attachFileInput.value) attachFileInput.value.value = ''
-  markChanged()
-}
-
-function onAttachFileChange(e) {
-  const file = e.target.files[0]
-  if (!file) return
-  if (file.size > 10 * 1024 * 1024) {
-    showToastMsg('error', 'Archivo demasiado grande', 'El documento no debe superar 10MB.')
-    return
-  }
-  attachFileObj.value = file
-  attachFileName.value = file.name
-  attachFileSize.value = formatFileSize(file.size)
-  markChanged()
-}
-
-function onAttachDrop(e) {
-  attachDragging.value = false
-  const file = e.dataTransfer.files[0]
-  if (!file) return
-  attachFileObj.value = file
-  attachFileName.value = file.name
-  attachFileSize.value = formatFileSize(file.size)
-  markChanged()
-}
-
-function formatFileSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1048576) return `${(bytes/1024).toFixed(1)} KB`
-  return `${(bytes/1048576).toFixed(1)} MB`
-}
-
-// ─── Toolbar ───
-function insertFormat(prefix, suffix) {
-  const ta = bodyRef.value
-  if (!ta) return
-  const s = ta.selectionStart, e = ta.selectionEnd
-  const sel = form.body.substring(s, e)
-  form.body = form.body.substring(0, s) + prefix + sel + suffix + form.body.substring(e)
-  setTimeout(() => { ta.focus(); ta.setSelectionRange(s + prefix.length, e + prefix.length) }, 0)
-  markChanged()
-}
-
-// ─── Validation ───
+// SCRUM-386: validar scheduledAt en edición
 function validateForm() {
   let ok = true
   if (!form.title.trim())  { fieldErrors.title    = 'El título es obligatorio'; ok = false }
   if (!form.body.trim())   { fieldErrors.body     = 'El contenido es obligatorio'; ok = false }
   if (!form.category)      { fieldErrors.category = 'Selecciona una categoría'; ok = false }
+  if (form.newsStatus === 'PROGRAMADO') {
+    if (!form.scheduledAt) { fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'; ok = false }
+    else {
+      const sel = new Date(form.scheduledAt), min = new Date(Date.now() + 5*60*1000)
+      if (sel < min) { fieldErrors.scheduledAt = 'La fecha debe ser al menos 5 minutos en el futuro'; ok = false }
+    }
+  }
   return ok
 }
 
@@ -634,19 +548,17 @@ async function loadNews() {
     form.careerId      = data.careerId || null
     form.coverUrl      = data.coverUrl || ''
     form.attachmentUrl = data.attachmentUrl || ''
-    form.published     = data.published ?? true
 
-    originalCreatedAt.value = data.createdAt || ''
-    originalUpdatedAt.value = data.updatedAt || ''
+    form.newsStatus  = data.newsStatus  || (data.published ? 'PUBLICADO' : 'BORRADOR')
+    form.scheduledAt = data.scheduledAt ? new Date(data.scheduledAt).toISOString().slice(0,16) : ''
 
-    // Set preview if URL exists
-    if (form.coverUrl) {
-      coverPreviewUrl.value = form.coverUrl
-      coverMode.value = 'url'
-    }
-    if (form.attachmentUrl) {
-      attachMode.value = 'url'
-    }
+    originalCreatedAt.value  = data.createdAt  || ''
+    originalUpdatedAt.value  = data.updatedAt  || ''
+    originalNewsStatus.value = form.newsStatus
+    originalScheduledAt.value = data.scheduledAt || null
+
+    if (form.coverUrl) { coverPreviewUrl.value = form.coverUrl; coverMode.value = 'url' }
+    if (form.attachmentUrl) attachMode.value = 'url'
 
     originalSnapshot = JSON.stringify({ ...form })
     hasChanges.value = false
@@ -661,14 +573,20 @@ async function loadNews() {
 
 // ─── Save / Submit ───
 async function sendToApi() {
+  let scheduledAtISO = null
+  if (form.newsStatus === 'PROGRAMADO' && form.scheduledAt) {
+    scheduledAtISO = new Date(form.scheduledAt).toISOString()
+  }
+
   const payload = {
     title:         form.title.trim(),
     body:          form.body.trim(),
     category:      form.category,
-    published:     form.published,
-    coverUrl:      coverMode.value === 'url' ? (form.coverUrl || null) : null,
-    attachmentUrl: attachMode.value === 'url' ? (form.attachmentUrl || null) : null,
-    careerId:      form.careerId || null
+    newsStatus:    form.newsStatus,
+    scheduledAt:   scheduledAtISO,
+    coverUrl:      coverMode.value==='url' ? (form.coverUrl||null) : null,
+    attachmentUrl: attachMode.value==='url' ? (form.attachmentUrl||null) : null,
+    careerId:      form.careerId||null
   }
 
   // If file uploaded, convert to base64 data URL (stored as coverUrl)
@@ -706,21 +624,17 @@ async function submitNews() {
   if (!validateForm()) return
   saving.value = true
   try {
-    const saved = await sendToApi()
-    hasChanges.value = false
-    originalUpdatedAt.value = saved.updatedAt || new Date().toISOString()
- 
-    showToastMsg('success', 'Cambios guardados', form.published
-      ? 'La noticia fue actualizada y publicada correctamente.'
-      : 'Los cambios fueron guardados como borrador.')
-    setTimeout(() => router.push('/publicador/mis-noticias'), 2000)
-  } catch (err) {
-    showToastMsg('error', 'Error al guardar', err.name === 'TypeError'
-      ? 'No se pudo conectar con el servidor.'
-      : err.message)
-  } finally {
-    saving.value = false
-  }
+    const saved=await sendToApi()
+    hasChanges.value=false
+    originalUpdatedAt.value=saved.updatedAt||new Date().toISOString()
+    originalNewsStatus.value=saved.newsStatus||form.newsStatus
+    originalScheduledAt.value=saved.scheduledAt||null
+
+    const msgs = { PUBLICADO:'La noticia fue actualizada y publicada.', PROGRAMADO:`Programada para ${formatScheduledAt(form.scheduledAt)}.`, BORRADOR:'Los cambios fueron guardados como borrador.' }
+    showToastMsg('success','Cambios guardados',msgs[form.newsStatus])
+    setTimeout(()=>router.push('/publicador/mis-noticias'),2000)
+  } catch(err) { showToastMsg('error','Error al guardar',err.name==='TypeError'?'No se pudo conectar.':err.message) }
+  finally { saving.value=false }
 }
 
 async function saveDraft() {
