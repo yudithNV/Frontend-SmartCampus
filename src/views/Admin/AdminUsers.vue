@@ -17,12 +17,103 @@
       @submit="handleCreateUser"
     />
 
+    <!-- ── MODAL EDITAR USUARIO ───────────────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="showEditModal" class="delete-overlay" @click.self="cancelEdit">
+          <div class="edit-modal">
+            <div class="edit-modal__header">
+              <h3 class="edit-modal__title">Editar Usuario</h3>
+              <button class="edit-modal__close" @click="cancelEdit">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Error de correo duplicado -->
+            <div v-if="editError" class="edit-error-banner">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {{ editError }}
+            </div>
+
+            <div class="edit-modal__body">
+              <!-- Nombre completo -->
+              <div class="form-group">
+                <label class="form-label">Nombre completo</label>
+                <input
+                  v-model="editForm.fullName"
+                  type="text"
+                  class="form-input"
+                  placeholder="Nombre completo"
+                />
+              </div>
+
+              <!-- Correo -->
+              <div class="form-group">
+                <label class="form-label">Correo electrónico</label>
+                <input
+                  v-model="editForm.email"
+                  type="email"
+                  class="form-input"
+                  placeholder="correo@ucb.edu.bo"
+                />
+              </div>
+
+              <!-- Rol -->
+              <div class="form-group">
+                <label class="form-label">Rol</label>
+                <select v-model="editForm.role" class="form-input">
+                  <option value="ESTUDIANTE">Estudiante</option>
+                  <option value="PUBLICADOR">Publicador</option>
+                  <option value="ADMINISTRADOR">Administrador</option>
+                </select>
+              </div>
+
+              <!-- Estado -->
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select v-model="editForm.status" class="form-input">
+                  <option value="ACTIVO">Activo</option>
+                  <option value="INACTIVO">Inactivo</option>
+                </select>
+              </div>
+
+              <!-- Carrera — solo si es estudiante -->
+              <div v-if="editForm.role === 'ESTUDIANTE'" class="form-group">
+                <label class="form-label">Carrera</label>
+                <select v-model="editForm.careerId" class="form-input">
+                  <option :value="null">Sin carrera</option>
+                  <option v-for="career in careers" :key="career.id" :value="career.id">
+                    {{ career.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="edit-modal__actions">
+              <button class="btn-cancel" @click="cancelEdit" :disabled="saving">
+                Cancelar
+              </button>
+              <button class="btn-save" @click="confirmEdit" :disabled="saving">
+                <svg v-if="saving" class="btn-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M12 2a10 10 0 0110 10"/>
+                </svg>
+                {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- ── MODAL ELIMINAR USUARIO ─────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
           <div class="delete-modal">
-            <!-- Ícono advertencia -->
             <div class="delete-modal__icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
                 <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -170,20 +261,32 @@
               </td>
               <td>{{ user.fecha }}</td>
               <td class="actions-cell">
-                <!-- PA: botón eliminar — no aparece si es el admin en sesión -->
-                <button
-                  v-if="user.id !== currentAdminId"
-                  class="action-btn action-btn--delete"
-                  title="Eliminar usuario"
-                  @click="openDeleteModal(user)"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <polyline points="3,6 5,6 21,6"/>
-                    <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
-                    <path d="M10,11v6"/><path d="M14,11v6"/>
-                    <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
-                  </svg>
-                </button>
+                <template v-if="user.id !== currentAdminId">
+                  <!-- PA 1: botón editar -->
+                  <button
+                    class="action-btn action-btn--edit"
+                    title="Editar usuario"
+                    @click="openEditModal(user)"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <!-- botón eliminar -->
+                  <button
+                    class="action-btn action-btn--delete"
+                    title="Eliminar usuario"
+                    @click="openDeleteModal(user)"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                      <path d="M10,11v6"/><path d="M14,11v6"/>
+                      <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
+                    </svg>
+                  </button>
+                </template>
                 <span v-else class="action-self-label">Tú</span>
               </td>
             </tr>
@@ -259,10 +362,102 @@ const showDeleteModal = ref(false)
 const userToDelete = ref(null)
 const deleting = ref(false)
 
+// ─── Estado edición ───────────────────────────────────────────────────────────
+const showEditModal = ref(false)
+const userToEdit = ref(null)
+const saving = ref(false)
+const editError = ref('')
+const editForm = ref({
+  fullName: '',
+  email: '',
+  role: 'ESTUDIANTE',
+  status: 'ACTIVO',
+  careerId: null
+})
+
 // Toast
 const toast = ref({ show: false, type: 'success', title: '', message: '' })
 const showToast = (type, title, message) => {
   toast.value = { show: true, type, title, message }
+}
+
+// ─── Abrir modal de edición con datos precargados (PA 4) ──────────────────────
+function openEditModal(user) {
+  userToEdit.value = user
+  editError.value = ''
+  editForm.value = {
+    fullName: user.nombre,
+    email: user.email,
+    role: user.rolRaw,        // valor backend: ESTUDIANTE / PUBLICADOR / ADMINISTRADOR
+    status: user.estadoRaw,   // valor backend: ACTIVO / INACTIVO
+    careerId: user.careerId ?? null
+  }
+  showEditModal.value = true
+}
+
+function cancelEdit() {
+  showEditModal.value = false
+  userToEdit.value = null
+  editError.value = ''
+}
+
+// ─── Guardar edición ──────────────────────────────────────────────────────────
+async function confirmEdit() {
+  if (!userToEdit.value) return
+  editError.value = ''
+
+  if (!editForm.value.fullName.trim() || !editForm.value.email.trim()) {
+    editError.value = 'El nombre y el correo son obligatorios.'
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = {
+      fullName: editForm.value.fullName.trim(),
+      email: editForm.value.email.trim(),
+      role: editForm.value.role,
+      status: editForm.value.status,
+      careerId: editForm.value.role === 'ESTUDIANTE' ? editForm.value.careerId : null
+    }
+
+    const res = await adminUserService.update(userToEdit.value.id, payload)
+    const updated = res.data ?? res
+
+    // Actualizar la fila en la tabla sin recargar
+    const idx = usuarios.value.findIndex(u => u.id === userToEdit.value.id)
+    if (idx !== -1) {
+      usuarios.value[idx] = mapUser(updated)
+    }
+
+    showEditModal.value = false
+    userToEdit.value = null
+    // PA 3: mensaje de confirmación exacto
+    showToast('success', 'Datos actualizados correctamente', `El usuario ${payload.fullName} fue actualizado.`)
+  } catch (err) {
+    // PA 2: error si el correo ya está en uso
+    editError.value = err.message || 'No se pudo actualizar el usuario.'
+  } finally {
+    saving.value = false
+  }
+}
+
+// ─── Mapear usuario del backend al formato de la tabla ────────────────────────
+function mapUser(user) {
+  return {
+    id: user.id,
+    nombre: user.fullName,
+    email: user.email,
+    iniciales: getInitials(user.fullName),
+    rol: user.role === 'ESTUDIANTE' ? 'Estudiante' :
+         user.role === 'PUBLICADOR' ? 'Publicador' : 'Administrador',
+    rolRaw: user.role,                         // valor original para el formulario
+    carrera: user.career?.name || 'N/A',
+    careerId: user.career?.id ?? null,         // para precargar select de carrera
+    estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
+    estadoRaw: user.status,                    // valor original para el formulario
+    fecha: new Date(user.createdAt).toLocaleDateString('es-ES')
+  }
 }
 
 // ─── Abrir modal de eliminación ───────────────────────────────────────────────
@@ -283,14 +478,12 @@ async function confirmDelete() {
   try {
     await adminUserService.delete(userToDelete.value.id)
 
-    // PA: desaparece de la lista sin recargar la página
     usuarios.value = usuarios.value.filter(u => u.id !== userToDelete.value.id)
     totalElements.value = Math.max(0, totalElements.value - 1)
 
     showDeleteModal.value = false
     userToDelete.value = null
 
-    // PA: mensaje de confirmación
     showToast('success', 'Usuario eliminado', 'Usuario eliminado correctamente')
   } catch (err) {
     showToast('error', 'Error al eliminar', err.message || 'No se pudo eliminar el usuario.')
@@ -315,18 +508,7 @@ const loadUsers = async () => {
     const { content, totalElements: total, totalPages: pages } = response
     totalElements.value = total
     totalPages.value = pages
-
-    usuarios.value = content.map(user => ({
-      id: user.id,
-      nombre: user.fullName,
-      email: user.email,
-      iniciales: getInitials(user.fullName),
-      rol: user.role === 'ESTUDIANTE' ? 'Estudiante' :
-           user.role === 'PUBLICADOR' ? 'Publicador' : 'Administrador',
-      carrera: user.career?.name || 'N/A',
-      estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
-      fecha: new Date(user.createdAt).toLocaleDateString('es-ES')
-    }))
+    usuarios.value = content.map(mapUser)
   } catch (err) {
     console.error('Error al cargar usuarios:', err)
     error.value = 'Error al cargar usuarios del servidor'
@@ -336,8 +518,8 @@ const loadUsers = async () => {
   }
 }
 
-const contarEstudiantes = computed(() => usuarios.value.filter(u => u.rol === 'Estudiante').length)
-const contarPublicadores = computed(() => usuarios.value.filter(u => u.rol === 'Publicador').length)
+const contarEstudiantes    = computed(() => usuarios.value.filter(u => u.rol === 'Estudiante').length)
+const contarPublicadores   = computed(() => usuarios.value.filter(u => u.rol === 'Publicador').length)
 const contarAdministradores = computed(() => usuarios.value.filter(u => u.rol === 'Administrador').length)
 
 const usuariosFiltrados = computed(() => {
@@ -499,18 +681,28 @@ onMounted(async () => {
 .status-activo   { background: #dcfce7; color: #166534; }
 .status-inactivo { background: #fee2e2; color: #991b1b; }
 
-.actions-cell { text-align: center; }
+/* ── Acciones ────────────────────────────────────────────────────────────── */
+.actions-cell { text-align: center; display: flex; gap: 0.4rem; align-items: center; justify-content: center; }
 
-.action-btn--delete {
+.action-btn {
   background: none;
-  border: 1.5px solid #fecaca;
   border-radius: 7px;
   padding: 0.4rem 0.6rem;
   cursor: pointer;
-  color: #dc2626;
   display: inline-flex;
   align-items: center;
   transition: background 0.15s, border-color 0.15s;
+}
+
+.action-btn--edit {
+  border: 1.5px solid #bfdbfe;
+  color: #1d4ed8;
+}
+.action-btn--edit:hover { background: #eff6ff; border-color: #1d4ed8; }
+
+.action-btn--delete {
+  border: 1.5px solid #fecaca;
+  color: #dc2626;
 }
 .action-btn--delete:hover { background: #fee2e2; border-color: #dc2626; }
 
@@ -531,7 +723,7 @@ onMounted(async () => {
 .stat-label  { color: #64748b; font-size: 0.9rem; }
 .stat-number { font-size: 2rem; font-weight: 700; color: #1a3a52; }
 
-/* ── Modal eliminar ──────────────────────────────────────────────────────── */
+/* ── Modal editar ────────────────────────────────────────────────────────── */
 .delete-overlay {
   position: fixed; inset: 0; z-index: 9999;
   background: rgba(0,0,0,0.45);
@@ -539,6 +731,88 @@ onMounted(async () => {
   padding: 1rem;
 }
 
+.edit-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 0;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: popIn 0.25s cubic-bezier(0.34,1.5,0.64,1) both;
+  overflow: hidden;
+}
+
+.edit-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.edit-modal__title { font-size: 1.05rem; font-weight: 700; color: #1a3a52; margin: 0; }
+
+.edit-modal__close {
+  background: none; border: none; cursor: pointer;
+  color: #94a3b8; padding: 0.25rem; border-radius: 6px;
+  display: flex; align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+.edit-modal__close:hover { color: #1a3a52; background: #e2e8f0; }
+
+.edit-error-banner {
+  margin: 0.75rem 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.825rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.edit-modal__body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-input {
+  padding: 0.6rem 0.85rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #0f1f2e;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input:focus { border-color: #1a3a52; box-shadow: 0 0 0 3px rgba(26,58,82,0.08); background: #fff; }
+
+.edit-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ── Modal eliminar ──────────────────────────────────────────────────────── */
 .delete-modal {
   background: white;
   border-radius: 16px;
@@ -574,6 +848,7 @@ onMounted(async () => {
 
 .delete-modal__actions { display: flex; gap: 0.75rem; width: 100%; margin-top: 0.25rem; }
 
+/* Botones compartidos */
 .btn-cancel {
   flex: 1; padding: 0.65rem 1rem;
   border: 1.5px solid #e2e8f0; border-radius: 8px;
@@ -583,6 +858,17 @@ onMounted(async () => {
 }
 .btn-cancel:hover:not(:disabled) { background: #f8fafc; }
 .btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-save {
+  flex: 1; padding: 0.65rem 1rem;
+  border: none; border-radius: 8px;
+  background: #1a3a52; color: white;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: background 0.15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+}
+.btn-save:hover:not(:disabled) { background: #2e5a7a; }
+.btn-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-delete {
   flex: 1; padding: 0.65rem 1rem;
