@@ -150,7 +150,9 @@ export const eventService = {
   getById: (id) => apiRequest(`/events/${id}`),
   create: (data) => apiRequest('/events', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => apiRequest(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id) => apiRequest(`/events/${id}`, { method: 'DELETE' })
+  delete: (id) => apiRequest(`/events/${id}`, { method: 'DELETE' }),
+  register: (eventId) => apiRequest(`/events/${eventId}/register`, { method: 'POST' }),
+  unregister: (eventId) => apiRequest(`/events/${eventId}/register`, { method: 'DELETE' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

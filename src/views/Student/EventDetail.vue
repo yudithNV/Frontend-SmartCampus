@@ -34,6 +34,24 @@
     <!-- ── CONTENT ───────── -->
     <div v-else-if="evento" class="detail-container">
 
+      <!-- ── Success Message ────── -->
+      <div v-if="successMessage" class="alert alert-success">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ successMessage }}
+      </div>
+
+      <!-- ── Error Message ────── -->
+      <div v-if="error" class="alert alert-error">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ error }}
+      </div>
+
       <!-- ── Poster Image ────── -->
       <div class="detail-hero">
         <img v-if="evento.posterUrl" :src="evento.posterUrl" :alt="evento.name" class="detail-hero__img">
@@ -133,7 +151,9 @@
             </div>
             <div class="detail-text">
               <p class="detail-label">Capacidad</p>
-              <p class="detail-value">{{ evento.maxCapacity || 'Sin límite' }}</p>
+              <p class="detail-value">
+                {{ registrado ? (evento.maxCapacity - 1) : evento.maxCapacity }} / {{ evento.maxCapacity }}
+              </p>
             </div>
           </div>
         </div>
@@ -162,11 +182,50 @@
             </svg>
             Volver al muro
           </button>
-          <button class="btn btn-primary" disabled style="opacity: 0.6; cursor: not-allowed;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            Participar (Próximamente)
+          <button 
+            @click="toggleRegistration" 
+            class="btn" 
+            :disabled="loadingRegistration || eventoPasado"
+            :style="eventoPasado 
+              ? 'background: #f3f4f6; color: #9ca3af; border: 1px solid #d1d5db; font-weight: 600; cursor: not-allowed;' 
+              : registrado 
+                ? 'background: #ecfdf5; color: #059669; border: 1px solid #10b981; font-weight: 600;' 
+                : 'background: #2563eb; color: white;'"
+          >
+            <span v-if="eventoPasado && !loadingRegistration">📅 Evento finalizado</span>
+            <span v-else-if="!registrado && !loadingRegistration">Inscribirme ahora</span>
+            <span v-else-if="registrado && !loadingRegistration">✅ ¡Inscrito! (Click para cancelar)</span>
+            <span v-else class="loading-spinner">Procesando...</span>
+          </button>
+          
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL DE CONFIRMACIÓN ────── -->
+    <div v-if="showConfirmModal" class="modal-overlay" @click="closeConfirmModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h2 class="modal-title">¿Estás seguro?</h2>
+        </div>
+        
+        <div class="modal-body">
+          <p>Si cancelas tu inscripción, <strong>perderás tu cupo</strong> en este evento y puede que no haya lugares disponibles después.</p>
+          <p class="modal-subtext">Esta acción no se puede deshacer.</p>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="closeConfirmModal" class="modal-btn modal-btn--cancel">
+            Mantener inscripción
+          </button>
+          <button @click="confirmUnregister" class="modal-btn modal-btn--danger" :disabled="loadingRegistration">
+            <span v-if="!loadingRegistration">Sí, cancelar inscripción</span>
+            <span v-else class="loading-spinner">Procesando...</span>
           </button>
         </div>
       </div>
@@ -188,6 +247,23 @@ const eventId = route.params.id
 const evento = ref(null)
 const loading = ref(true)
 const error = ref('')
+const registrado = ref(false)
+const loadingRegistration = ref(false)
+const successMessage = ref('')
+const showConfirmModal = ref(false)
+const eventoPasado = ref(false)
+
+// Función para verificar si el evento ya pasó
+const verificarEventoPasado = () => {
+  if (!evento.value || !evento.value.startDatetime) {
+    eventoPasado.value = false
+    return
+  }
+  
+  const fechaInicio = new Date(evento.value.startDatetime)
+  const ahora = new Date()
+  eventoPasado.value = fechaInicio < ahora
+}
 
 // Obtener detalles del evento
 const fetchEventDetail = async () => {
@@ -195,7 +271,7 @@ const fetchEventDetail = async () => {
   error.value = ''
   try {
     const data = await eventService.getById(eventId)
-    const raw  = data.data || data
+    const raw = data.data || data
 
     // Marcar recomendado si el backend no lo devuelve
     if (raw.recommended === undefined || raw.recommended === null) {
@@ -215,12 +291,127 @@ const fetchEventDetail = async () => {
     }
 
     evento.value = raw
+    
+    // Si el backend devuelve isRegistered, usar ese valor
+    if (evento.value && typeof evento.value.isRegistered === 'boolean') {
+      registrado.value = evento.value.isRegistered
+    }
+    
+    // Verificar si el evento ya pasó
+    verificarEventoPasado()
   } catch (err) {
     console.error('Error al cargar evento:', err)
     error.value = err.message || 'Error desconocido'
   } finally {
     loading.value = false
   }
+}
+
+// Manejar registro/desregistro del evento
+const toggleRegistration = () => {
+  if (!registrado.value) {
+    // Si no está registrado, inscribirse directamente
+    proceedWithRegistration()
+  } else {
+    // Si está registrado, mostrar modal de confirmación
+    showConfirmModal.value = true
+  }
+}
+
+// Proceder con la inscripción
+const proceedWithRegistration = async () => {
+  loadingRegistration.value = true
+  successMessage.value = ''
+  error.value = ''
+  
+  try {
+    const response = await eventService.register(eventId)
+    successMessage.value = '¡Inscripción realizada con éxito!'
+    
+    // Actualizar evento con los datos devueltos por el servidor
+    const eventoActualizado = response.data || response
+    if (eventoActualizado) {
+      evento.value = eventoActualizado
+      registrado.value = eventoActualizado.isRegistered
+    }
+    
+    // Limpiar mensaje de éxito después de 3 segundos
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (err) {
+    console.error('Error al procesar registro:', err)
+    const errorMsg = err.message || 'Error al procesar la solicitud'
+    
+    // Mostrar mensaje de error específico
+    if (errorMsg.includes('inscrito')) {
+      error.value = 'Ya estás inscrito en este evento'
+    } else if (errorMsg.includes('Cupo')) {
+      error.value = 'El evento ha alcanzado su capacidad máxima'
+    } else if (errorMsg.includes('no encontrado')) {
+      error.value = 'Evento no encontrado'
+    } else {
+      error.value = errorMsg
+    }
+    
+    // Limpiar mensaje de error después de 5 segundos
+    setTimeout(() => {
+      error.value = ''
+    }, 5000)
+  } finally {
+    loadingRegistration.value = false
+  }
+}
+
+// Confirmar desuscripción desde el modal
+const confirmUnregister = async () => {
+  loadingRegistration.value = true
+  error.value = ''
+  successMessage.value = ''
+  
+  try {
+    const response = await eventService.unregister(eventId)
+    successMessage.value = '¡Inscripción cancelada con éxito!'
+    
+    // Actualizar evento con los datos devueltos por el servidor
+    const eventoActualizado = response.data || response
+    if (eventoActualizado) {
+      evento.value = eventoActualizado
+      registrado.value = eventoActualizado.isRegistered
+    }
+    
+    // Cerrar modal
+    showConfirmModal.value = false
+    
+    // Limpiar mensaje de éxito después de 3 segundos
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  } catch (err) {
+    console.error('Error al cancelar inscripción:', err)
+    const errorMsg = err.message || 'Error al procesar la solicitud'
+    
+    // Mostrar mensaje de error específico
+    if (errorMsg.includes('no inscrito')) {
+      error.value = 'No estabas inscrito en este evento'
+    } else if (errorMsg.includes('no encontrado')) {
+      error.value = 'Evento no encontrado'
+    } else {
+      error.value = errorMsg
+    }
+    
+    // Limpiar mensaje de error después de 5 segundos
+    setTimeout(() => {
+      error.value = ''
+    }, 5000)
+  } finally {
+    loadingRegistration.value = false
+  }
+}
+
+// Cerrar modal sin hacer nada
+const closeConfirmModal = () => {
+  showConfirmModal.value = false
 }
 
 // Helpers
@@ -231,11 +422,6 @@ const getInitials = (name) => {
 
 const goBack = () => {
   router.back()
-}
-
-const confirmParticipation = () => {
-  // TODO: Implementar lógica de participación
-  alert('Función de participación próximamente disponible')
 }
 
 onMounted(() => {
@@ -684,6 +870,27 @@ onMounted(() => {
   background: #cbd5e1;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* ── Responsive ────── */
 @media (max-width: 640px) {
   .detail-main {
@@ -715,6 +922,203 @@ onMounted(() => {
 
   .metadata-label {
     min-width: unset;
+  }
+}
+
+/* ── Alerts ────── */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+}
+
+.alert-success svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #ef4444;
+}
+
+.alert-error svg {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+/* ── Modal de Confirmación ────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: #ffffff; /* Cambia var(--surface) por #ffffff directamente */
+  border-radius: 12px;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+  max-width: 420px;
+  width: 90%;
+  padding: 0;
+  animation: slideUp 0.3s ease;
+  z-index: 10000; /* Asegúrate de que esté por encima de todo */
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header svg {
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-body p {
+  font-size: 0.95rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.modal-body strong {
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.modal-subtext {
+  font-size: 0.85rem;
+  color: var(--slate);
+  font-style: italic;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.modal-btn--cancel {
+  background: var(--border);
+  color: var(--ink);
+}
+
+.modal-btn--cancel:hover {
+  background: #cbd5e1;
+}
+
+.modal-btn--danger {
+  background: #ef4444;
+  color: white;
+}
+
+.modal-btn--danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ────── */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95%;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
   }
 }
 </style>
