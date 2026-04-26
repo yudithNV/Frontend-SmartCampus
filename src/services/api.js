@@ -186,7 +186,8 @@ export const locationService = { getAll: () => apiRequest('/locations') }
 // ─────────────────────────────────────────────────────────────────────────────
 export const suggestionService = {
   create: (data) => apiRequest('/suggestions', { method: 'POST', body: JSON.stringify(data) }),
-  getMy: () => apiRequest('/suggestions/my')
+  getMy:  () => apiRequest('/suggestions/my'),
+  delete: (id) => apiRequest(`/suggestions/${id}`, { method: 'DELETE' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

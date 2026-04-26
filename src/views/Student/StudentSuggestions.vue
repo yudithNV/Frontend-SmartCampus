@@ -97,7 +97,7 @@
         <span>{{ historyError }}</span>
       </div>
 
-      <!-- Vacío — PA: mensaje específico -->
+      <!-- PA: mensaje si no hay sugerencias -->
       <div v-else-if="history.length === 0" class="history-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -105,7 +105,7 @@
         <span>Aún no has enviado ninguna sugerencia.</span>
       </div>
 
-      <!-- Lista — PA: categoría, vista previa, fecha, ordenadas de más reciente -->
+      <!-- PA: lista con categoría, vista previa, fecha y botón eliminar -->
       <div v-else class="history-list">
         <div
           v-for="item in history"
@@ -116,7 +116,21 @@
             <span class="history-item__cat">{{ formatCategory(item.category) }}</span>
             <p class="history-item__body">{{ truncate(item.body, 120) }}</p>
           </div>
-          <span class="history-item__date">{{ formatDate(item.createdAt) }}</span>
+          <div class="history-item__right">
+            <span class="history-item__date">{{ formatDate(item.createdAt) }}</span>
+            <button
+              class="btn-delete-item"
+              title="Eliminar sugerencia"
+              @click="openDeleteModal(item)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <polyline points="3,6 5,6 21,6"/>
+                <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                <path d="M10,11v6"/><path d="M14,11v6"/>
+                <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -135,6 +149,35 @@
             <h3 class="modal-title">Sugerencia enviada</h3>
             <p class="modal-body">Tu sugerencia fue recibida correctamente. ¡Gracias por contribuir a mejorar la UCB!</p>
             <button class="btn-primary btn-primary--full" @click="closeModal">Aceptar</button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── MODAL CONFIRMAR ELIMINACIÓN ───────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showDeleteModal" class="modal-overlay" @click.self="cancelDelete">
+          <div class="modal">
+            <div class="modal-icon modal-icon--danger">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 class="modal-title">¿Eliminar sugerencia?</h3>
+            <p class="modal-body">Esta acción no se puede deshacer.</p>
+            <div class="modal-actions">
+              <button class="btn-cancel" @click="cancelDelete" :disabled="deleting">
+                Cancelar
+              </button>
+              <button class="btn-confirm-delete" @click="confirmDelete" :disabled="deleting">
+                <svg v-if="deleting" class="btn-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M12 2a10 10 0 0110 10"/>
+                </svg>
+                {{ deleting ? 'Eliminando...' : 'Sí, eliminar' }}
+              </button>
+            </div>
           </div>
         </div>
       </Transition>
@@ -173,6 +216,11 @@ const history = ref([])
 const loadingHistory = ref(true)
 const historyError = ref(null)
 
+// ─── Estado eliminación ───────────────────────────────────────────────────────
+const showDeleteModal = ref(false)
+const itemToDelete = ref(null)
+const deleting = ref(false)
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function truncate(text, max) {
   if (!text) return ''
@@ -199,7 +247,6 @@ async function loadHistory() {
   historyError.value = null
   try {
     const res = await suggestionService.getMy()
-    // El backend devuelve ApiResponse<List> → datos en res.data
     const data = res.data ?? res
     history.value = Array.isArray(data) ? data : []
   } catch (err) {
@@ -207,6 +254,33 @@ async function loadHistory() {
     console.error('[StudentSuggestions] loadHistory:', err)
   } finally {
     loadingHistory.value = false
+  }
+}
+
+// ─── Eliminar sugerencia ──────────────────────────────────────────────────────
+function openDeleteModal(item) {
+  itemToDelete.value = item
+  showDeleteModal.value = true
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false
+  itemToDelete.value = null
+}
+
+async function confirmDelete() {
+  if (!itemToDelete.value) return
+  deleting.value = true
+  try {
+    await suggestionService.delete(itemToDelete.value.id)
+    // Quitar de la lista sin recargar
+    history.value = history.value.filter(s => s.id !== itemToDelete.value.id)
+    showDeleteModal.value = false
+    itemToDelete.value = null
+  } catch (err) {
+    console.error('[StudentSuggestions] confirmDelete:', err)
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -239,14 +313,14 @@ async function handleSubmit() {
   }
 }
 
-// ─── Cerrar modal y recargar historial ────────────────────────────────────────
+// ─── Cerrar modal éxito y recargar historial ──────────────────────────────────
 function closeModal() {
   showSuccessModal.value = false
   form.category = ''
   form.body = ''
   errors.category = ''
   errors.body = ''
-  loadHistory()  // refresca la lista para mostrar la nueva sugerencia
+  loadHistory()
 }
 
 onMounted(loadHistory)
@@ -431,15 +505,37 @@ onMounted(loadHistory)
   margin: 0;
 }
 
+/* Lado derecho: fecha + botón eliminar */
+.history-item__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .history-item__date {
   font-size: 0.75rem;
   color: #94a3b8;
   white-space: nowrap;
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
-/* ── Modal ───────────────────────────────────────────────────────────────── */
+.btn-delete-item {
+  background: none;
+  border: 1.5px solid #fecaca;
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  cursor: pointer;
+  color: #dc2626;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+}
+.history-item:hover .btn-delete-item { opacity: 1; }
+.btn-delete-item:hover { background: #fee2e2; border-color: #dc2626; }
+
+/* ── Modales ─────────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -461,11 +557,63 @@ onMounted(loadHistory)
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.75rem;
 }
 
-.modal-title { font-size: 1.15rem; font-weight: 700; color: #1a3a52; margin: 0; }
+.modal-icon {
+  width: 56px; height: 56px;
+  background: #dcfce7;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-icon--danger { background: #fef2f2; }
+
+.modal-title { font-size: 1.1rem; font-weight: 700; color: #1a3a52; margin: 0; }
 .modal-body  { font-size: 0.875rem; color: #64748b; margin: 0; line-height: 1.6; }
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-cancel:hover:not(:disabled) { background: #f8fafc; }
+.btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-confirm-delete {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.btn-confirm-delete:hover:not(:disabled) { background: #b91c1c; }
+.btn-confirm-delete:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
@@ -476,5 +624,6 @@ onMounted(loadHistory)
 @media (max-width: 640px) {
   .suggestions-form, .card-header { padding: 1.25rem; }
   .history-item { padding: 1rem 1.25rem; }
+  .btn-delete-item { opacity: 1; }
 }
 </style>
