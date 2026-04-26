@@ -179,7 +179,7 @@ export const eventService = {
 
   /** Cancelar inscripción en un evento */
   unregister: (eventId) =>
-    apiRequest(`/events/${eventId}/unregister`, 'DELETE')
+    apiRequest(`/events/${eventId}/register`, 'DELETE')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
