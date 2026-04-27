@@ -237,7 +237,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
-import { formatDateTime, formatEventDateTime } from '../../utils/index.js'
+import { formatDateTime, formatEventDateTime, eventBus } from '../../utils/index.js'
 import { eventService, userService } from '../../services/api.js'
 
 const router = useRouter()
@@ -334,6 +334,9 @@ const proceedWithRegistration = async () => {
       evento.value = eventoActualizado
       registrado.value = eventoActualizado.isRegistered
     }
+    
+    // Emitir evento para actualizar el calendario
+    eventBus.emit('event-registered', eventId)
     
     // Limpiar mensaje de éxito después de 3 segundos
     setTimeout(() => {

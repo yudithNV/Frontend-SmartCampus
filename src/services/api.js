@@ -146,7 +146,21 @@ export const eventService = {
   },
 
   getMy: () => apiRequest('/events/my'),
+  
+  getRegistered: () => apiRequest('/events/registered'),
+
   getByCareer: (careerId) => apiRequest(`/events/career/${careerId}`),
+
+  getCalendarEvents: async (year, month, day = null, careerId = null, categoryId = null) => {
+    const params = new URLSearchParams({ year, month })
+    if (day) params.append('day', day)
+    if (careerId) params.append('careerId', careerId)
+    if (categoryId) params.append('categoryId', categoryId)
+    
+    const response = await apiRequest(`/events/calendar?${params}`)
+    return response?.data ?? response
+  },
+
   getById: (id) => apiRequest(`/events/${id}`),
   create: (data) => apiRequest('/events', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => apiRequest(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
