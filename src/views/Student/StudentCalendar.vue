@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-wrapper">
+  <div class="calendar-wrapper" :class="{ 'sidebar-visible': selectedDate }">
     <div class="calendar-container">
       <div class="calendar-header">
         <button @click="previousMonth" class="nav-btn" title="Mes anterior" :disabled="loading">
@@ -62,7 +62,7 @@
     </div>
 
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" :class="{ 'visible': selectedDate }">
       <div class="filters-section">
         <h3 class="filters-title">Filtros</h3>
         
@@ -88,6 +88,13 @@
 
         <button @click="clearFilters" class="clear-filters-btn" :disabled="loadingFilters">Limpiar filtros</button>
       </div>
+
+      <button v-if="selectedDate" @click="closeSidebar" class="close-sidebar-btn" title="Cerrar panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
 
       <!-- Evento seleccionado -->
       <transition name="fade">
@@ -297,6 +304,10 @@ function selectDate(date) {
   selectedDate.value = date
 }
 
+function closeSidebar() {
+  selectedDate.value = null
+}
+
 async function applyFilters() {
   await loadCalendarEvents()
 }
@@ -332,12 +343,17 @@ onUnmounted(() => {
 <style scoped>
 .calendar-wrapper {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr;
   gap: 2rem;
   background: #ffffff;
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: grid-template-columns 0.3s ease;
+}
+
+.calendar-wrapper.sidebar-visible {
+  grid-template-columns: 1fr 380px;
 }
 
 .calendar-container {
@@ -556,7 +572,7 @@ onUnmounted(() => {
 
 /* Sidebar */
 .sidebar {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 2rem;
   background: #f8fafc;
@@ -565,6 +581,23 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
   max-height: 800px;
   overflow-y: auto;
+  position: relative;
+}
+
+.sidebar.visible {
+  display: flex;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .filters-section {
@@ -638,6 +671,28 @@ onUnmounted(() => {
 .clear-filters-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.close-sidebar-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #1a3a52;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-sidebar-btn:hover {
+  background: #FFD200;
+  border-color: #FFD200;
+  color: #1a3a52;
 }
 
 .selected-date-section {
@@ -776,19 +831,19 @@ onUnmounted(() => {
     gap: 1.5rem;
   }
 
+  .calendar-wrapper.sidebar-visible {
+    grid-template-columns: 1fr;
+  }
+
   .sidebar {
     max-height: none;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: none;
     gap: 1.5rem;
   }
 
-  .filters-section {
-    grid-column: 1 / 2;
-  }
-
-  .selected-date-section {
-    grid-column: 2 / 3;
+  .sidebar.visible {
+    display: flex;
+    margin-top: 1.5rem;
   }
 }
 
@@ -809,12 +864,12 @@ onUnmounted(() => {
   }
 
   .sidebar {
-    grid-template-columns: 1fr;
     padding: 1rem;
   }
 
-  .selected-date-section {
-    grid-column: auto;
+  .close-sidebar-btn {
+    top: 0.75rem;
+    right: 0.75rem;
   }
 }
 </style>
