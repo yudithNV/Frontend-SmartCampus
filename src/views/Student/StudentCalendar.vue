@@ -108,6 +108,7 @@
             <p v-else>
               No hay eventos programados para esta fecha
             </p>
+            <button @click="goToEvents" class="btn-view-events">Ver eventos disponibles</button>
           </div>
 
           <!-- Lista de eventos -->
@@ -137,9 +138,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { eventService, careerService, categoryService } from '../../services/api'
+import { eventBus } from '../../utils'
 
 const router = useRouter()
 
@@ -245,10 +247,8 @@ async function loadCalendarEvents() {
   loading.value = true
   error.value = null
   try {
-    const year = currentDate.value.getFullYear()
-    const month = currentDate.value.getMonth() + 1
-    const data = await eventService.getCalendarEvents(year, month, null, selectedCareerId.value || null, selectedCategoryId.value || null)
-    events.value = Array.isArray(data) ? data : []
+    const data = await eventService.getRegistered()
+    events.value = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
     
     // Actualizar selectedDate con eventos filtrados si está seleccionada
     if (selectedDate.value) {
@@ -311,9 +311,21 @@ function goToEventDetail(eventId) {
   router.push({ name: 'EventDetail', params: { id: eventId } })
 }
 
+function goToEvents() {
+  router.push({ name: 'StudentEvents' })
+}
+
 onMounted(() => {
   loadFiltersData()
   loadCalendarEvents()
+  
+  // Escuchar evento cuando se inscribe a un evento
+  eventBus.on('event-registered', loadCalendarEvents)
+})
+
+onUnmounted(() => {
+  // Limpiar listener cuando se desmonta el componente
+  eventBus.off('event-registered', loadCalendarEvents)
 })
 </script>
 
@@ -667,7 +679,25 @@ onMounted(() => {
 }
 
 .no-events p {
-  margin: 0;
+  margin: 0 0 1rem 0;
+}
+
+.btn-view-events {
+  padding: 0.75rem 1.5rem;
+  background: #FFD200;
+  color: #1a3a52;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-view-events:hover {
+  background: #FFC700;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 210, 0, 0.3);
 }
 
 .events-list {

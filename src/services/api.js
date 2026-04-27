@@ -157,6 +157,10 @@ export const eventService = {
   getMy: () =>
     apiRequest('/events/my', 'GET'),
 
+  /** Eventos registrados del estudiante autenticado */
+  getRegistered: () =>
+    apiRequest('/events/registered', 'GET'),
+
   /** Eventos filtrados por carrera — usado por el calendario del estudiante */
   getByCareer: (careerId) =>
     apiRequest(`/events/career/${careerId}`, 'GET'),

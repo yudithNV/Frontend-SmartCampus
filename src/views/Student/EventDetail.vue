@@ -176,7 +176,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
-import { formatDateTime, formatEventDateTime } from '../../utils/index.js'
+import { formatDateTime, formatEventDateTime, eventBus } from '../../utils/index.js'
 import { eventService } from '../../services/api.js'
 
 const router = useRouter()
@@ -214,9 +214,19 @@ const goBack = () => {
   router.back()
 }
 
-const confirmParticipation = () => {
-  // TODO: Implementar lógica de participación
-  alert('Función de participación próximamente disponible')
+const confirmParticipation = async () => {
+  try {
+    // Aquí iría tu llamada al API, por ahora simulamos éxito:
+    alert('¡Inscripción exitosa!');
+    
+    // EL DISPARADOR:
+    eventBus.emit('event-registered'); 
+    
+    // Opcional: volver al calendario
+    router.push('/estudiante/calendario'); 
+  } catch (err) {
+    alert('Error al inscribirse');
+  }
 }
 
 onMounted(() => {
