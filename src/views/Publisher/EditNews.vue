@@ -549,6 +549,7 @@ function validateForm() {
       if (sel < min) {
         // SCRUM-390: mensaje explícito para fecha pasada o menor al mínimo
         fieldErrors.scheduledAt = 'La fecha ingresada no es válida. Debe ser al menos 5 minutos en el futuro.'
+        ok = false
       }
     }
   }
