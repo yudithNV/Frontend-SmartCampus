@@ -205,9 +205,16 @@
                 <template v-if="item._isOwn">
                   <router-link :to="`/publicador/editar-noticia/${item.id}`" class="fb-dd-item" @click="closeMenu(item.id)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar noticia</router-link>
                   <!-- SCRUM-391: acción diferente según estado -->
-                  <button v-if="item.newsStatus !== 'PUBLICADO'" class="fb-dd-item" @click="publishNow(item); closeMenu(item.id)" :disabled="item._saving"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Publicar ahora</button>
+                    <button v-if="item.newsStatus === 'PROGRAMADO'" class="fb-dd-item" 
+                      @click="cancelScheduled(item); closeMenu(item.id)" :disabled="item._saving">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                      </svg>
+                      Cancelar programación
+                    </button>
                   <button v-else class="fb-dd-item" @click="unpublish(item); closeMenu(item.id)" :disabled="item._saving"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg>Despublicar</button>
                   <div class="fb-dd-divider"></div>
+                  
                   <button class="fb-dd-item fb-dd-danger" @click="askDelete(item); closeMenu(item.id)">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                     Eliminar noticia
@@ -248,6 +255,18 @@
           <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="fb-act-btn fb-act-pub" @click="publishNow(item)" :disabled="item._saving">
             <span class="spinner-xs" v-if="item._saving"></span>
             <template v-else><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Publicar ahora</template>
+          </button>
+          <button v-if="item._isOwn && item.newsStatus === 'PROGRAMADO'" 
+            class="fb-act-btn fb-act-unpub" 
+            @click="cancelScheduled(item)" 
+            :disabled="item._saving">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <template v-else>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Cancelar programación
+            </template>
           </button>
           <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="fb-act-btn fb-act-unpub" @click="unpublish(item)" :disabled="item._saving">
             <span class="spinner-xs" v-if="item._saving"></span>
@@ -290,6 +309,12 @@
         </div>
         <div class="card-actions">
           <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="action-btn btn-edit">Editar</router-link>
+          <button v-if="item._isOwn && item.newsStatus === 'PROGRAMADO'" 
+            class="action-btn btn-unpublish" 
+            @click="cancelScheduled(item)" :disabled="item._saving">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <template v-else>Cancelar</template>
+          </button>
           <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="action-btn btn-publish-action" @click="publishNow(item)" :disabled="item._saving"><span class="spinner-xs" v-if="item._saving"></span><template v-else>Publicar</template></button>
           <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="action-btn btn-unpublish" @click="unpublish(item)" :disabled="item._saving">Despublicar</button>
           <button v-if="item._isOwn" class="action-btn btn-delete" @click="askDelete(item)">Eliminar</button>
@@ -323,6 +348,15 @@
         </div>
         <div class="list-actions">
           <router-link v-if="item._isOwn" :to="`/publicador/editar-noticia/${item.id}`" class="icon-btn" title="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></router-link>
+          <button v-if="item._isOwn && item.newsStatus === 'PROGRAMADO'" 
+            class="icon-btn ico-unpublish" 
+            @click="cancelScheduled(item)" :disabled="item._saving" 
+            title="Cancelar programación">
+            <span class="spinner-xs" v-if="item._saving"></span>
+            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </button>
           <button v-if="item._isOwn && item.newsStatus !== 'PUBLICADO'" class="icon-btn ico-publish" @click="publishNow(item)" :disabled="item._saving" title="Publicar ahora"><span class="spinner-xs" v-if="item._saving"></span><svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
           <button v-if="item._isOwn && item.newsStatus === 'PUBLICADO'" class="icon-btn ico-unpublish" @click="unpublish(item)" :disabled="item._saving" title="Despublicar"><span class="spinner-xs" v-if="item._saving"></span><svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12H3"/><polyline points="7 8 3 12 7 16"/></svg></button>
           <button v-if="item._isOwn" class="icon-btn ico-delete" @click="askDelete(item)" title="Eliminar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
@@ -506,6 +540,26 @@ async function publishNow(item) {
     showToast('success','Noticia publicada',`"${item.title}" ya está visible para todos.`)
   } catch { showToast('error','Error','No se pudo publicar la noticia.') }
   finally { item._saving=false }
+}
+
+async function cancelScheduled(item) {
+  item._saving = true
+  try {
+    const res = await fetch(`http://localhost:8081/api/news/${item.id}`, {
+      method: 'PUT', headers: getHeaders(), mode: 'cors',
+      body: JSON.stringify({ newsStatus: 'BORRADOR', scheduledAt: null })
+    })
+    if (!res.ok) throw new Error()
+    const updated = await res.json()
+    item.newsStatus = updated.newsStatus || 'BORRADOR'
+    item.published = false
+    item.scheduledAt = null
+    showToast('success', 'Programación cancelada', `"${item.title}" volvió a estado borrador.`)
+  } catch {
+    showToast('error', 'Error', 'No se pudo cancelar la programación.')
+  } finally {
+    item._saving = false
+  }
 }
 
 // Despublicar (vuelve a BORRADOR)

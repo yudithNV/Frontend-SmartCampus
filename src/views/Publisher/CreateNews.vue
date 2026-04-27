@@ -336,23 +336,41 @@
               </button>
             </div>
 
-            <!-- SCRUM-384/386: datetime picker — solo visible cuando status = PROGRAMADO -->
             <Transition name="slide-down">
               <div v-if="form.newsStatus === 'PROGRAMADO'" class="scheduled-picker">
                 <div class="scheduled-picker-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
                   Fecha y hora de publicación automática
                 </div>
                 <input
                   v-model="form.scheduledAt"
                   type="datetime-local"
                   class="form-input scheduled-input"
+                  :class="{ 'input-error': fieldErrors.scheduledAt }"
                   :min="minScheduledAt"
-                  @change="clearFieldError('scheduledAt')"
+                  @change="onScheduledAtChange"
                 />
-                <span class="field-error" v-if="fieldErrors.scheduledAt">{{ fieldErrors.scheduledAt }}</span>
-                <p class="scheduled-hint">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <Transition name="fade">
+                  <div v-if="fieldErrors.scheduledAt" class="scheduled-error-banner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/>
+                      <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    {{ fieldErrors.scheduledAt }}
+                  </div>
+                </Transition>
+                <p class="scheduled-hint" v-if="!fieldErrors.scheduledAt">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
                   Debe ser al menos 5 minutos en el futuro. El sistema la publicará automáticamente.
                 </p>
               </div>
@@ -437,7 +455,15 @@ const attachFileSize  = ref('')
 const attachFileObj   = ref(null)
 
 const careers = ref([])
-
+function onScheduledAtChange() {
+  clearFieldError('scheduledAt')
+  if (!form.scheduledAt) return
+  const selected   = new Date(form.scheduledAt)
+  const minAllowed = new Date(Date.now() + 5 * 60 * 1000)
+  if (selected < minAllowed) {
+    fieldErrors.scheduledAt = 'La fecha ingresada no es válida. Debe ser al menos 5 minutos en el futuro.'
+  }
+}
 // ── SCRUM-382/384: form ahora usa newsStatus + scheduledAt ──
 const form = reactive({
   title: '', body: '', category: '',
@@ -516,18 +542,22 @@ function onAttachDrop(e) { attachDragging.value = false; const file = e.dataTran
 function formatFileSize(bytes) { if (bytes < 1024) return `${bytes} B`; if (bytes < 1048576) return `${(bytes/1024).toFixed(1)} KB`; return `${(bytes/1048576).toFixed(1)} MB` }
 function insertFormat(prefix, suffix) { const ta = bodyRef.value; if (!ta) return; const s = ta.selectionStart, e = ta.selectionEnd; const sel = form.body.substring(s, e); form.body = form.body.substring(0, s) + prefix + sel + suffix + form.body.substring(e); setTimeout(() => { ta.focus(); ta.setSelectionRange(s + prefix.length, e + prefix.length) }, 0) }
 
-// ── SCRUM-386: validación de scheduledAt ──
 function validateForm() {
   let ok = true
   if (!form.title.trim())  { fieldErrors.title    = 'El título es obligatorio'; ok = false }
   if (!form.body.trim())   { fieldErrors.body     = 'El contenido es obligatorio'; ok = false }
   if (!form.category)      { fieldErrors.category = 'Selecciona una categoría'; ok = false }
   if (form.newsStatus === 'PROGRAMADO') {
-    if (!form.scheduledAt) { fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'; ok = false }
-    else {
-      const selected = new Date(form.scheduledAt)
+    if (!form.scheduledAt) {
+      fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'
+      ok = false
+    } else {
+      const selected   = new Date(form.scheduledAt)
       const minAllowed = new Date(Date.now() + 5 * 60 * 1000)
-      if (selected < minAllowed) { fieldErrors.scheduledAt = 'La fecha debe ser al menos 5 minutos en el futuro'; ok = false }
+      if (selected < minAllowed) {
+        fieldErrors.scheduledAt = 'La fecha ingresada no es válida. Debe ser al menos 5 minutos en el futuro.'
+        ok = false
+      }
     }
   }
   return ok
@@ -594,17 +624,43 @@ async function runSubmit(statusOverride) {
 }
 
 async function submitNews() {
+  if (form.newsStatus === 'PROGRAMADO') {
+    if (!form.scheduledAt) {
+      fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'
+      showToastMsg('error', 'Fecha requerida', 'Debes seleccionar una fecha y hora para programar la noticia.')
+      document.querySelector('.scheduled-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    const selected   = new Date(form.scheduledAt)
+    const minAllowed = new Date(Date.now() + 5 * 60 * 1000)
+    if (selected < minAllowed) {
+      fieldErrors.scheduledAt = 'La fecha ingresada no es válida. Debe ser al menos 5 minutos en el futuro.'
+      showToastMsg('error', 'Fecha no válida',
+        'La fecha programada debe ser al menos 5 minutos en el futuro. Por favor, elige una fecha válida.')
+      document.querySelector('.scheduled-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+  }
   if (!validateForm()) return
   saving.value = true
   try {
     await runSubmit()
-    const msgs = { PUBLICADO: 'La noticia fue publicada correctamente.', PROGRAMADO: `Programada para ${formatScheduledAt(form.scheduledAt)}.`, BORRADOR: 'El borrador fue guardado.' }
-    showToastMsg('success', form.newsStatus === 'PROGRAMADO' ? 'Noticia programada' : 'Noticia publicada', msgs[form.newsStatus])
+    const msgs = {
+      PUBLICADO:  'La noticia fue publicada correctamente.',
+      PROGRAMADO: `Programada para ${formatScheduledAt(form.scheduledAt)}.`,
+      BORRADOR:   'El borrador fue guardado.'
+    }
+    showToastMsg('success',
+      form.newsStatus === 'PROGRAMADO' ? 'Noticia programada' : 'Noticia publicada',
+      msgs[form.newsStatus])
     setTimeout(() => router.push('/publicador/mis-noticias'), 2000)
   } catch (err) {
     uploading.value = false
-    showToastMsg('error', 'Error', err.name === 'TypeError' ? 'No se pudo conectar con el servidor.' : err.message)
-  } finally { saving.value = false }
+    showToastMsg('error', 'Error',
+      err.name === 'TypeError' ? 'No se pudo conectar con el servidor.' : err.message)
+  } finally {
+    saving.value = false
+  }
 }
 
 async function saveDraft() {
@@ -750,8 +806,41 @@ onMounted(async () => {
 .status-opt-title { display: block; font-size: 0.86rem; font-weight: 600; color: #1e293b; }
 .status-opt-desc  { font-size: 0.75rem; color: #64748b; }
 .status-check { width: 22px; height: 22px; border-radius: 50%; background: #1a3a52; color: #FFD200; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
-/* ── SCRUM-384: Scheduled datetime picker ── */
+form-input.input-error {
+  border-color: #ef4444 !important;
+  background: #fff8f8 !important;
+}
+.scheduled-input.input-error {
+  border-color: #ef4444 !important;
+  background: #fff8f8 !important;
+}
+.scheduled-input.input-error:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important;
+}
+ 
+/* SCRUM-390: banner de error de fecha prominente */
+.scheduled-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
+  border-left: 4px solid #ef4444;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #be123c;
+  line-height: 1.5;
+}
+.scheduled-error-banner svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #ef4444;
+}
+/*  Scheduled datetime picker ── */
 .scheduled-picker {
   margin-top: 0.85rem; background: #faf5ff; border-radius: 10px;
   padding: 1rem; border: 1.5px solid #e9d5ff;
@@ -800,4 +889,14 @@ onMounted(async () => {
   .category-grid { grid-template-columns: repeat(2,1fr); }
   .field-block { padding: 1.1rem; }
 }
+
+.scheduled-input.input-error { border-color: #ef4444 !important; background: #fff8f8 !important; }
+.scheduled-input.input-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important; }
+.scheduled-error-banner {
+  display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 0.6rem;
+  padding: 0.75rem 0.9rem; background: #fff1f2; border: 1.5px solid #fecdd3;
+  border-left: 4px solid #ef4444; border-radius: 9px;
+  font-size: 0.8rem; font-weight: 600; color: #be123c; line-height: 1.5;
+}
+.scheduled-error-banner svg { flex-shrink: 0; margin-top: 1px; color: #ef4444; }
 </style>

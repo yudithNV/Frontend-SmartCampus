@@ -185,7 +185,6 @@
                 <span class="optional-tag">Opcional</span>
               </div>
 
-              <!-- Tab selector -->
               <div class="upload-tabs">
                 <button type="button" class="upload-tab" :class="{ active: coverMode === 'url' }" @click="coverMode = 'url'">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -197,7 +196,6 @@
                 </button>
               </div>
 
-              <!-- URL mode -->
               <div v-if="coverMode === 'url'" class="input-icon-wrap">
                 <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 <input
@@ -289,20 +287,38 @@
               <Transition name="slide-down">
                 <div v-if="showCancelScheduledWarning" class="cancel-scheduled-banner">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  La programación será cancelada. La noticia volverá a estado <strong>Borrador</strong> y no se publicará automáticamente.
+                  <span v-if="form.newsStatus === 'BORRADOR'">
+                    La programación será cancelada. La noticia volverá a estado <strong>Borrador</strong> y no se publicará automáticamente.
+                  </span>
+                  <span v-else-if="form.newsStatus === 'PUBLICADO'">
+                    La programación será cancelada. La noticia se publicará <strong>ahora</strong> de forma inmediata.
+                  </span>
                 </div>
               </Transition>
 
-              <!-- SCRUM-384/386: selector datetime cuando PROGRAMADO -->
+              <!-- SCRUM-384/386: datetime picker — SOLO visible cuando status = PROGRAMADO -->
               <Transition name="slide-down">
                 <div v-if="form.newsStatus === 'PROGRAMADO'" class="scheduled-picker">
                   <div class="scheduled-picker-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     Fecha y hora de publicación automática
                   </div>
-                  <input v-model="form.scheduledAt" type="datetime-local" class="form-input scheduled-input" :min="minScheduledAt" @change="clearFieldError('scheduledAt'); markChanged()" />
-                  <span class="field-error" v-if="fieldErrors.scheduledAt">{{ fieldErrors.scheduledAt }}</span>
-                  <p class="scheduled-hint">
+                  <input
+                    v-model="form.scheduledAt"
+                    type="datetime-local"
+                    class="form-input scheduled-input"
+                    :class="{ 'input-error': fieldErrors.scheduledAt }"
+                    :min="minScheduledAt"
+                    @change="onScheduledAtChange"
+                  />
+                  <!-- SCRUM-390: mensaje de error visible para fecha pasada o inválida -->
+                  <Transition name="fade">
+                    <div v-if="fieldErrors.scheduledAt" class="scheduled-error-banner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ fieldErrors.scheduledAt }}
+                    </div>
+                  </Transition>
+                  <p class="scheduled-hint" v-if="!fieldErrors.scheduledAt">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     Debe ser al menos 5 minutos en el futuro.
                   </p>
@@ -413,10 +429,10 @@ const attachFileSize  = ref('')
 const attachFileObj   = ref(null)
 const coverFileObj    = ref(null)
 
-const originalCreatedAt = ref('')
-const originalUpdatedAt = ref('')
-const originalNewsStatus = ref('PUBLICADO')   // SCRUM-385/389
-const originalScheduledAt = ref(null)          // SCRUM-385
+const originalCreatedAt  = ref('')
+const originalUpdatedAt  = ref('')
+const originalNewsStatus = ref('PUBLICADO')
+const originalScheduledAt = ref(null)
 
 const careers = ref([])
 
@@ -431,8 +447,11 @@ const fieldErrors = reactive({ title: '', body: '', category: '', scheduledAt: '
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
 let originalSnapshot = ''
 
+// ── SCRUM-389: mostrar aviso cuando se cancela la programación
+// Se activa cuando el estado ORIGINAL era PROGRAMADO y ahora se cambia a BORRADOR o PUBLICADO
 const showCancelScheduledWarning = computed(() =>
-  originalNewsStatus.value === 'PROGRAMADO' && form.newsStatus === 'BORRADOR'
+  originalNewsStatus.value === 'PROGRAMADO' &&
+  (form.newsStatus === 'BORRADOR' || form.newsStatus === 'PUBLICADO')
 )
 
 const minScheduledAt = computed(() => {
@@ -461,16 +480,31 @@ const statusMetaLabel = computed(() => ({
   BORRADOR:   'Borrador',
 }[form.newsStatus]))
 
-// SCRUM-389: cambiar a BORRADOR limpia scheduledAt
+// ── SCRUM-389: al cambiar estado, limpiar scheduledAt si no es PROGRAMADO
 function setStatus(s) {
   form.newsStatus = s
-  if (s !== 'PROGRAMADO') form.scheduledAt = ''
+  if (s !== 'PROGRAMADO') {
+    form.scheduledAt = ''
+    clearFieldError('scheduledAt')
+  }
   markChanged()
 }
 
 function formatScheduledAt(val) {
   if (!val) return ''
   return new Date(val).toLocaleString('es-ES', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+}
+
+// ── SCRUM-390: validar fecha en tiempo real al cambiarla
+function onScheduledAtChange() {
+  clearFieldError('scheduledAt')
+  if (!form.scheduledAt) return
+  const selected = new Date(form.scheduledAt)
+  const minAllowed = new Date(Date.now() + 5 * 60 * 1000)
+  if (selected < minAllowed) {
+    fieldErrors.scheduledAt = 'La fecha debe ser al menos 5 minutos en el futuro. Por favor, elige una fecha válida.'
+  }
+  markChanged()
 }
 
 const categories = [
@@ -482,7 +516,6 @@ const categories = [
   { value:'OTRO',      label:'Otro',      svgAttrs:{width:'18',height:'18',viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2'}, paths:[{d:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'},{d:'M14 2v6h6M16 13H8M16 17H8M10 9H8'}] }
 ]
 
-// ─── Validation ───
 const todayFormatted = computed(() => new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}))
 const isValid = computed(() => form.title.trim().length > 0 && form.body.trim().length > 0 && form.category !== '')
 function getCategoryLabel(val) { return categories.find(c=>c.value===val)?.label||'Sin categoría' }
@@ -500,23 +533,28 @@ function onAttachDrop(e) { attachDragging.value=false; const f=e.dataTransfer.fi
 function formatFileSize(b) { if(b<1024) return `${b} B`; if(b<1048576) return `${(b/1024).toFixed(1)} KB`; return `${(b/1048576).toFixed(1)} MB` }
 function insertFormat(prefix,suffix) { const ta=bodyRef.value; if(!ta) return; const s=ta.selectionStart,e=ta.selectionEnd; const sel=form.body.substring(s,e); form.body=form.body.substring(0,s)+prefix+sel+suffix+form.body.substring(e); setTimeout(()=>{ta.focus();ta.setSelectionRange(s+prefix.length,e+prefix.length)},0); markChanged() }
 
-// SCRUM-386: validar scheduledAt en edición
+// ── SCRUM-386 + SCRUM-390: validar scheduledAt con mensaje claro
 function validateForm() {
   let ok = true
   if (!form.title.trim())  { fieldErrors.title    = 'El título es obligatorio'; ok = false }
   if (!form.body.trim())   { fieldErrors.body     = 'El contenido es obligatorio'; ok = false }
   if (!form.category)      { fieldErrors.category = 'Selecciona una categoría'; ok = false }
   if (form.newsStatus === 'PROGRAMADO') {
-    if (!form.scheduledAt) { fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'; ok = false }
-    else {
-      const sel = new Date(form.scheduledAt), min = new Date(Date.now() + 5*60*1000)
-      if (sel < min) { fieldErrors.scheduledAt = 'La fecha debe ser al menos 5 minutos en el futuro'; ok = false }
+    if (!form.scheduledAt) {
+      fieldErrors.scheduledAt = 'Selecciona una fecha y hora de publicación'
+      ok = false
+    } else {
+      const sel = new Date(form.scheduledAt)
+      const min = new Date(Date.now() + 5 * 60 * 1000)
+      if (sel < min) {
+        // SCRUM-390: mensaje explícito para fecha pasada o menor al mínimo
+        fieldErrors.scheduledAt = 'La fecha ingresada no es válida. Debe ser al menos 5 minutos en el futuro.'
+      }
     }
   }
   return ok
 }
 
-// ─── Toast ───
 function showToastMsg(type, title, message) {
   toast.show = false
   setTimeout(() => {
@@ -525,13 +563,11 @@ function showToastMsg(type, title, message) {
   }, 60)
 }
 
-// ─── Auth headers ───
 function getHeaders() {
   const token = localStorage.getItem('ucb_token')
   return { 'Content-Type':'application/json', ...(token ? { Authorization:`Bearer ${token}` } : {}) }
 }
 
-// ─── Load existing news ───
 async function loadNews() {
   loadingNews.value = true
   loadError.value = ''
@@ -552,9 +588,9 @@ async function loadNews() {
     form.newsStatus  = data.newsStatus  || (data.published ? 'PUBLICADO' : 'BORRADOR')
     form.scheduledAt = data.scheduledAt ? new Date(data.scheduledAt).toISOString().slice(0,16) : ''
 
-    originalCreatedAt.value  = data.createdAt  || ''
-    originalUpdatedAt.value  = data.updatedAt  || ''
-    originalNewsStatus.value = form.newsStatus
+    originalCreatedAt.value   = data.createdAt  || ''
+    originalUpdatedAt.value   = data.updatedAt  || ''
+    originalNewsStatus.value  = form.newsStatus
     originalScheduledAt.value = data.scheduledAt || null
 
     if (form.coverUrl) { coverPreviewUrl.value = form.coverUrl; coverMode.value = 'url' }
@@ -571,7 +607,6 @@ async function loadNews() {
   }
 }
 
-// ─── Save / Submit ───
 async function sendToApi() {
   let scheduledAtISO = null
   if (form.newsStatus === 'PROGRAMADO' && form.scheduledAt) {
@@ -589,7 +624,6 @@ async function sendToApi() {
     careerId:      form.careerId||null
   }
 
-  // If file uploaded, convert to base64 data URL (stored as coverUrl)
   if (coverMode.value === 'file' && coverFileObj.value) {
     payload.coverUrl = await toBase64(coverFileObj.value)
   }
@@ -624,17 +658,23 @@ async function submitNews() {
   if (!validateForm()) return
   saving.value = true
   try {
-    const saved=await sendToApi()
-    hasChanges.value=false
-    originalUpdatedAt.value=saved.updatedAt||new Date().toISOString()
-    originalNewsStatus.value=saved.newsStatus||form.newsStatus
-    originalScheduledAt.value=saved.scheduledAt||null
+    const saved = await sendToApi()
+    hasChanges.value = false
+    originalUpdatedAt.value  = saved.updatedAt  || new Date().toISOString()
+    originalNewsStatus.value = saved.newsStatus || form.newsStatus
+    originalScheduledAt.value = saved.scheduledAt || null
 
-    const msgs = { PUBLICADO:'La noticia fue actualizada y publicada.', PROGRAMADO:`Programada para ${formatScheduledAt(form.scheduledAt)}.`, BORRADOR:'Los cambios fueron guardados como borrador.' }
-    showToastMsg('success','Cambios guardados',msgs[form.newsStatus])
-    setTimeout(()=>router.push('/publicador/mis-noticias'),2000)
-  } catch(err) { showToastMsg('error','Error al guardar',err.name==='TypeError'?'No se pudo conectar.':err.message) }
-  finally { saving.value=false }
+    const msgs = {
+      PUBLICADO:  'La noticia fue actualizada y publicada.',
+      PROGRAMADO: `Programada para ${formatScheduledAt(form.scheduledAt)}.`,
+      BORRADOR:   'Los cambios fueron guardados como borrador.'
+    }
+    showToastMsg('success', 'Cambios guardados', msgs[form.newsStatus])
+    setTimeout(() => router.push('/publicador/mis-noticias'), 2000)
+  } catch(err) {
+    showToastMsg('error', 'Error al guardar', err.name==='TypeError' ? 'No se pudo conectar.' : err.message)
+  }
+  finally { saving.value = false }
 }
 
 async function saveDraft() {
@@ -665,7 +705,6 @@ function discardChanges() {
   hasChanges.value      = false
 }
 
-// ─── Load on mount ───
 onMounted(async () => {
   await loadNews()
   try {
@@ -899,6 +938,9 @@ onMounted(async () => {
 }
 .form-input.with-icon { padding-left: 2.4rem; }
 .form-input:focus { border-color: #FFD200; background: #fffef5; box-shadow: 0 0 0 3px rgba(255,210,0,0.07); }
+/* SCRUM-390: estilo de input con error */
+.form-input.input-error { border-color: #ef4444; background: #fff8f8; }
+.form-input.input-error:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
 .input-clear {
   position: absolute; right: 0.7rem; background: none; border: none;
   cursor: pointer; color: #94a3b8; display: flex; align-items: center; padding: 3px; border-radius: 3px;
@@ -915,7 +957,6 @@ onMounted(async () => {
 .file-drop-zone:hover, .file-drop-zone.dragging {
   border-color: #FFD200; background: #fffef5;
 }
-.file-drop-zone.file-drop-doc { cursor: default; }
 
 .drop-content {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -924,11 +965,6 @@ onMounted(async () => {
 .drop-content p { font-size: 0.84rem; color: #64748b; }
 .drop-content small { font-size: 0.72rem; color: #94a3b8; }
 .drop-link { color: #1a3a52; font-weight: 600; text-decoration: underline; }
-
-.drop-preview {
-  position: relative; height: 180px;
-}
-.drop-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .attach-file-info {
   display: flex; align-items: center; gap: 0.85rem;
@@ -956,12 +992,11 @@ onMounted(async () => {
 }
 .cover-remove:hover { background: rgba(239,68,68,0.85); }
 
-/* Cover preview (URL mode) */
-.cover-preview-wrap {
+.cover-preview-url {
   margin-top: 0.75rem; position: relative;
   border-radius: 9px; overflow: hidden; height: 170px;
 }
-.cover-preview-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-preview-url img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .existing-attach {
   display: flex; align-items: center; gap: 0.4rem;
@@ -970,28 +1005,75 @@ onMounted(async () => {
 .existing-attach a { color: #1a3a52; font-weight: 600; text-decoration: none; }
 .existing-attach a:hover { text-decoration: underline; }
 
-/* Publish toggle */
+/* Status selector */
 .publish-block { border-color: #f1f5f9; }
-.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.toggle-left { display: flex; align-items: center; gap: 0.75rem; flex: 1; }
-.toggle-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.icon-pub   { background: #dcfce7; color: #16a34a; }
-.icon-draft { background: #fef3c7; color: #d97706; }
-.toggle-title { display: block; font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-bottom: 0.18rem; }
-.toggle-desc  { font-size: 0.76rem; color: #64748b; }
-.toggle-switch {
-  width: 46px; height: 25px; background: #e2e8f0; border: none;
-  border-radius: 13px; cursor: pointer; position: relative; transition: background 0.22s; flex-shrink: 0;
-}
-.toggle-switch.on { background: #1a3a52; }
-.toggle-knob {
-  position: absolute; top: 3px; left: 3px;
-  width: 19px; height: 19px; background: #fff; border-radius: 50%;
-  transition: transform 0.22s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: block;
-}
-.toggle-switch.on .toggle-knob { transform: translateX(21px); background: #FFD200; }
+.status-selector { display: flex; flex-direction: column; gap: 0.5rem; }
 
-/* Preview column */
+.status-opt {
+  display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem;
+  border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
+  cursor: pointer; transition: all 0.18s; font-family: 'Inter', sans-serif; text-align: left; width: 100%;
+}
+.status-opt:hover { border-color: #cbd5e1; background: #fff; }
+.status-opt.active { border-color: #1a3a52; background: #fff; box-shadow: 0 0 0 3px rgba(26,58,82,0.07); }
+.status-opt-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-draft     { background: #fef3c7; color: #d97706; }
+.icon-scheduled { background: #f5f3ff; color: #7c3aed; }
+.icon-pub       { background: #dcfce7; color: #16a34a; }
+.status-opt-text { flex: 1; }
+.status-opt-title { display: block; font-size: 0.86rem; font-weight: 600; color: #1e293b; }
+.status-opt-desc  { font-size: 0.75rem; color: #64748b; }
+.status-check { width: 22px; height: 22px; border-radius: 50%; background: #1a3a52; color: #FFD200; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── SCRUM-389: banner de cancelación de programación ── */
+.cancel-scheduled-banner {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  margin-top: 0.85rem; padding: 0.85rem 1rem;
+  background: #fffbeb; border: 1.5px solid #fde68a; border-left: 4px solid #f59e0b;
+  border-radius: 10px; font-size: 0.8rem; color: #92400e; line-height: 1.5;
+}
+.cancel-scheduled-banner svg { flex-shrink: 0; margin-top: 1px; color: #f59e0b; }
+
+/* ── SCRUM-384: Scheduled datetime picker ── */
+.scheduled-picker {
+  margin-top: 0.85rem; background: #faf5ff; border-radius: 10px;
+  padding: 1rem; border: 1.5px solid #e9d5ff;
+}
+.scheduled-picker-label {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.78rem; font-weight: 600; color: #7c3aed; margin-bottom: 0.65rem;
+}
+.scheduled-input {
+  width: 100%; padding: 0.68rem 0.9rem; border: 1.5px solid #e9d5ff;
+  border-radius: 9px; font-size: 0.86rem; font-family: 'Inter', sans-serif;
+  color: #1e293b; background: #fff; outline: none; transition: all 0.18s;
+}
+.scheduled-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+/* SCRUM-390: input de fecha con error */
+.scheduled-input.input-error {
+  border-color: #ef4444 !important;
+  background: #fff8f8 !important;
+}
+
+/* SCRUM-390: banner de error de fecha prominente */
+.scheduled-error-banner {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  margin-top: 0.6rem; padding: 0.75rem 0.9rem;
+  background: #fff1f2; border: 1.5px solid #fecdd3; border-left: 4px solid #ef4444;
+  border-radius: 9px; font-size: 0.8rem; font-weight: 600; color: #be123c; line-height: 1.5;
+}
+.scheduled-error-banner svg { flex-shrink: 0; margin-top: 1px; color: #ef4444; }
+
+.scheduled-hint {
+  display: flex; align-items: flex-start; gap: 0.4rem; margin-top: 0.55rem;
+  font-size: 0.73rem; color: #7c3aed; line-height: 1.5;
+}
+
+.slide-down-enter-active, .slide-down-leave-active { transition: all 0.25s ease; overflow: hidden; }
+.slide-down-enter-from, .slide-down-leave-to { opacity: 0; max-height: 0; }
+.slide-down-enter-to, .slide-down-leave-from { opacity: 1; max-height: 200px; }
+
+/* Preview */
 .preview-column { position: sticky; top: 2rem; align-self: start; display: flex; flex-direction: column; gap: 1rem; }
 .preview-header { display: flex; align-items: center; justify-content: space-between; }
 .preview-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
@@ -1008,10 +1090,12 @@ onMounted(async () => {
 .preview-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800; color: #0f172a; line-height: 1.3; margin-bottom: 0.6rem; letter-spacing: -0.2px; }
 .preview-body { font-size: 0.82rem; line-height: 1.7; color: #475569; }
 .preview-empty { color: #cbd5e1; font-style: italic; }
-.preview-attachment { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px solid #f1f5f9; font-size: 0.78rem; color: #1a3a52; font-weight: 600; }
+
 .preview-status { padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.76rem; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
-.status-pub  { background: #f0fdf4; color: #16a34a; }
-.status-draft{ background: #fffbeb; color: #d97706; }
+.status-pub       { background: #f0fdf4; color: #16a34a; }
+.status-draft     { background: #fffbeb; color: #d97706; }
+.status-scheduled { background: #f5f3ff; color: #6d28d9; }
+.scheduled-preview-date { font-weight: 500; }
 
 /* Edit meta card */
 .edit-meta-card {
@@ -1023,8 +1107,11 @@ onMounted(async () => {
 .meta-item:last-child { border: none; }
 .meta-key { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
 .meta-val { font-size: 0.75rem; color: #475569; font-weight: 600; }
-.val-pub   { color: #16a34a; }
-.val-draft { color: #d97706; }
+.val-pub       { color: #16a34a; }
+.val-draft     { color: #d97706; }
+.val-scheduled { color: #6d28d9; }
+.scheduled-val { color: #6d28d9; font-weight: 600; }
+.meta-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 5px; vertical-align: middle; }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.22s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
