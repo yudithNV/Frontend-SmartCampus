@@ -147,7 +147,13 @@ export const eventService = {
 
   getMy: () => apiRequest('/events/my'),
   
-  getRegistered: () => apiRequest('/events/registered'),
+  getRegistered: (startDate, endDate) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('startDate', startDate)
+    if (endDate) params.append('endDate', endDate)
+    const queryString = params.toString()
+    return apiRequest(`/events/registered${queryString ? '?' + queryString : ''}`)
+  },
 
   getByCareer: (careerId) => apiRequest(`/events/career/${careerId}`),
 

@@ -13,6 +13,12 @@
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </button>
+        <button @click="toggleFiltersSidebar" class="filter-btn" title="Filtrar eventos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          Filtrar
+        </button>
       </div>
 
       <!-- Loading State -->
@@ -48,7 +54,9 @@
               'other-month': !date.isCurrentMonth,
               'today': date.isToday,
               'has-events': date.events.length > 0,
-              'has-filtered-events': date.filteredEvents.length > 0
+              'has-filtered-events': date.filteredEvents.length > 0,
+              'has-past-events': date.hasPastEvents,
+              'is-selected': date.dateStr === selectedDate?.dateStr
             }"
             @click="selectDate(date)"
           >
@@ -61,86 +69,105 @@
       </template>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar" :class="{ 'visible': selectedDate }">
-      <div class="filters-section">
-        <h3 class="filters-title">Filtros</h3>
-        
-        <div class="filter-group">
-          <label class="filter-label">Carrera</label>
-          <select v-model="selectedCareerId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
-            <option value="">Todas las carreras</option>
-            <option v-for="career in careers" :key="career.id" :value="career.id">
-              {{ career.name }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Categoría</label>
-          <select v-model="selectedCategoryId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
-            <option value="">Todas las categorías</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
-
-        <button @click="clearFilters" class="clear-filters-btn" :disabled="loadingFilters">Limpiar filtros</button>
-      </div>
-
-      <button v-if="selectedDate" @click="closeSidebar" class="close-sidebar-btn" title="Cerrar panel">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-
-      <!-- Evento seleccionado -->
-      <transition name="fade">
-        <div class="selected-date-section" v-if="selectedDate">
+    <!-- Filters Sidebar -->
+    <aside class="event-sidebar" :class="{ 'visible': selectedDate || showFiltersSidebar }">
+      <!-- Evento Seleccionado - Prioridad 1 -->
+      <template v-if="selectedDate">
+        <div class="sidebar-header">
           <h3 class="selected-date-title">{{ formatDateTitle(selectedDate) }}</h3>
-          
-          <!-- Loading eventos del día -->
-          <div v-if="loadingDayEvents" class="loading-day">
-            <div class="spinner-small"></div>
-            <p>Cargando eventos...</p>
-          </div>
+          <button @click="closeSidebar" class="close-sidebar-btn" title="Cerrar panel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
 
-          <!-- No hay eventos -->
-          <div v-else-if="selectedDate.filteredEvents.length === 0" class="no-events">
-            <p v-if="selectedDate.events.length > 0">
-              No hay eventos que coincidan con los filtros
-            </p>
-            <p v-else>
-              No hay eventos programados para esta fecha
-            </p>
-            <button @click="goToEvents" class="btn-view-events">Ver eventos disponibles</button>
-          </div>
+        <!-- Loading eventos del día -->
+        <div v-if="loadingDayEvents" class="loading-day">
+          <div class="spinner-small"></div>
+          <p>Cargando eventos...</p>
+        </div>
 
-          <!-- Lista de eventos -->
-          <div v-else class="events-list">
-            <div 
-              v-for="event in selectedDate.filteredEvents" 
-              :key="event.id" 
-              class="event-item"
-              @click="goToEventDetail(event.id)"
-            >
-              <div class="event-time">{{ formatEventTime(event.startDatetime, event.endDatetime) }}</div>
-              <div class="event-content">
-                <h4>{{ event.name }}</h4>
-                <p v-if="event.category" class="event-category" :style="{ color: event.category.colorHex }">
-                  🏷️ {{ event.category.name }}
-                </p>
-                <p v-if="event.career" class="event-career">📚 {{ event.career.name }}</p>
-                <p v-if="event.location" class="event-location">📍 {{ event.location.name }} ({{ event.location.block }})</p>
-                <p v-if="event.description" class="event-description">{{ event.description }}</p>
-              </div>
+        <!-- No hay eventos -->
+        <div v-else-if="selectedDate.filteredEvents.length === 0" class="no-events">
+          <p v-if="selectedDate.events.length > 0 && (selectedCareerId || selectedCategoryId)">
+            No se encontraron eventos con esos filtros
+          </p>
+          <p v-else-if="selectedDate.events.length > 0">
+            No hay eventos que coincidan con los filtros
+          </p>
+          <p v-else>
+            No hay eventos programados para esta fecha
+          </p>
+          <button @click="goToEvents" class="btn-view-events">Ver eventos disponibles</button>
+        </div>
+
+        <!-- Lista de eventos -->
+        <div v-else class="events-list">
+          <div 
+            v-for="event in selectedDate.filteredEvents" 
+            :key="event.id" 
+            class="event-item"
+            @click="goToEventDetail(event.id)"
+          >
+            <div class="event-time">{{ formatEventTime(event.startDatetime, event.endDatetime) }}</div>
+            <div class="event-content">
+              <h4>{{ event.name }}</h4>
+              <p v-if="event.category" class="event-category" :style="{ color: event.category.colorHex }">
+                🏷️ {{ event.category.name }}
+              </p>
+              <p v-if="event.career" class="event-career">📚 {{ event.career.name }}</p>
+              <p v-if="event.location" class="event-location">📍 {{ event.location.name }} ({{ event.location.block }})</p>
+              <p v-if="event.description" class="event-description">{{ event.description }}</p>
             </div>
           </div>
         </div>
-      </transition>
-    </div>
+      </template>
+
+      <!-- Filtros - Prioridad 2 (si NO hay evento seleccionado) -->
+      <template v-else-if="showFiltersSidebar">
+        <div class="sidebar-header">
+          <h3 class="filters-title">Filtros</h3>
+          <button @click="closeFiltersSidebar" class="close-sidebar-btn" title="Cerrar filtros">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="filters-section">
+          <div class="filter-group">
+            <label class="filter-label">Carrera</label>
+            <select v-model="selectedCareerId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
+              <option value="">Todas las carreras</option>
+              <option v-for="career in careers" :key="career.id" :value="career.id">
+                {{ career.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Categoría</label>
+            <select v-model="selectedCategoryId" @change="applyFilters" class="filter-select" :disabled="loadingFilters">
+              <option value="">Todas las categorías</option>
+              <option v-for="category in categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+
+          <button 
+            @click="clearFilters" 
+            class="clear-filters-btn" 
+            :disabled="!selectedCareerId && !selectedCategoryId"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </template>
+    </aside>
   </div>
 </template>
 
@@ -154,6 +181,7 @@ const router = useRouter()
 
 const currentDate = ref(new Date())
 const selectedDate = ref(null)
+const showFiltersSidebar = ref(false)
 const selectedCareerId = ref('')
 const selectedCategoryId = ref('')
 
@@ -195,6 +223,13 @@ const calendarDays = computed(() => {
 
     const dayEvents = getEventsForDate(dateStr)
     const filteredDayEvents = filterEvents(dayEvents)
+    
+    // Detectar si los eventos de este día ya pasaron
+    const hasPastEvents = dayEvents.length > 0 && dayEvents.some(event => {
+      const eventEndDate = new Date(event.endDatetime)
+      const now = new Date()
+      return eventEndDate < now
+    })
 
     days.push({
       day: date.getDate(),
@@ -203,7 +238,8 @@ const calendarDays = computed(() => {
       isCurrentMonth,
       isToday,
       events: dayEvents,
-      filteredEvents: filteredDayEvents
+      filteredEvents: filteredDayEvents,
+      hasPastEvents
     })
 
     date.setDate(date.getDate() + 1)
@@ -222,9 +258,15 @@ function getEventsForDate(dateStr) {
 
 function filterEvents(eventsList) {
   return eventsList.filter(event => {
-    const careerMatch = !selectedCareerId.value || (event.career && event.career.id === parseInt(selectedCareerId.value))
-    const categoryMatch = !selectedCategoryId.value || (event.category && event.category.id === parseInt(selectedCategoryId.value))
-    return careerMatch && categoryMatch
+    // Convertimos a número para asegurar la comparación
+    const careerId = selectedCareerId.value ? parseInt(selectedCareerId.value) : null;
+    const categoryId = selectedCategoryId.value ? parseInt(selectedCategoryId.value) : null;
+
+    const careerMatch = !careerId || (event.career && event.career.id === careerId);
+    // Usamos categoryId directamente de la raíz del objeto según tu JSON
+    const categoryMatch = !categoryId || (event.categoryId === categoryId);
+    
+    return careerMatch && categoryMatch;
   })
 }
 
@@ -254,8 +296,38 @@ async function loadCalendarEvents() {
   loading.value = true
   error.value = null
   try {
-    const data = await eventService.getRegistered()
-    events.value = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+    // Calcular el rango de fechas visible en el calendario
+    const year = currentDate.value.getFullYear()
+    const month = currentDate.value.getMonth()
+    
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    
+    // startDate: primer día visible (puede incluir días del mes anterior)
+    const calendarStartDate = new Date(firstDay)
+    calendarStartDate.setDate(calendarStartDate.getDate() - firstDay.getDay())
+    
+    // endDate: último día visible (puede incluir días del mes siguiente)
+    let calendarEndDate = new Date(lastDay)
+    const daysUntilSunday = 6 - lastDay.getDay()
+    calendarEndDate.setDate(calendarEndDate.getDate() + daysUntilSunday)
+    
+    // Formatear fechas a YYYY-MM-DD
+    const formatDate = (date) => {
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    }
+    
+    const startDateStr = formatDate(calendarStartDate)
+    const endDateStr = formatDate(calendarEndDate)
+    
+    // Llamar al API con los parámetros de fecha
+    const data = await eventService.getRegistered(startDateStr, endDateStr)
+    
+    // La respuesta ahora viene en data.events en lugar de directamente
+    events.value = Array.isArray(data?.data?.events) ? data.data.events : (Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []))
     
     // Actualizar selectedDate con eventos filtrados si está seleccionada
     if (selectedDate.value) {
@@ -301,6 +373,11 @@ function nextMonth() {
 }
 
 function selectDate(date) {
+  // Resetear los filtros
+  selectedCareerId.value = ''
+  selectedCategoryId.value = ''
+  
+  // Establecer la fecha seleccionada (esto trigger el recalc de filteredEvents en calendarDays)
   selectedDate.value = date
 }
 
@@ -308,8 +385,26 @@ function closeSidebar() {
   selectedDate.value = null
 }
 
+function toggleFiltersSidebar() {
+  showFiltersSidebar.value = !showFiltersSidebar.value
+}
+
+function closeFiltersSidebar() {
+  showFiltersSidebar.value = false
+}
+
 async function applyFilters() {
   await loadCalendarEvents()
+  // 1. Buscamos el primer día que tenga eventos con el filtro aplicado
+  const firstDayWithEvents = calendarDays.value.find(day => day.filteredEvents.length > 0);
+  
+  if (firstDayWithEvents) {
+    // 2. Forzamos a que el sidebar muestre ese día (ej. el día 30)
+    selectedDate.value = firstDayWithEvents;
+  } else {
+    // Si no hay nada con ese filtro, podrías limpiar la selección o dejarla
+    selectedDate.value = null; 
+  }
 }
 
 function clearFilters() {
@@ -342,23 +437,19 @@ onUnmounted(() => {
 
 <style scoped>
 .calendar-wrapper {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
   gap: 2rem;
   background: #ffffff;
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: grid-template-columns 0.3s ease;
-}
-
-.calendar-wrapper.sidebar-visible {
-  grid-template-columns: 1fr 380px;
 }
 
 .calendar-container {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .calendar-header {
@@ -391,6 +482,29 @@ onUnmounted(() => {
 .nav-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.filter-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: #1a3a52;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+.filter-btn:hover {
+  background: #FFD200;
+  border-color: #FFD200;
+  color: #1a3a52;
 }
 
 .month-year {
@@ -524,6 +638,12 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.calendar-day.is-selected {
+  border: 3px solid #3B82F6;
+  background: #E0F0FF;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+
 .calendar-day.has-events {
   background: #E8F4FF;
   border-color: #3B82F6;
@@ -534,9 +654,21 @@ onUnmounted(() => {
   border-color: #3B82F6;
 }
 
+.calendar-day.has-past-events {
+  background: #E5E7EB;
+  border-color: #9CA3AF;
+  opacity: 0.7;
+}
+
 .calendar-day.has-events.today {
   background: #FFF0D6;
   border-color: #FFD200;
+}
+
+.calendar-day.has-past-events.today {
+  background: #FFF0D6;
+  border-color: #FFD200;
+  opacity: 1;
 }
 
 .day-number {
@@ -570,23 +702,42 @@ onUnmounted(() => {
   color: #1a3a52;
 }
 
+.calendar-day.has-past-events .event-count {
+  background: #9CA3AF;
+  color: white;
+}
+
+.calendar-day.has-past-events.today .event-count {
+  background: #FFD200;
+  color: #1a3a52;
+}
+
 /* Sidebar */
-.sidebar {
+.event-sidebar {
   display: none;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   background: #f8fafc;
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid #e2e8f0;
+  min-width: 340px;
+  max-width: 380px;
   max-height: 800px;
   overflow-y: auto;
-  position: relative;
+  flex-shrink: 0;
 }
 
-.sidebar.visible {
+.event-sidebar.visible {
   display: flex;
   animation: slideIn 0.3s ease-out;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 @keyframes slideIn {
@@ -674,9 +825,7 @@ onUnmounted(() => {
 }
 
 .close-sidebar-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+  position: static;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
@@ -695,6 +844,14 @@ onUnmounted(() => {
   color: #1a3a52;
 }
 
+.selected-date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .selected-date-section {
   background: white;
   border: 1px solid #e2e8f0;
@@ -704,7 +861,7 @@ onUnmounted(() => {
 
 .selected-date-title {
   color: #1a3a52;
-  margin: 0 0 1rem 0;
+  margin: 0;
   font-size: 1rem;
   font-weight: 700;
   word-break: break-word;
@@ -827,28 +984,20 @@ onUnmounted(() => {
 
 @media (max-width: 1200px) {
   .calendar-wrapper {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
     gap: 1.5rem;
   }
 
-  .calendar-wrapper.sidebar-visible {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
+  .event-sidebar {
     max-height: none;
-    display: none;
-    gap: 1.5rem;
-  }
-
-  .sidebar.visible {
-    display: flex;
-    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 768px) {
   .calendar-wrapper {
+    flex-direction: column;
     padding: 1rem;
     gap: 1rem;
   }
@@ -863,13 +1012,15 @@ onUnmounted(() => {
     min-width: auto;
   }
 
-  .sidebar {
+  .event-sidebar {
     padding: 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 
-  .close-sidebar-btn {
-    top: 0.75rem;
-    right: 0.75rem;
+  .filter-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
 }
 </style>
