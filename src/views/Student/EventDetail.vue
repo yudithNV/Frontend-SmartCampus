@@ -70,6 +70,13 @@
 
         <!-- Badges -->
         <div class="badge-row">
+          <!-- Badge inscrito -->
+          <span v-if="evento.isRegistered" class="badge badge-registered">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Inscrito
+          </span>
           <!-- Badge recomendado (SCRUM-404) -->
           <span v-if="evento.recommended" class="badge badge-recommended">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -142,18 +149,22 @@
           </div>
 
           <!-- Capacidad -->
-          <div class="detail-card">
-            <div class="detail-icon">
+          <div class="detail-card" :class="{ 'capacity-full': evento.registeredCount >= evento.maxCapacity }">
+            <div class="detail-icon" :class="{ 'capacity-full-icon': evento.registeredCount >= evento.maxCapacity }">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
                 <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
               </svg>
             </div>
             <div class="detail-text">
-              <p class="detail-label">Capacidad</p>
-              <p class="detail-value">
-                {{ registrado ? (evento.maxCapacity - 1) : evento.maxCapacity }} / {{ evento.maxCapacity }}
-              </p>
+              <p class="detail-label">Cupos</p>
+              <div class="capacity-display">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="capacity-icon" :class="{ 'capacity-icon-warning': evento.registeredCount >= evento.maxCapacity }">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                <span class="capacity-text" :class="{ 'capacity-text-full': evento.registeredCount >= evento.maxCapacity }">{{ evento.registeredCount || 0 }} de {{ evento.maxCapacity }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -184,17 +195,44 @@
           </button>
           <button 
             @click="toggleRegistration" 
-            class="btn" 
-            :disabled="loadingRegistration || eventoPasado"
-            :style="eventoPasado 
-              ? 'background: #f3f4f6; color: #9ca3af; border: 1px solid #d1d5db; font-weight: 600; cursor: not-allowed;' 
-              : registrado 
-                ? 'background: #ecfdf5; color: #059669; border: 1px solid #10b981; font-weight: 600;' 
-                : 'background: #2563eb; color: white;'"
+            class="btn registration-btn" 
+            :class="[
+              evento.isRegistered ? 'btn-unregister' : 'btn-register',
+              (evento.registeredCount >= evento.maxCapacity && !evento.isRegistered) ? 'btn-capacity-full' : ''
+            ]"
+            :disabled="loadingRegistration || eventoPasado || (evento.registeredCount >= evento.maxCapacity && !evento.isRegistered)"
           >
-            <span v-if="eventoPasado && !loadingRegistration">📅 Evento finalizado</span>
-            <span v-else-if="!registrado && !loadingRegistration">Inscribirme ahora</span>
-            <span v-else-if="registrado && !loadingRegistration">✅ ¡Inscrito! (Click para cancelar)</span>
+            <span v-if="eventoPasado && !loadingRegistration" class="btn-text">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Evento finalizado
+            </span>
+            <span v-else-if="evento.registeredCount >= evento.maxCapacity && !evento.isRegistered && !loadingRegistration" class="btn-text">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Cupos agotados
+            </span>
+            <span v-else-if="!evento.isRegistered && !loadingRegistration" class="btn-text">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Inscribirme
+            </span>
+            <span v-else-if="evento.isRegistered && !loadingRegistration" class="btn-text">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Cancelar asistencia
+            </span>
             <span v-else class="loading-spinner">Procesando...</span>
           </button>
           
@@ -247,7 +285,6 @@ const eventId = route.params.id
 const evento = ref(null)
 const loading = ref(true)
 const error = ref('')
-const registrado = ref(false)
 const loadingRegistration = ref(false)
 const successMessage = ref('')
 const showConfirmModal = ref(false)
@@ -292,11 +329,6 @@ const fetchEventDetail = async () => {
 
     evento.value = raw
     
-    // Si el backend devuelve isRegistered, usar ese valor
-    if (evento.value && typeof evento.value.isRegistered === 'boolean') {
-      registrado.value = evento.value.isRegistered
-    }
-    
     // Verificar si el evento ya pasó
     verificarEventoPasado()
   } catch (err) {
@@ -309,7 +341,7 @@ const fetchEventDetail = async () => {
 
 // Manejar registro/desregistro del evento
 const toggleRegistration = () => {
-  if (!registrado.value) {
+  if (!evento.value.isRegistered) {
     // Si no está registrado, inscribirse directamente
     proceedWithRegistration()
   } else {
@@ -332,7 +364,6 @@ const proceedWithRegistration = async () => {
     const eventoActualizado = response.data || response
     if (eventoActualizado) {
       evento.value = eventoActualizado
-      registrado.value = eventoActualizado.isRegistered
     }
     
     // Emitir evento para actualizar el calendario
@@ -380,11 +411,13 @@ const confirmUnregister = async () => {
     const eventoActualizado = response.data || response
     if (eventoActualizado) {
       evento.value = eventoActualizado
-      registrado.value = eventoActualizado.isRegistered
     }
     
     // Cerrar modal
     showConfirmModal.value = false
+    
+    // Emitir evento para actualizar el calendario
+    eventBus.emit('event-registered', eventId)
     
     // Limpiar mensaje de éxito después de 3 segundos
     setTimeout(() => {
@@ -613,6 +646,13 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.badge-registered {
+  background: #d1fae5;
+  color: #047857;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
 .badge-status {
   background: #dbeafe;
   color: #1e40af;
@@ -758,6 +798,47 @@ onMounted(() => {
   margin: 0.3rem 0 0;
 }
 
+/* ── Capacity Display ────── */
+.capacity-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.capacity-icon {
+  color: var(--navy);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.capacity-icon-warning {
+  color: #ef4444;
+  opacity: 1;
+}
+
+.capacity-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.capacity-text-full {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.detail-card.capacity-full {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.detail-card.capacity-full .detail-icon.capacity-full-icon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
 /* ── Description Section ────── */
 .description-section {
   margin-bottom: 2rem;
@@ -854,6 +935,12 @@ onMounted(() => {
   min-width: 180px;
 }
 
+.btn-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .btn-primary {
   background: var(--navy);
   color: var(--gold);
@@ -873,9 +960,59 @@ onMounted(() => {
   background: #cbd5e1;
 }
 
+/* ── Registration Buttons ────── */
+.registration-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-register {
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}
+
+.btn-register:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-register:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-capacity-full {
+  background: #6b7280;
+  color: white;
+}
+
+.btn-capacity-full:hover:not(:disabled) {
+  background: #4b5563;
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.btn-unregister {
+  background: #ef4444;
+  color: white;
+  font-weight: 700;
+}
+
+.btn-unregister:hover:not(:disabled) {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-unregister:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none !important;
 }
 
 .loading-spinner {

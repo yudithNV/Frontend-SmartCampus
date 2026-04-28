@@ -137,7 +137,10 @@ function normalizeEvent(event) {
 // Servicios de Eventos
 // ─────────────────────────────────────────────────────────────────────────────
 export const eventService = {
-  getAll: () => apiRequest('/events'),
+  getAll: (page = 0, size = 10, sortBy = 'createdAt', sortType = 'DESC') => {
+    const params = new URLSearchParams({ page, size, sortBy, sortType })
+    return apiRequest(`/events?${params}`)
+  },
 
   getUpcoming: async () => {
     const response = await apiRequest('/events/upcoming')
@@ -145,7 +148,10 @@ export const eventService = {
     return Array.isArray(list) ? list.map(normalizeEvent) : []
   },
 
-  getMy: () => apiRequest('/events/my'),
+  getMy: (page = 0, size = 10, sortBy = 'createdAt', sortType = 'DESC') => {
+    const params = new URLSearchParams({ page, size, sortBy, sortType })
+    return apiRequest(`/events/my?${params}`)
+  },
   
   getRegistered: (startDate, endDate) => {
     const params = new URLSearchParams()

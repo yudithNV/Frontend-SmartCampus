@@ -282,6 +282,32 @@
       </div>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="!loading && !error && events.length > 0" class="pagination-wrapper">
+      <div class="pagination-info">
+        <span>Mostrando {{ events.length }} de {{ totalElements }} eventos (página {{ currentPage + 1 }} de {{ totalPages }})</span>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="btn-pagination" 
+          @click="currentPage > 0 && (currentPage--, loadEvents())"
+          :disabled="currentPage === 0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Anterior
+        </button>
+        <div class="page-info">
+          Página <span class="current-page">{{ currentPage + 1 }}</span> de <span class="total-pages">{{ totalPages }}</span>
+        </div>
+        <button 
+          class="btn-pagination" 
+          @click="currentPage < totalPages - 1 && (currentPage++, loadEvents())"
+          :disabled="currentPage === totalPages - 1 || totalPages === 0">
+          Siguiente
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -307,6 +333,12 @@ const careerFilter = ref('all')
 const sortBy = ref('newest')
 const viewMode = ref('grid')
 const currentUserId = ref(null)
+
+// Paginación
+const currentPage = ref(0)
+const pageSize = ref(10)
+const totalPages = ref(0)
+const totalElements = ref(0)
 
 const toast = reactive({ show: false, type: 'success', title: '', message: '' })
 const deleteModal = reactive({ show: false, id: null, title: '', loading: false })
@@ -343,19 +375,24 @@ const filteredEvents = computed(() => {
     const q = search.value.toLowerCase()
     list = list.filter(e => e.name?.toLowerCase().includes(q))
   }
-  if (sortBy.value === 'newest') list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  if (sortBy.value === 'oldest') list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-  if (sortBy.value === 'date') list.sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime))
-  if (sortBy.value === 'title-asc') list.sort((a, b) => a.name.localeCompare(b.name))
-  if (sortBy.value === 'title-desc') list.sort((a, b) => b.name.localeCompare(a.name))
+  
+  // Mapeo de sortBy a parámetros backend
+  const sortMap = {
+    'newest': { sortBy: 'createdAt', sortType: 'DESC' },
+    'oldest': { sortBy: 'createdAt', sortType: 'ASC' },
+    'date': { sortBy: 'startDatetime', sortType: 'ASC' },
+    'title-asc': { sortBy: 'name', sortType: 'ASC' },
+    'title-desc': { sortBy: 'name', sortType: 'DESC' }
+  }
+  
   return list
 })
 
-// Contadores para los stats
-const myEventsCount = computed(() => events.value.filter(e => e._isOwn).length)
+// Contadores para los stats (usan totalElements del backend)
+const myEventsCount = computed(() => scopeFilter.value === 'my' ? totalElements.value : 0)
 const myPublishedCount = computed(() => events.value.filter(e => e._isOwn && e.isActive).length)
 const myDraftsCount = computed(() => events.value.filter(e => e._isOwn && !e.isActive).length)
-const globalEventsCount = computed(() => events.value.filter(e => e.isActive).length)
+const globalEventsCount = computed(() => scopeFilter.value === 'global' ? totalElements.value : 0)
 
 function showToast(type, title, message) {
   toast.show = false
@@ -369,7 +406,7 @@ async function loadEvents() {
   loading.value = true
   error.value = ''
   try {
-    console.log('🔄 Iniciando carga de eventos...', 'Scope:', scopeFilter.value)
+    console.log('🔄 Iniciando carga de eventos...', 'Scope:', scopeFilter.value, 'Page:', currentPage.value)
 
     // Obtener userId del localStorage (del token o de ucb_user_id)
     const storedUser = localStorage.getItem('ucb_user_id')
@@ -392,22 +429,41 @@ async function loadEvents() {
     careers.value = careerResponse.data || careerResponse || []
     console.log('🎓 Carreras cargadas:', careers.value.length)
 
-    // Cargar eventos según el scope (mis eventos o todos)
+    // Mapeo de sortBy a parámetros backend
+    const sortMap = {
+      'newest': { sortBy: 'createdAt', sortType: 'DESC' },
+      'oldest': { sortBy: 'createdAt', sortType: 'ASC' },
+      'date': { sortBy: 'startDatetime', sortType: 'ASC' },
+      'title-asc': { sortBy: 'name', sortType: 'ASC' },
+      'title-desc': { sortBy: 'name', sortType: 'DESC' }
+    }
+    const sort = sortMap[sortBy.value] || sortMap['newest']
+
+    // Cargar eventos según el scope (mis eventos o todos) con paginación
     const response = scopeFilter.value === 'my'
-      ? await eventService.getMy()
-      : await eventService.getAll()
+      ? await eventService.getMy(currentPage.value, pageSize.value, sort.sortBy, sort.sortType)
+      : await eventService.getAll(currentPage.value, pageSize.value, sort.sortBy, sort.sortType)
     console.log('✅ Respuesta recibida:', response)
 
-    // Validar que la respuesta sea un array o convertirla
+    // Validar que la respuesta tenga estructura paginada
     let eventsList = []
-    if (Array.isArray(response)) {
+    let pagination = { totalPages: 0, totalElements: 0 }
+    
+    if (response && response.content && Array.isArray(response.content)) {
+      eventsList = response.content
+      pagination = {
+        totalPages: response.totalPages || 0,
+        totalElements: response.totalElements || 0
+      }
+    } else if (Array.isArray(response)) {
       eventsList = response
     } else if (response && response.data && Array.isArray(response.data)) {
       eventsList = response.data
-    } else if (response && typeof response === 'object') {
-      console.warn('⚠️ Estructura de respuesta inesperada:', response)
-      eventsList = Array.isArray(response) ? response : []
     }
+
+    // Guardar datos de paginación
+    totalPages.value = pagination.totalPages
+    totalElements.value = pagination.totalElements
 
     // Agregar propiedades auxiliares (_isOwn, _saving)
     events.value = eventsList.map(e => ({
@@ -416,7 +472,7 @@ async function loadEvents() {
       _saving: false
     }))
 
-    console.log('📊 Eventos cargados:', events.value.length)
+    console.log('📊 Eventos cargados:', events.value.length, 'de', totalElements.value, 'total')
   } catch (err) {
     console.error('❌ Error al cargar eventos:', err)
     const errorMsg = err.message || 'Error desconocido'
@@ -743,11 +799,73 @@ onMounted(loadEvents)
 .loading-row { display:flex; align-items:center; gap:0.4rem; }
 .spinner-xs { display:inline-block; width:11px; height:11px; border:2px solid rgba(0,0,0,0.12); border-top-color:currentColor; border-radius:50%; animation:spin 0.5s linear infinite; flex-shrink:0; }
 
+/* Pagination */
+.pagination-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem 1.5rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 2rem;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1e293b;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-pagination:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.875rem;
+  color: #64748b;
+  min-width: 120px;
+  text-align: center;
+}
+
+.current-page,
+.total-pages {
+  font-weight: 600;
+  color: #1e293b;
+}
+
 @media (max-width:720px) {
   .page-header { flex-direction:column; gap:1rem; align-items:flex-start; }
   .btn-new { width:100%; justify-content:center; }
   .stats-row { flex-wrap:wrap; }
   .filters-bar { flex-direction:column; align-items:stretch; }
   .events-grid { grid-template-columns:1fr; }
+  .pagination-wrapper { flex-direction:column; gap:1rem; }
 }
 </style>
