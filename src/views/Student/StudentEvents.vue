@@ -15,6 +15,12 @@
           <p class="feed-header__sub">Explora y participa en las actividades de la comunidad UCB</p>
         </div>
       </div>
+
+      <!-- Indicador de preferencias activas -->
+      <div v-if="hasActivePreferences" class="prefs-indicator" @click="goToProfile">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Ordenando por tus preferencias
+      </div>
     </div>
 
     <!----- FILTROS ----->
@@ -67,10 +73,12 @@
         </button>
       </div>
 
-      <!-- Resultado count -->
       <div v-if="!loading" class="filter-result-info">
         <span v-if="totalElements > 0">
           {{ totalElements }} evento{{ totalElements !== 1 ? 's' : '' }} encontrado{{ totalElements !== 1 ? 's' : '' }}
+          <span v-if="recommendedCount > 0" class="result-recommended-count">
+            · {{ recommendedCount }} recomendado{{ recommendedCount !== 1 ? 's' : '' }} para ti
+          </span>
         </span>
         <span v-else class="filter-result-info--empty">Sin resultados para los filtros aplicados</span>
       </div>
@@ -83,13 +91,34 @@
 
     <!-- ── FEED LIST ───────────────────────────────────────────────── -->
     <div v-else-if="eventos.length > 0" class="feed-list">
+
+      
+
       <article
         v-for="(evento, i) in eventos"
         :key="evento.id"
         class="event-card"
-        :style="{ '--delay': i * 0.08 + 's' }"
+        :class="{ 'event-card--recommended': evento.recommended }"
+        :style="{ '--delay': i * 0.07 + 's' }"
         @click="goToDetail(evento.id)"
       >
+        <!-- Badge recomendado -->
+        <div v-if="evento.recommended" class="badge-recommended">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          Recomendado para ti
+        </div>
+
+        <!-- Separador entre recomendados y resto -->
+        <div
+          v-if="recommendedCount > 0 && i === recommendedCount"
+          class="section-label section-label--rest"
+          style="margin-bottom: 0.5rem;"
+        >
+          Otros eventos
+        </div>
+
         <div class="event-card__header">
           <div class="author-avatar">{{ getInitials(evento.authorName) }}</div>
           <div class="author-meta">
@@ -110,25 +139,20 @@
           <p class="event-card__text">{{ evento.description }}</p>
           <div class="event-meta-info">
             <span class="meta-tag">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
               {{ formatEventDateTime(evento.startDatetime, evento.endDatetime) }}
             </span>
-            
             <span class="meta-tag">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
               {{ evento.location?.name || 'No especificada' }}
             </span>
-
-            <span class="meta-tag">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle; margin-right: 4px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-            </svg>
-              {{ evento.eventType }}</span>
+            <span class="meta-tag meta-tag--type">
+              {{ evento.eventType }}
+            </span>
           </div>
         </div>
 
@@ -140,8 +164,9 @@
 
     <div v-else class="empty-state">
       <div class="empty-state__visual">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
       </div>
       <h3>Sin Resultados</h3>
@@ -200,189 +225,149 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
 import { formatDateTime, formatEventDateTime } from '../../utils/index.js'
+import { userService } from '../../services/api.js'
 
-const router = useRouter()
-const eventos = ref([])
-const careers = ref([])
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8081'
+
+const router   = useRouter()
+const eventos  = ref([])
+const careers  = ref([])
 const categories = ref([])
-const loading = ref(true)
+const loading  = ref(true)
 
-// ─── Mapa de colores para categorías (por id) ───
-const categoryColorMap = ref({})
+// Preferencias del estudiante (para reordenación client-side si no viene del backend)
+const userPreferences = ref({ eventTypes: [], categoryIds: [] })
+const hasActivePreferences = computed(
+  () => userPreferences.value.eventTypes.length > 0 || userPreferences.value.categoryIds.length > 0
+)
 
-// ─── Filtros ───
-const searchInput = ref('')
+// Cuenta cuántos eventos de la página actual son recomendados
+const recommendedCount = computed(() => eventos.value.filter(e => e.recommended).length)
+
+// ─── Filtros ───────────────────────────────────────────────────────────────
+const searchInput    = ref('')
 const selectedCareer = ref('')
 const selectedCategory = ref('')
-const sortType = ref('DESC')
+const sortType       = ref('DESC')
 
-// ─── Paginación ───
-const currentPage = ref(0)
-const pageSize = ref(10)
-const totalPages = ref(0)
-const totalElements = ref(0)
+const currentPage    = ref(0)
+const pageSize       = ref(10)
+const totalPages     = ref(0)
+const totalElements  = ref(0)
 
-// ─── Debounce para el buscador ───
 let searchTimer = null
 function onSearchInput() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    currentPage.value = 0
-    fetchEventos()
-  }, 450)
+  searchTimer = setTimeout(() => { currentPage.value = 0; fetchEventos() }, 450)
 }
+function clearSearch() { searchInput.value = ''; currentPage.value = 0; fetchEventos() }
 
-function clearSearch() {
-  searchInput.value = ''
-  currentPage.value = 0
-  fetchEventos()
-}
-
-// ─── Filtros activos ───
 const hasActiveFilters = computed(() =>
   searchInput.value.trim() !== '' ||
   selectedCareer.value !== '' ||
   selectedCategory.value !== '' ||
   sortType.value !== 'DESC'
 )
-
-function applyFilters() {
-  currentPage.value = 0
-  fetchEventos()
-}
-
+function applyFilters() { currentPage.value = 0; fetchEventos() }
 function clearAllFilters() {
-  searchInput.value = ''
-  selectedCareer.value = ''
-  selectedCategory.value = ''
-  sortType.value = 'DESC'
-  currentPage.value = 0
-  fetchEventos()
+  searchInput.value = ''; selectedCareer.value = ''; selectedCategory.value = ''; sortType.value = 'DESC'
+  currentPage.value = 0; fetchEventos()
 }
 
-// ─── Paginación ───
 function goToPage(page) {
   if (page < 0 || page >= totalPages.value) return
-  currentPage.value = page
-  fetchEventos()
+  currentPage.value = page; fetchEventos()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 const visiblePages = computed(() => {
-  const total = totalPages.value
-  const current = currentPage.value
+  const total = totalPages.value; const current = currentPage.value
   if (total <= 7) return Array.from({ length: total }, (_, i) => i)
-
-  const pages = []
-  if (current <= 3) {
-    pages.push(0, 1, 2, 3, 4, '...', total - 1)
-  } else if (current >= total - 4) {
-    pages.push(0, '...', total - 5, total - 4, total - 3, total - 2, total - 1)
-  } else {
-    pages.push(0, '...', current - 1, current, current + 1, '...', total - 1)
-  }
-  return pages
+  if (current <= 3) return [0, 1, 2, 3, 4, '...', total - 1]
+  if (current >= total - 4) return [0, '...', total - 5, total - 4, total - 3, total - 2, total - 1]
+  return [0, '...', current - 1, current, current + 1, '...', total - 1]
 })
 
-// ─── Carga de eventos con filtros del backend ───
+// ─── Aplicar recomendaciones (client-side fallback) ────────────────────────
+// El backend devuelve `recommended` si el endpoint lo soporta.
+// Si no, lo calculamos aquí con las preferencias cargadas.
+function applyRecommendations(list) {
+  const prefs = userPreferences.value
+  const hasPrefs = prefs.eventTypes.length > 0 || prefs.categoryIds.length > 0
+
+  if (!hasPrefs) return list // SCRUM-406: sin prefs → sin badge, sin reordenación
+
+  const enriched = list.map(e => {
+    // Si el backend ya lo marcó, respetar eso
+    if (e.recommended !== undefined && e.recommended !== null) return e
+
+    const matchType     = prefs.eventTypes.includes(e.eventType)
+    const matchCategory = e.category?.id != null && prefs.categoryIds.includes(e.category.id)
+    return { ...e, recommended: matchType || matchCategory }
+  })
+
+  // Reordenar: recomendados primero (SCRUM-403)
+  const rec  = enriched.filter(e => e.recommended)
+  const rest = enriched.filter(e => !e.recommended)
+  return [...rec, ...rest]
+}
+
+// ─── Fetch ─────────────────────────────────────────────────────────────────
 const fetchEventos = async () => {
   loading.value = true
   try {
-    const params = new URLSearchParams({
-      page: currentPage.value,
-      size: pageSize.value,
-    })
+    const params = new URLSearchParams({ page: currentPage.value, size: pageSize.value, sortBy: 'createdAt', sortType: sortType.value })
+    if (searchInput.value.trim())   params.append('search',     searchInput.value.trim())
+    if (selectedCareer.value)       params.append('careerId',   selectedCareer.value)
+    if (selectedCategory.value)     params.append('categoryId', selectedCategory.value)
 
-    // Agregar parámetros opcionales
-    if (searchInput.value.trim()) params.append('search', searchInput.value.trim())
-    if (selectedCareer.value) params.append('careerId', selectedCareer.value)
-    if (selectedCategory.value) params.append('categoryId', selectedCategory.value)
-    
-    // Agregar parámetros de ordenamiento
-    params.append('sortBy', 'createdAt')
-    params.append('sortType', sortType.value)
+    const response = await fetch(`${API_BASE}/api/events/recent?${params.toString()}`)
+    const result   = await response.json()
 
-    const response = await fetch(`http://localhost:8081/api/events/recent?${params.toString()}`)
-    const result = await response.json()
-
-    // Spring Page response: { content, totalPages, totalElements, ... }
-    eventos.value = result.content || []
-    totalPages.value = result.totalPages || 0
+    const rawList = result.content || []
+    eventos.value       = applyRecommendations(rawList)
+    totalPages.value    = result.totalPages    || 0
     totalElements.value = result.totalElements || 0
-
   } catch (error) {
-    console.error("Error al cargar eventos:", error)
+    console.error('Error al cargar eventos:', error)
     eventos.value = []
   } finally {
     loading.value = false
   }
 }
 
-// Cargar carreras para el filtro
 const fetchCareers = async () => {
   try {
-    const response = await fetch('http://localhost:8081/api/careers')
-    const result = await response.json()
+    const res = await fetch(`${API_BASE}/api/careers`)
+    const result = await res.json()
     careers.value = Array.isArray(result) ? result : (result.data || [])
-  } catch (error) {
-    console.warn("Error al cargar carreras:", error)
-  }
+  } catch { /* no crítico */ }
 }
 
-// Cargar categorías para el filtro
 const fetchCategories = async () => {
   try {
-    const response = await fetch('http://localhost:8081/api/categories')
-    const result = await response.json()
-    const cats = Array.isArray(result) ? result : (result.data || [])
-    categories.value = cats
-    
-    // Construir mapa de colores por ID de categoría
-    const colorMap = {}
-    cats.forEach(cat => {
-      //colorMap[cat.id] = cat.color_hex || '#64748b'
-      colorMap[cat.id] = cat.colorHex || cat.color_hex || '#64748b'
-    })
-    categoryColorMap.value = colorMap
-  } catch (error) {
-    console.warn("Error al cargar categorías:", error)
-  }
+    const res = await fetch(`${API_BASE}/api/categories`)
+    const result = await res.json()
+    categories.value = Array.isArray(result) ? result : (result.data || [])
+  } catch { /* no crítico */ }
 }
 
-// PA: Redirigir a la vista detallada del evento
-const goToDetail = (id) => {
-  router.push(`/estudiante/eventos/${id}`)
+const loadUserPreferences = async () => {
+  try {
+    const data = await userService.getPreferences()
+    userPreferences.value = data
+  } catch { /* no crítico */ }
 }
 
-// formatDateTime importado de utils
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const d = new Date(dateString)
-  return d.toLocaleString('es-BO', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-  })
-}
+const goToDetail = (id) => router.push(`/estudiante/eventos/${id}`)
+const goToProfile = () => router.push('/estudiante/perfil')
 
 const getInitials = (name) => {
   if (!name) return '?'
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
-const getCategoryColor = (categoryId) => {
-  if (!categoryId) return '#64748b'
-  return categoryColorMap.value[categoryId] || '#64748b'
-}
-
-const getCategoryName = (categoryId) => {
-  if (!categoryId) return ''
-  // Forzamos la comparación a Number o String dependiendo de tu BD
-  const category = categories.value.find(c => String(c.id) === String(categoryId))
-  //const category = categories.value.find(c => c.id === categoryId)
-  return category?.name || ''
-}
-
-onMounted(() => {
+onMounted(async () => {
+  await loadUserPreferences()   // cargar prefs ANTES de eventos para marcar correctamente
   fetchCareers()
   fetchCategories()
   fetchEventos()
@@ -390,10 +375,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 .events-feed-page {
   --navy:    #1a3a52;
+  --navy2:   #1e4d6b;
   --gold:    #FFD200;
   --ink:     #0f1f2e;
   --slate:   #64748b;
@@ -421,15 +407,10 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+  gap: 1rem;
 }
-
-.feed-header__left {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
+.feed-header__left { display: flex; align-items: center; gap: 0.875rem; }
 .feed-header__icon {
   width: 44px;
   height: 44px;
@@ -443,90 +424,47 @@ onMounted(() => {
 }
 
 .feed-header__title {
-  font-family: 'Fraunces', serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 0.1rem;
-  line-height: 1.2;
+  font-family: 'Fraunces', serif; font-size: 1.35rem; font-weight: 700;
+  color: var(--ink); margin: 0 0 0.1rem; line-height: 1.2;
 }
+.feed-header__sub { font-size: 0.78rem; color: var(--slate); margin: 0; }
 
-.feed-header__sub {
-  font-size: 0.78rem;
-  color: var(--slate);
-  margin: 0;
+/* Indicador de preferencias */
+.prefs-indicator {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  background: linear-gradient(135deg, #fffbeb, #fef9c3);
+  border: 1.5px solid #fde68a;
+  border-radius: 20px;
+  font-size: 0.73rem; font-weight: 700; color: #92400e;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all 0.15s;
 }
+.prefs-indicator:hover { background: #fef3c7; border-color: #fbbf24; }
 
-/* ── Filtros ──── */
+/* ── Filtros ─────────────────────────────────────────────────────────────── */
 .filters-bar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0.875rem 1.25rem;
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  position: sticky;
-  top: 77px;
-  z-index: 9;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0.875rem 1.5rem; margin-bottom: 1.25rem;
+  display: flex; flex-direction: column; gap: 0.6rem;
+  position: sticky; top: 73px; z-index: 9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-
-.filter-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.filter-search__icon {
-  position: absolute;
-  left: 0.75rem;
-  color: var(--muted);
-  pointer-events: none;
-}
-
+.filter-search { position: relative; display: flex; align-items: center; }
+.filter-search__icon { position: absolute; left: 0.75rem; color: var(--muted); pointer-events: none; }
 .filter-search__input {
-  width: 100%;
-  padding: 0.6rem 2.5rem 0.6rem 2.4rem;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-family: inherit;
-  color: var(--ink);
-  background: #f8fafc;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
+  width: 100%; padding: 0.58rem 2.4rem 0.58rem 2.4rem;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 0.875rem; font-family: inherit; color: var(--ink);
+  background: #f8fafc; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
-
-.filter-search__input:focus {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px rgba(26,58,82,0.08);
-  background: #fff;
-}
-
+.filter-search__input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,58,82,0.08); background: #fff; }
 .filter-clear-btn {
-  position: absolute;
-  right: 0.65rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: color 0.15s;
+  position: absolute; right: 0.65rem; background: none; border: none; cursor: pointer;
+  color: var(--muted); display: flex; align-items: center; padding: 0.25rem; border-radius: 4px; transition: color 0.15s;
 }
-
 .filter-clear-btn:hover { color: var(--ink); }
-
-.filter-row {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
+.filter-row { display: flex; gap: 0.55rem; flex-wrap: wrap; align-items: center; }
 .filter-select {
   padding: 0.5rem 0.75rem;
   border: 1.5px solid var(--border);
@@ -541,10 +479,8 @@ onMounted(() => {
   flex: 1;
   min-width: 130px;
 }
-
 .filter-select:focus { border-color: var(--navy); }
 .filter-select--sort { max-width: 150px; }
-
 .filter-reset-btn {
   display: flex;
   align-items: center;
@@ -561,18 +497,20 @@ onMounted(() => {
   transition: background 0.15s;
   white-space: nowrap;
 }
-
 .filter-reset-btn:hover { background: #ffe4e6; }
+.filter-result-info { font-size: 0.78rem; color: var(--slate); padding: 0 0.1rem; }
+.filter-result-info--empty { color: #d97706; font-weight: 600; }
+.result-recommended-count { color: #92400e; font-weight: 700; }
 
 .filter-result-info {
   font-size: 0.78rem;
   color: var(--slate);
   padding: 0 0.1rem;
 }
+.section-label--recommended { color: #92400e; }
+.section-label--rest { color: var(--muted); }
 
-.filter-result-info--empty { color: #d97706; font-weight: 600; }
-
-/* ── Feed list ──────── */
+/* ── Feed ────────────────────────────────────────────────────────────────── */
 .feed-list {
   max-width: 680px;
   margin: 0 auto;
@@ -587,16 +525,19 @@ onMounted(() => {
   background: var(--surface);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   overflow: hidden;
-  animation: cardReveal 0.45s ease both;
+  animation: cardReveal 0.4s ease both;
   animation-delay: var(--delay, 0s);
-  transition: box-shadow 0.2s, cursor 0.2s;
+  transition: box-shadow 0.2s, transform 0.15s;
   cursor: pointer;
+  position: relative;
 }
+.event-card:hover { box-shadow: 0 6px 22px rgba(26,58,82,0.12); transform: translateY(-1px); }
 
-.event-card:hover {
-  box-shadow: 0 4px 20px rgba(26,58,82,0.1);
+/* Card recomendada: borde izquierdo dorado */
+.event-card--recommended {
+  border-left: 3px solid #FFD200;
 }
 
 @keyframes cardReveal {
@@ -604,58 +545,36 @@ onMounted(() => {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Card Header (autor) ────── */
+/* Badge recomendado */
+.badge-recommended {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  display: inline-flex; align-items: center; gap: 0.28rem;
+  padding: 4px 10px 4px 8px;
+  background: linear-gradient(135deg, #FFD200 0%, #f59e0b 100%);
+  color: #1a3a52;
+  font-size: 0.65rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.4);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* Header de la card */
 .event-card__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem 1.1rem 0.6rem;
+  display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.1rem 0.5rem;
 }
-
 .author-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--navy), #2e6a8a);
-  color: var(--gold);
-  font-size: 0.78rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  letter-spacing: 0.5px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: var(--gold); font-size: 0.75rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; letter-spacing: 0.5px;
 }
-
-.author-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.author-name {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.2;
-}
-
-.event-date {
-  font-size: 0.75rem;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
+.author-meta { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.author-name { font-size: 0.875rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.event-date  { font-size: 0.73rem; color: var(--muted); }
+.meta-row    { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .cat-pill {
   font-size: 0.68rem;
   font-weight: 700;
@@ -671,15 +590,13 @@ onMounted(() => {
   padding: 0.5rem 1.1rem 0.9rem;
 }
 
+/* Body */
+.event-card__body { padding: 0.4rem 1.1rem 0.9rem; }
 .event-card__title {
-  font-family: 'Fraunces', serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 0.55rem;
-  line-height: 1.35;
+  font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700;
+  color: var(--ink); margin: 0 0 0.45rem; line-height: 1.3;
+  padding-right: 100px; /* espacio para el badge */
 }
-
 .event-card__text {
   font-size: 0.9rem;
   color: #374151;

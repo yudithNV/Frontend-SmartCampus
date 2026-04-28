@@ -18,6 +18,7 @@ import AdminAccessLogs from '../views/Admin/AdminAccessLogs.vue'
 import StudentLayout      from '../views/Student/StudentLayout.vue'
 import StudentEvents      from '../views/Student/StudentEvents.vue'
 import EventDetail        from '../views/Student/EventDetail.vue'
+import StudentCalendar    from '../views/Student/StudentCalendar.vue'
 import StudentProfile     from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints  from '../views/Student/StudentComplaints.vue'
@@ -79,6 +80,7 @@ const routes = [
     children: [
       { path: 'eventos',         name: 'StudentEvents',      component: StudentEvents },
       { path: 'eventos/:id',     name: 'EventDetail',        component: EventDetail, props: true },
+      { path: 'calendario',      name: 'StudentCalendar',    component: StudentCalendar },
       { path: 'perfil',          name: 'StudentProfile',     component: StudentProfile },
       { path: 'sugerencias',     name: 'StudentSuggestions', component: StudentSuggestions },
       { path: 'reclamos',        name: 'StudentComplaints',  component: StudentComplaints },
