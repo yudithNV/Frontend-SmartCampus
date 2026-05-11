@@ -249,9 +249,25 @@ export const complaintService = {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Logs
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const accessLogService = {
   getAll: () => apiRequest('/access-logs')
+}
+
+export const favoriteService = {
+
+  add: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}`, { method: 'POST' }),
+ 
+
+  remove: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}`, { method: 'DELETE' }),
+ 
+  
+  getMy: () =>
+    apiRequest('/news/favorites'),
+ 
+ 
+  getStatus: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}/status`),
 }
