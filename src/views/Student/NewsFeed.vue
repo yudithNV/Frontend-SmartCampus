@@ -121,6 +121,7 @@
 
           <!--publicador -->
           <div class="news-card__header">
+
             <div class="author-avatar">
               {{ getInitials(item.authorName) }}
             </div>
@@ -134,18 +135,30 @@
                 <span class="news-date">
                   {{ formatDateTime(item.createdAt) }}
                 </span>
+
                 <span
                   class="career-pill"
                   :class="{ 'career-pill--general': !item.careerName }"
-                >{{ item.careerName || 'Toda la comunidad UCB' }}</span>
+                >
+                  {{ item.careerName || 'Toda la comunidad UCB' }}
+                </span>
+
                 <span
                   v-if="item.category"
                   class="cat-pill"
                   :style="{ background: getCategoryColor(item.category) }"
-                >{{ getCategoryLabel(item.category) }}
+                >
+                  {{ getCategoryLabel(item.category) }}
                 </span>
               </div>
             </div>
+            <FavoriteButton
+              :active="isFavorite(item.id)"
+              :loading="togglingId === item.id"
+              variant="heart"
+              class="news-card__fav-btn"
+              @toggle="toggleFavorite(item.id)"
+            />
           </div>
 
           <!-- titulo -->
@@ -240,6 +253,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { newsService, careerService } from '../../services/api.js'
+import { useFavorites } from '../../composables/useFavorites.js'
+import FavoriteButton from '../../components/FavoriteButton.vue'
 
 // ─── Constantes ───
 const CATEGORIES = [
@@ -257,6 +272,12 @@ const allNews  = ref([])
 const careers  = ref([])
 const loading  = ref(true)
 const errorMsg = ref('')
+const {
+  isFavorite,
+  toggleFavorite,
+  togglingId,
+  loadFavorites
+} = useFavorites()
 
 // ─── Filtros 
 const searchInput      = ref('')
@@ -402,6 +423,7 @@ function getCategoryColor(val) { return CATEGORY_MAP[val]?.color ?? '#64748b' }
 onMounted(() => {
   fetchCareers()
   fetchNews()
+  loadFavorites()
 })
 </script>
 
@@ -958,5 +980,12 @@ onMounted(() => {
   .news-card { border-radius: 0; border-left: none; border-right: none; }
   .filter-select--sort { max-width: 100%; }
   .filters-bar { top: 65px; }
+}
+/* ────────────FAVORITOS────────────── */
+
+.news-card__fav-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 </style>
