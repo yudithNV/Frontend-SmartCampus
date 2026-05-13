@@ -49,6 +49,7 @@ const pageTitle = computed(() => {
     calendario: 'Mi Calendario',
     perfil: 'Mi Perfil',
     noticias: 'Muro de Noticias',
+    favoritos: 'Mis Favoritos',
     reservar: 'Reservar',
     'buscar-material': 'Buscar Material',
     historial: 'Historial',
