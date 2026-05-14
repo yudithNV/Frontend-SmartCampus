@@ -250,6 +250,41 @@ export const complaintService = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Reclamos (Admin)
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminComplaintService = {
+  getAll: async () => {
+    const response = await apiRequest('/admin/complaints')
+    return response.data || response
+  },
+
+  getById: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}`)
+    return response.data || response
+  },
+
+  patchStatus: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/status`, {
+      method: 'PATCH'
+    })
+    return response.data || response
+  },
+
+  postResponse: async (id, body) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`, {
+      method: 'POST',
+      body: JSON.stringify({ body })
+    })
+    return response.data || response
+  },
+
+  listResponses: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`)
+    return response.data || response
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Logs
 // ─────────────────────────────────────────────────────────────────────────────
 export const accessLogService = {
