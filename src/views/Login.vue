@@ -155,7 +155,9 @@
             </span>
             <span>Recordarme</span>
           </label>
-          <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+          <router-link to="/forgot-password" class="forgot-link">
+            ¿Olvidaste tu contraseña?
+          </router-link>
         </div>
 
         <!-- Submit -->
