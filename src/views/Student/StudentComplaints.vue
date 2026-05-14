@@ -132,6 +132,16 @@
                     </div>
                   </div>
                 </div>
+                <div v-if="complaintResponses.length > 0" class="detail-row detail-row--col">
+                  <span class="detail-label">Respuesta de administración: </span>
+                  <div v-for="r in complaintResponses" :key="r.id" class="respuesta-card">
+                    <div class="respuesta-meta">
+                      <span class="respuesta-autor">{{ r.adminName || 'Administración' }}</span>
+                      <span class="respuesta-fecha">{{ formatFecha(r.createdAt) }}</span>
+                    </div>
+                    <p class="respuesta-body">{{ r.body }}</p>
+                  </div>
+                </div>
 
                 <p v-else class="detail-value detail-value--muted">Sin adjuntos</p>
               </div>
@@ -224,7 +234,7 @@
               <button
                 class="action-btn"
                 title="Ver detalle"
-                @click="selectedComplaint = complaint"
+                @click="openDetail(complaint)"
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -346,6 +356,10 @@ const formatDate = (dateString) => {
   const date = new Date(dateString)
   return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`
 }
+function openDetail(complaint) {
+  selectedComplaint.value = complaint
+  fetchResponses(complaint.id)
+}
 const truncateText = (text, maxLength) => {
   if (!text) return ''
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
@@ -385,7 +399,26 @@ const handleCreateComplaint = async ({ dto, files }) => {
     showToast('error', 'Error al enviar reclamo', msg)
   }
 }
+//ah
+const complaintResponses = ref([])
 
+async function fetchResponses(complaintId) {
+  complaintResponses.value = []
+  try {
+    const data = await complaintService.getResponses(complaintId)
+    complaintResponses.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.error('Error al cargar respuestas:', err)
+    complaintResponses.value = []
+  }
+}
+
+function formatFecha(isoString) {
+  return new Date(isoString).toLocaleString('es-BO', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
+}
 onMounted(() => { loadComplaints() })
 </script>
 
@@ -698,6 +731,52 @@ onMounted(() => { loadComplaints() })
   font-weight: 600; font-size: 0.9rem; transition: background 0.2s ease;
 }
 .btn-close-detail:hover { background: #0f2438; }
+
+/* Respuesta de administración */
+.respuesta-card {
+  background: #dcfce7;
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.respuesta-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.respuesta-autor {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+.respuesta-autor::before {
+  content: '✓';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.respuesta-fecha {
+  color: #7c2d12;
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+.respuesta-body {
+  margin: 0;
+  color: #166534;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
 
 /* Transitions */
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s ease; }

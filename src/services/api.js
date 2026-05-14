@@ -246,6 +246,11 @@ export const complaintService = {
       body: formData
     })
     return response.data || response
+  },
+
+  getResponses: async (id) => {
+    const response = await apiRequest(`/complaints/${id}/responses`)
+    return response.data || response
   }
 }
 
