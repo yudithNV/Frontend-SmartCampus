@@ -47,7 +47,27 @@ export const userService = {
 
   logout: () =>
     apiRequest('/auth/logout', { method: 'POST' }),
+ // ── Recuperación de contraseña 
+  forgotPassword: (email) =>
+    apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }),
 
+  validateResetToken: (token) =>
+    apiRequest(
+      `/auth/validate-reset-token?token=${encodeURIComponent(token)}`
+    ),
+
+  resetPassword: (token, newPassword, confirmPassword) =>
+    apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        token,
+        newPassword,
+        confirmPassword
+      })
+    }),
   getMe: () =>
     apiRequest('/auth/me'),
 
