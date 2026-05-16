@@ -112,34 +112,54 @@
     <!-- ── MODAL ELIMINAR USUARIO ─────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="modal-fade">
-        <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+        <div v-if="showStatusModal" class="delete-overlay" @click.self="cancelStatusChange">
           <div class="delete-modal">
-            <div class="delete-modal__icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            <div class="delete-modal__icon"
+                :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'icon-block' : 'icon-unblock'">
+              <!-- Block icon -->
+              <svg v-if="statusTarget?.estadoRaw === 'ACTIVO'"
+                  width="28" height="28" viewBox="0 0 24 24" fill="none"
+                  stroke="#dc2626" stroke-width="2">
+                <rect x="5" y="11" width="14" height="10" rx="2"/>
+                <path d="M8 11V7a4 4 0 018 0v4"/>
+              </svg>
+              <!-- Unlock icon -->
+              <svg v-else width="28" height="28" viewBox="0 0 24 24" fill="none"
+                  stroke="#059669" stroke-width="2">
+                <rect x="5" y="11" width="14" height="10" rx="2"/>
+                <path d="M8 11V7a4 4 0 018 0"/>
               </svg>
             </div>
 
-            <h3 class="delete-modal__title">¿Eliminar usuario?</h3>
+            <h3 class="delete-modal__title">
+              {{ statusTarget?.estadoRaw === 'ACTIVO' ? '¿Bloquear usuario?' : '¿Activar usuario?' }}
+            </h3>
 
             <p class="delete-modal__desc">
-              Estás a punto de eliminar a
-              <strong>{{ userToDelete?.nombre }}</strong>.
-              <br/>
-              <span class="delete-modal__warning">⚠️ Esta acción no se puede deshacer.</span>
+              {{ statusTarget?.estadoRaw === 'ACTIVO'
+                ? `El usuario ${statusTarget?.nombre} no podrá iniciar sesión hasta que sea reactivado.`
+                : `El usuario ${statusTarget?.nombre} recuperará el acceso al sistema.`
+              }}
             </p>
 
             <div class="delete-modal__actions">
-              <button class="btn-cancel" @click="cancelDelete" :disabled="deleting">
+              <button class="btn-cancel" @click="cancelStatusChange" :disabled="statusChanging">
                 Cancelar
               </button>
-              <button class="btn-delete" @click="confirmDelete" :disabled="deleting">
-                <svg v-if="deleting" class="btn-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <button
+                :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'btn-delete' : 'btn-activate'"
+                @click="confirmStatusChange"
+                :disabled="statusChanging"
+              >
+                <svg v-if="statusChanging" class="btn-spin" width="14" height="14"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round">
                   <path d="M12 2a10 10 0 0110 10"/>
                 </svg>
-                {{ deleting ? 'Eliminando...' : 'Sí, eliminar' }}
+                {{ statusChanging
+                  ? 'Procesando...'
+                  : (statusTarget?.estadoRaw === 'ACTIVO' ? 'Sí, bloquear' : 'Sí, activar')
+                }}
               </button>
             </div>
           </div>
@@ -262,24 +282,52 @@
               <td>{{ user.fecha }}</td>
               <td class="actions-cell">
                 <template v-if="user.id !== currentAdminId">
-                  <!-- PA 1: botón editar -->
+
+                  <!-- ── Toggle Bloquear/Activar ── -->
+                  <div class="status-toggle-wrap" :title="user.estado === 'Activo' ? 'Bloquear usuario' : 'Activar usuario'">
+                    <button
+                      class="toggle-status-btn"
+                      :class="{
+                        'toggle-status-btn--active':  user.estadoRaw === 'ACTIVO',
+                        'toggle-status-btn--blocked': user.estadoRaw === 'BLOQUEADO',
+                        'toggle-status-btn--saving':  user._savingStatus
+                      }"
+                      :disabled="user._savingStatus"
+                      @click="openStatusConfirmModal(user)"
+                    >
+                      <span v-if="user._savingStatus" class="btn-spin-xs"></span>
+                      <template v-else>
+                        <svg v-if="user.estadoRaw === 'ACTIVO'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <rect x="5" y="11" width="14" height="10" rx="2"/>
+                          <path d="M8 11V7a4 4 0 018 0v4"/>
+                        </svg>
+                        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <rect x="5" y="11" width="14" height="10" rx="2"/>
+                          <path d="M8 11V7a4 4 0 0 1 8 0"/>
+                          <line x1="15" y1="7" x2="19" y2="7"/>
+                        </svg>
+                      </template>
+                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Activar' }}
+                    </button>
+                  </div>
+
+                  <!-- Edit + Delete (existing buttons) -->
                   <button
                     class="action-btn action-btn--edit"
                     title="Editar usuario"
                     @click="openEditModal(user)"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </button>
-                  <!-- botón eliminar -->
                   <button
                     class="action-btn action-btn--delete"
                     title="Eliminar usuario"
                     @click="openDeleteModal(user)"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polyline points="3,6 5,6 21,6"/>
                       <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
                       <path d="M10,11v6"/><path d="M14,11v6"/>

@@ -89,6 +89,9 @@ export const adminUserService = {
 
   update: (id, data) =>
     apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  
+  updateStatus: (id, status) =>
+    apiRequest(`/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   delete: (id) =>
     apiRequest(`/users/${id}`, { method: 'DELETE' })
