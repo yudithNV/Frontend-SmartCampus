@@ -68,7 +68,38 @@ export const userService = {
     apiRequest('/profile/preferences', {
       method: 'PUT',
       body: JSON.stringify(dto)
+    }),
+
+  // NUEVO: AVATAR
+  uploadAvatar: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    return apiRequest('/profile/avatar', {
+      method: 'POST',
+      body: formData
     })
+  },
+
+  removeAvatar: async () => {
+	  const token = localStorage.getItem('ucb_token')
+
+	  const response = await fetch(`${API_BASE_URL}/profile/avatar`, {
+		  method: 'DELETE',
+		  mode: 'cors',
+		  headers: {
+			  ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+		  }
+	  })
+
+	  if (!response.ok) {
+		  const errorData = await response.json().catch(() => null)
+		  throw new Error(errorData?.message || `Error ${response.status}`)
+	  }
+
+	// 204 No Content → no parsear JSON
+	  return
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
