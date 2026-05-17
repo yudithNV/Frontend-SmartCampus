@@ -6,9 +6,22 @@
 
       <!-- Avatar + nombre — siempre visible -->
       <div class="profile-hero">
-        <div class="avatar" :class="{ 'avatar--has-img': displayAvatarUrl }">
+        <div
+          class="avatar"
+          :class="{ 'avatar--has-img': displayAvatarUrl }"
+          @click="showAvatarModal = true"
+          title="Cambiar foto de perfil"
+          style="cursor:pointer; position:relative;"
+        >
           <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="Avatar" class="avatar-img" @error="onAvatarError" />
           <span v-else class="avatar-initials">{{ initials }}</span>
+          <!-- Overlay de edición -->
+          <div class="avatar-edit-overlay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
         </div>
         <div class="profile-hero__info">
           <h2 class="profile-name">{{ profile.fullName || 'Estudiante' }}</h2>
@@ -280,6 +293,16 @@
       </div>
     </div>
 
+    <!-- Modal de foto de perfil -->
+    <AvatarUploadModal
+      :is-open="showAvatarModal"
+      :current-avatar-url="displayAvatarUrl"
+      :initials="initials"
+      @close="showAvatarModal = false"
+      @avatar-updated="onAvatarUpdated"
+      @avatar-removed="onAvatarRemoved"
+    />
+
     <!-- ── TOAST ──────────────────────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="toast">
@@ -297,6 +320,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { userService, careerService } from '../../services/api.js'
+import AvatarUploadModal from '../../components/Student/AvatarUploadModal.vue'
 
 // ─── Estado ───────────────────────────────────────────────────────────────────
 const profile  = ref({})
@@ -306,6 +330,7 @@ const saving   = ref(false)
 const loading  = ref(true)
 const form     = ref({ fullName: '', phone: '', bio: '', avatarUrl: '' })
 const toast    = ref({ show: false, type: 'success', message: '' })
+const showAvatarModal = ref(false)
 
 // ─── Preferencias ─────────────────────────────────────────────────────────────
 const EVENT_TYPES = [
@@ -366,6 +391,14 @@ function showToast(message, type = 'success') {
 }
 function onAvatarError() {
   profile.value = { ...profile.value, avatarUrl: '' }
+}
+function onAvatarUpdated(newUrl) {
+  profile.value = { ...profile.value, avatarUrl: newUrl }
+  showToast('Foto de perfil actualizada correctamente')
+}
+function onAvatarRemoved() {
+  profile.value = { ...profile.value, avatarUrl: '' }
+  showToast('Foto de perfil eliminada')
 }
 
 // ─── Modo edición ─────────────────────────────────────────────────────────────
@@ -524,6 +557,21 @@ onMounted(async () => {
   padding: 3px 10px;
   border-radius: 20px;
 }
+
+/* ── Avatar overlay de edición ───────────────────────────────────────── */
+.avatar-edit-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: #fff;
+}
+.avatar:hover .avatar-edit-overlay { opacity: 1; }
 
 /* ── Divider ─────────────────────────────────────────────────────────────── */
 .profile-divider { height: 1px; background: #f1f5f9; }

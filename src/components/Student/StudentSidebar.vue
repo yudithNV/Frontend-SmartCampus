@@ -128,7 +128,16 @@
     </nav>
 
     <div class="user-profile">
-      <div class="profile-avatar">{{ userInitial }}</div>
+      <div class="profile-avatar">
+        <img
+          v-if="userAvatar"
+          :src="userAvatar"
+          class="sidebar-avatar-img"
+          alt="Avatar"
+          @error="userAvatar = ''"
+        />
+        <span v-else>{{ userInitial }}</span>
+      </div>
       <transition name="text-fade">
         <div v-if="!collapsed" class="profile-info">
           <span class="profile-name">{{ userName }}</span>
@@ -165,6 +174,7 @@ const userName = ref('Estudiante')
 const userEmail = ref('estudiante@ucb.edu.bo')
 const showLogoutModal = ref(false)
 const loggingOut = ref(false)
+const userAvatar = ref('')
 
 const userInitial = computed(() => {
   return userName.value ? userName.value.charAt(0).toUpperCase() : 'E'
@@ -177,6 +187,7 @@ async function loadProfile() {
     if (profile) {
       userName.value = profile.fullName || 'Estudiante'
       userEmail.value = profile.email || 'estudiante@ucb.edu.bo'
+      userAvatar.value = profile.avatarUrl || ''
     }
   } catch (error) {
     console.error('Error al cargar perfil:', error)
@@ -350,6 +361,14 @@ onMounted(() => {
   font-weight: 700;
   font-size: 1.2rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .profile-info {
