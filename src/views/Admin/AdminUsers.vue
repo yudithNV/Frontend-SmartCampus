@@ -132,13 +132,15 @@
             </div>
 
             <h3 class="delete-modal__title">
-              {{ statusTarget?.estadoRaw === 'ACTIVO' ? '¿Bloquear usuario?' : '¿Activar usuario?' }}
+              {{ statusTarget?.estadoRaw === 'ACTIVO'
+                ? '¿Bloquear usuario?'
+                : '¿Desbloquear usuario?' }}
             </h3>
 
             <p class="delete-modal__desc">
               {{ statusTarget?.estadoRaw === 'ACTIVO'
                 ? `El usuario ${statusTarget?.nombre} no podrá iniciar sesión hasta que sea reactivado.`
-                : `El usuario ${statusTarget?.nombre} recuperará el acceso al sistema.`
+                : `El usuario ${statusTarget?.nombre} volverá a tener acceso al sistema.`
               }}
             </p>
 
@@ -158,7 +160,7 @@
                 </svg>
                 {{ statusChanging
                   ? 'Procesando...'
-                  : (statusTarget?.estadoRaw === 'ACTIVO' ? 'Sí, bloquear' : 'Sí, activar')
+                  : (statusTarget?.estadoRaw === 'ACTIVO'? 'Sí, bloquear' : 'Sí, desbloquear')
                 }}
               </button>
             </div>
@@ -307,7 +309,7 @@
                           <line x1="15" y1="7" x2="19" y2="7"/>
                         </svg>
                       </template>
-                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Activar' }}
+                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Desbloquear' }}
                     </button>
                   </div>
 
@@ -394,6 +396,9 @@ const roleFilter = ref('')
 const statusFilter = ref('')
 const careerFilter = ref('')
 const careers = ref([])
+const showStatusModal  = ref(false)
+const statusTarget     = ref(null)
+const statusChanging   = ref(false)
 let searchTimeout
 
 // Paginación
@@ -428,7 +433,46 @@ const toast = ref({ show: false, type: 'success', title: '', message: '' })
 const showToast = (type, title, message) => {
   toast.value = { show: true, type, title, message }
 }
+function openStatusConfirmModal(user) {
+  statusTarget.value = user
+  showStatusModal.value = true
+}
 
+function cancelStatusChange() {
+  if (statusChanging.value) return
+  showStatusModal.value = false
+  statusTarget.value = null
+}
+
+async function confirmStatusChange() {
+  if (!statusTarget.value) return
+  statusChanging.value = true
+
+  const user = statusTarget.value
+  const newStatus = user.estadoRaw === 'ACTIVO' ? 'BLOQUEADO' : 'ACTIVO'
+
+  try {
+    const res = await adminUserService.updateStatus(user.id, newStatus)
+    const updated = res.data ?? res
+
+    const idx = usuarios.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) {
+      usuarios.value[idx] = mapUser(updated)
+    }
+
+    showStatusModal.value = false
+    statusTarget.value = null
+
+    const label = newStatus === 'BLOQUEADO' ? 'bloqueado' : 'activado'
+    showToast('success', `Usuario ${label}`,
+      `${user.nombre} fue ${label} correctamente.`)
+
+  } catch (err) {
+    showToast('error', 'Error', err.message || 'No se pudo cambiar el estado.')
+  } finally {
+    statusChanging.value = false
+  }
+}
 // ─── Abrir modal de edición con datos precargados (PA 4) ──────────────────────
 function openEditModal(user) {
   userToEdit.value = user
@@ -499,12 +543,13 @@ function mapUser(user) {
     iniciales: getInitials(user.fullName),
     rol: user.role === 'ESTUDIANTE' ? 'Estudiante' :
          user.role === 'PUBLICADOR' ? 'Publicador' : 'Administrador',
-    rolRaw: user.role,                         // valor original para el formulario
+    rolRaw: user.role,
     carrera: user.career?.name || 'N/A',
-    careerId: user.career?.id ?? null,         // para precargar select de carrera
+    careerId: user.career?.id ?? null,
     estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
-    estadoRaw: user.status,                    // valor original para el formulario
-    fecha: new Date(user.createdAt).toLocaleDateString('es-ES')
+    estadoRaw: user.status,
+    fecha: new Date(user.createdAt).toLocaleDateString('es-ES'),
+    _savingStatus: false,   // ← add this
   }
 }
 
@@ -945,4 +990,82 @@ onMounted(async () => {
   .pagination-container { flex-direction: column; gap: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
 }
+/* ── Toggle de estado (Bloquear/Activar)  */
+.status-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.toggle-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: all 0.18s;
+  font-family: inherit;
+}
+
+.toggle-status-btn--active {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fff1f2;
+}
+.toggle-status-btn--active:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+.toggle-status-btn--blocked {
+  border-color: #bbf7d0;
+  color: #059669;
+  background: #f0fdf4;
+}
+.toggle-status-btn--blocked:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #059669;
+}
+
+.toggle-status-btn--saving {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-spin-xs {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Activate button (green confirm) */
+.btn-activate {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #059669;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.btn-activate:hover:not(:disabled) { background: #047857; }
+.btn-activate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Icon backgrounds for status modal */
+.delete-modal__icon.icon-block  { background: #fff1f2; }
+.delete-modal__icon.icon-unblock { background: #f0fdf4; }
 </style>
