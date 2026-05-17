@@ -255,7 +255,14 @@ export const complaintService = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Servicios de Reclamos (Admin)
+// Dashboard Admin
+// ─────────────────────────────────────────────────────────────────────────────
+export const dashboardAdminService = {
+  getMetrics: async () => {
+    const response = await apiRequest('/dashboard/admin')
+    return response.data || response
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminComplaintService = {
   getAll: async () => {
