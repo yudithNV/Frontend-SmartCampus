@@ -45,27 +45,32 @@
 
             <div v-if="complaint.attachments && complaint.attachments.length > 0" class="attachments">
               <label>Adjuntos</label>
-              <ul>
-                <li v-for="(file, idx) in complaint.attachments" :key="idx">
-                  <a :href="file.url" target="_blank">{{ file.name }}</a>
-                </li>
-              </ul>
+              <div class="attachments-list">
+                <div v-for="(file, idx) in complaint.attachments" :key="idx" class="attachment-item">
+                  <div class="attachment-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                  </div>
+                  <div class="attachment-info">
+                    <a :href="file.url" target="_blank" class="attachment-name">{{ file.name }}</a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- Acciones -->
           <div class="actions-section">
-            <button 
-              v-if="complaint.status !== 'EN_REVISION' && complaint.status !== 'RESUELTO'"
-              @click="markAsReview"
-              class="btn btn-primary"
-              :disabled="actionLoading"
-            >
-              {{ actionLoading ? 'Procesando...' : 'Marcar en revisión' }}
-            </button>
-            <span v-else class="status-badge">
-              {{ complaint.status === 'EN_REVISION' ? 'Estado: En revisión' : 'Estado: Resuelto' }}
-            </span>
+          <!-- Acción: Tomar en revisión (solo si PENDIENTE) -->
+          <button 
+            v-if="complaint.status === 'PENDIENTE'"
+            @click="markAsReview"
+            class="btn btn-primary"
+            :disabled="actionLoading"
+          >
+            {{ actionLoading ? 'Procesando...' : 'Tomar en revisión' }}
+          </button>
           </div>
         </div>
       </div>
@@ -83,7 +88,10 @@
         <div v-else class="responses-list">
           <div v-for="response in responses" :key="response.id" class="response-item">
             <div class="response-header">
-              <span class="admin-badge">Admin</span>
+              <span class="admin-badge">
+                {{ response.adminName || 'Admin' }}
+              </span>
+
               <small>{{ formatDate(response.createdAt) }}</small>
             </div>
             <p class="response-body">{{ response.body }}</p>
@@ -92,10 +100,10 @@
         </div>
       </div>
 
-      <!-- Formulario de respuesta -->
-      <div v-if="complaint.status !== 'RESUELTO'" class="card">
+      <!-- Formulario de respuesta (solo si EN_REVISION) -->
+      <div v-if="complaint.status === 'EN_REVISION'" class="card">
         <div class="card-header">
-          <h3>Responder al Reclamo</h3>
+          <h3>Responder y Resolver</h3>
         </div>
 
         <div class="card-body">
@@ -114,7 +122,7 @@
 
             <div class="form-actions">
               <button type="submit" class="btn btn-success" :disabled="responseLoading || !responseText.trim()">
-                {{ responseLoading ? 'Enviando...' : 'Enviar Respuesta' }}
+                {{ responseLoading ? 'Enviando...' : 'Responder y resolver' }}
               </button>
               <button type="button" @click="responseText = ''" class="btn btn-secondary">
                 Limpiar
@@ -125,7 +133,7 @@
       </div>
 
       <div v-else class="resolved-message">
-        <p>✓ Este reclamo ha sido resuelto</p>
+        <p>✓ Este reclamo ha sido resuelto. No se pueden realizar más acciones.</p>
       </div>
     </div>
 
@@ -134,7 +142,14 @@
     </div>
 
     <!-- Toast de notificaciones -->
-    <Toast :message="toastMessage" :type="toastType" :visible="showToast" />
+    <Toast
+      :show="showToast"
+      :type="toastType"
+      title="Acción completada"
+      :message="toastMessage"
+      @close="showToast = false"
+    />
+
   </div>
 </template>
 
@@ -187,7 +202,7 @@ async function markAsReview() {
   try {
     const updated = await adminComplaintService.patchStatus(complaintId)
     complaint.value = updated
-    showNotification('Reclamo marcado como EN_REVISION', 'success')
+    showNotification('Reclamo marcado como en revisión correctamente', 'success')
   } catch (error) {
     console.error('Error:', error)
     showNotification('Error al actualizar estado', 'error')
@@ -204,7 +219,7 @@ async function submitResponse() {
     await adminComplaintService.postResponse(complaintId, responseText.value)
     responseText.value = ''
     await loadComplaintDetail()
-    showNotification('Respuesta enviada correctamente', 'success')
+    showNotification('Respuesta enviada correctamente. El reclamo fue marcado como resuelto.', 'success')
   } catch (error) {
     console.error('Error:', error)
     showNotification('Error al enviar respuesta', 'error')
@@ -222,20 +237,18 @@ function showNotification(message, type = 'success') {
 
 function getStatusClass(status) {
   const classes = {
-    ABIERTO: 'status-open',
+    PENDIENTE: 'status-pending',
     EN_REVISION: 'status-review',
-    RESUELTO: 'status-resolved',
-    CERRADO: 'status-closed'
+    RESUELTO: 'status-resolved'
   }
-  return classes[status] || 'status-open'
+  return classes[status] || 'status-pending'
 }
 
 function formatStatus(status) {
   const labels = {
-    ABIERTO: 'Abierto',
+    PENDIENTE: 'Pendiente',
     EN_REVISION: 'En Revisión',
-    RESUELTO: 'Resuelto',
-    CERRADO: 'Cerrado'
+    RESUELTO: 'Resuelto'
   }
   return labels[status] || status
 }
@@ -331,7 +344,7 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.status-open {
+.status-pending {
   background: #fef3c7;
   color: #92400e;
 }
@@ -344,11 +357,6 @@ onMounted(() => {
 .status-resolved {
   background: #dcfce7;
   color: #15803d;
-}
-
-.status-closed {
-  background: #f3f4f6;
-  color: #374151;
 }
 
 .card-body {
@@ -426,28 +434,54 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.attachments ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.attachments-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.attachments li {
-  padding: 0.5rem 1rem;
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
   background: #f8fafc;
-  border-radius: 6px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
 }
 
-.attachments a {
+.attachment-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.attachment-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #dbeafe;
+  border-radius: 6px;
+  color: #1e40af;
+  flex-shrink: 0;
+}
+
+.attachment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-name {
   color: #1a3a52;
   text-decoration: none;
   font-weight: 500;
+  word-break: break-word;
+  transition: color 0.3s ease;
 }
 
-.attachments a:hover {
+.attachment-name:hover {
   color: #FFD200;
   text-decoration: underline;
 }

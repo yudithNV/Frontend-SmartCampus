@@ -30,7 +30,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Buscar por título o categoría..."
+            placeholder="Buscar por título, categoría, estudiante o nro..."
             class="search-input"
             @input="applyFilters"
           />
@@ -59,28 +59,40 @@
       <p>{{ searchQuery ? 'No se encontraron reclamos' : 'Sin reclamos en este estado' }}</p>
     </div>
 
-    <!-- ── LISTA DE RECLAMOS ───────────────────────────────────────────────── -->
-    <div v-else class="complaints-list">
-      <div v-for="complaint in filteredComplaints" :key="complaint.id" class="complaint-card">
-        <div class="complaint-card__header">
-          <div class="complaint-card__content">
-            <h3 class="complaint-card__title">{{ complaint.title }}</h3>
-            <p class="complaint-card__category">{{ complaint.category }}</p>
-          </div>
-          <div class="complaint-card__status" :class="getStatusClass(complaint.status)">
-            {{ formatStatus(complaint.status) }}
-          </div>
-        </div>
-
-        <p class="complaint-card__body">{{ complaint.body.substring(0, 120) }}...</p>
-
-        <div class="complaint-card__footer">
-          <small class="complaint-card__date">{{ formatDate(complaint.createdAt) }}</small>
-          <router-link :to="`/admin/reclamos/${complaint.id}`" class="complaint-card__link">
-            Ver detalle →
-          </router-link>
-        </div>
-      </div>
+    <!-- ── TABLA DE RECLAMOS ─────────────────────────────────────────────── -->
+    <div v-else class="table-container">
+      <table class="complaints-table">
+        <thead>
+          <tr>
+            <th class="col-tracking">Nro. Seguimiento</th>
+            <th class="col-student">Estudiante</th>
+            <th class="col-title">Título</th>
+            <th class="col-category">Categoría</th>
+            <th class="col-date">Fecha</th>
+            <th class="col-status">Estado</th>
+            <th class="col-action">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="complaint in filteredComplaints" :key="complaint.id" class="complaint-row">
+            <td class="col-tracking"><strong>#{{ complaint.id }}</strong></td>
+            <td class="col-student">{{ complaint.studentName || 'N/A' }}</td>
+            <td class="col-title">{{ complaint.title }}</td>
+            <td class="col-category">{{ complaint.category }}</td>
+            <td class="col-date">{{ formatDate(complaint.createdAt) }}</td>
+            <td class="col-status">
+              <span class="status-badge" :class="getStatusClass(complaint.status)">
+                {{ formatStatus(complaint.status) }}
+              </span>
+            </td>
+            <td class="col-action">
+              <router-link :to="`/admin/reclamos/${complaint.id}`" class="action-link">
+                Ver detalle
+              </router-link>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -104,9 +116,12 @@ const statusTabs = [
 const filteredComplaints = computed(() => {
   return complaints.value.filter(complaint => {
     const matchesStatus = activeFilter.value === 'TODOS' || complaint.status === activeFilter.value
+    const searchLower = searchQuery.value.toLowerCase()
     const matchesSearch = searchQuery.value === '' || 
-      complaint.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      complaint.category.toLowerCase().includes(searchQuery.value.toLowerCase())
+      complaint.title.toLowerCase().includes(searchLower) ||
+      complaint.category.toLowerCase().includes(searchLower) ||
+      (complaint.studentName && complaint.studentName.toLowerCase().includes(searchLower)) ||
+      complaint.id.toString().includes(searchLower)
     return matchesStatus && matchesSearch
   })
 })
@@ -130,20 +145,18 @@ function applyFilters() {
 
 function getStatusClass(status) {
   const classes = {
-    PENDIENTE: 'status-open',
+    PENDIENTE: 'status-pending',
     EN_REVISION: 'status-review',
-    RESUELTO: 'status-resolved',
-    CERRADO: 'status-closed'
+    RESUELTO: 'status-resolved'
   }
-  return classes[status] || 'status-open'
+  return classes[status] || 'status-pending'
 }
 
 function formatStatus(status) {
   const labels = {
     PENDIENTE: 'Pendiente',
     EN_REVISION: 'En Revisión',
-    RESUELTO: 'Resuelto',
-    CERRADO: 'Cerrado'
+    RESUELTO: 'Resuelto'
   }
   return labels[status] || status
 }
@@ -299,63 +312,67 @@ onMounted(() => {
   }
 }
 
-/* ── LISTA DE RECLAMOS ───────────────────────────────────────────────────── */
-.complaints-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.complaint-card {
+/* ── TABLA DE RECLAMOS ──────────────────────────────────────────────────── */
+.table-container {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.complaint-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+.complaints-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.complaint-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+.complaints-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.complaint-card__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.complaint-card__title {
-  margin: 0 0 0.25rem 0;
-  color: #1a3a52;
-  font-size: 1.1rem;
-  font-weight: 600;
-  word-break: break-word;
-}
-
-.complaint-card__category {
-  margin: 0;
+.complaints-table th {
+  padding: 1rem;
+  text-align: left;
   color: #64748b;
+  font-weight: 600;
   font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.complaint-card__status {
-  padding: 0.4rem 0.8rem;
+.col-tracking { width: 12%; }
+.col-student { width: 15%; }
+.col-title { width: 25%; }
+.col-category { width: 12%; }
+.col-date { width: 12%; }
+.col-status { width: 12%; }
+.col-action { width: 12%; text-align: center; }
+
+.complaint-row {
+  border-bottom: 1px solid #e2e8f0;
+  transition: background-color 0.2s ease;
+}
+
+.complaint-row:hover {
+  background-color: #f8fafc;
+}
+
+.complaints-table td {
+  padding: 1rem;
+  color: #1a3a52;
+  font-size: 0.95rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-  text-transform: capitalize;
 }
 
-.status-open {
+.status-pending {
   background: #fef3c7;
   color: #92400e;
 }
@@ -370,41 +387,21 @@ onMounted(() => {
   color: #15803d;
 }
 
-.status-closed {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.complaint-card__body {
-  margin: 0 0 1rem 0;
-  color: #64748b;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.complaint-card__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 1rem;
-  border-top: 1px solid #f1f5f9;
-}
-
-.complaint-card__date {
-  color: #94a3b8;
-  font-size: 0.85rem;
-}
-
-.complaint-card__link {
-  color: #1a3a52;
+.action-link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #1a3a52;
+  color: #ffffff;
   text-decoration: none;
-  font-size: 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: 600;
   transition: all 0.3s ease;
 }
 
-.complaint-card__link:hover {
-  color: #FFD200;
+.action-link:hover {
+  background: #FFD200;
+  color: #1a3a52;
 }
 
 /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
@@ -422,23 +419,30 @@ onMounted(() => {
     width: 100%;
   }
 
-  .complaint-card__header {
-    flex-direction: column;
+  .table-container {
+    overflow-x: auto;
   }
 
-  .complaint-card__status {
-    align-self: flex-start;
+  .complaints-table {
+    font-size: 0.85rem;
   }
 
-  .complaint-card__footer {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
+  .complaints-table th,
+  .complaints-table td {
+    padding: 0.75rem;
   }
 
-  .complaint-card__link {
-    width: 100%;
-    text-align: center;
+  .col-tracking { width: 10%; }
+  .col-student { width: 13%; }
+  .col-title { width: 20%; }
+  .col-category { width: 12%; }
+  .col-date { width: 12%; }
+  .col-status { width: 12%; }
+  .col-action { width: 21%; }
+
+  .action-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
   }
 }
 </style>
