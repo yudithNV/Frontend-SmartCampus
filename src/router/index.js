@@ -60,6 +60,18 @@ const routes = [
     component: ChangePassword,
     meta: { public: true }
   },
+  {
+  path: '/forgot-password',
+  name: 'ForgotPassword',
+  component: () => import('../views/ForgotPassword.vue'),
+  meta: { public: true }
+},
+{
+  path: '/reset-password',
+  name: 'ResetPassword',
+  component: () => import('../views/ResetPassword.vue'),
+  meta: { public: true }
+},
 
   // ── Admin Routes ──────────────────────────────────────────────────────────
   {
