@@ -25,6 +25,7 @@ import StudentProfile     from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints  from '../views/Student/StudentComplaints.vue'
 import NewsFeed           from '../views/Student/NewsFeed.vue'
+import MyFavorites from '../views/Student/MyFavorites.vue'
 
 // Publicador
 import PublisherLayout      from '../views/Publisher/PublisherLayout.vue'
@@ -101,6 +102,7 @@ const routes = [
       { path: 'sugerencias',     name: 'StudentSuggestions', component: StudentSuggestions },
       { path: 'reclamos',        name: 'StudentComplaints',  component: StudentComplaints },
       { path: 'noticias',        name: 'StudentNewsFeed',    component: NewsFeed },
+      { path: 'favoritos',      name: 'StudentFavorites',  component: MyFavorites },
       {
         path: 'reservar',
         name: 'StudentReserve',
