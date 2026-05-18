@@ -47,7 +47,27 @@ export const userService = {
 
   logout: () =>
     apiRequest('/auth/logout', { method: 'POST' }),
+ // ── Recuperación de contraseña 
+  forgotPassword: (email) =>
+    apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }),
 
+  validateResetToken: (token) =>
+    apiRequest(
+      `/auth/validate-reset-token?token=${encodeURIComponent(token)}`
+    ),
+
+  resetPassword: (token, newPassword, confirmPassword) =>
+    apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        token,
+        newPassword,
+        confirmPassword
+      })
+    }),
   getMe: () =>
     apiRequest('/auth/me'),
 
@@ -120,6 +140,9 @@ export const adminUserService = {
 
   update: (id, data) =>
     apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  
+  updateStatus: (id, status) =>
+    apiRequest(`/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   delete: (id) =>
     apiRequest(`/users/${id}`, { method: 'DELETE' })
@@ -277,34 +300,87 @@ export const complaintService = {
       body: formData
     })
     return response.data || response
+  },
+
+  getResponses: async (id) => {
+    const response = await apiRequest(`/complaints/${id}/responses`)
+    return response.data || response
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Logs
+// Dashboard Admin
 // ─────────────────────────────────────────────────────────────────────────────
+export const dashboardAdminService = {
+  getMetrics: async () => {
+    const response = await apiRequest('/dashboard/admin')
+    return response.data || response
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminComplaintService = {
+  getAll: async () => {
+    const response = await apiRequest('/admin/complaints')
+    return response.data || response
+  },
+
+  getById: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}`)
+    return response.data || response
+  },
+
+  patchStatus: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/status`, {
+      method: 'PATCH'
+    })
+    return response.data || response
+  },
+
+  postResponse: async (id, body) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`, {
+      method: 'POST',
+      body: JSON.stringify({ body })
+    })
+    return response.data || response
+  },
+
+  listResponses: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`)
+    return response.data || response
+  }
+}
+
+
 export const accessLogService = {
   getAll: () => apiRequest('/access-logs')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PARCHE: Agregar al final de src/services/api.js
-// ─────────────────────────────────────────────────────────────────────────────
- 
 // Servicios del ChatBot
+// ─────────────────────────────────────────────────────────────────────────────
 export const chatbotService = {
-  /**
-   * Envía una pregunta al bot.
-   * @param {string} question - Pregunta del estudiante
-   * @returns {{ answer: string, escalated: boolean, historyId: number }}
-   */
   ask: async (question) => {
     const response = await apiRequest('/chatbot/ask', {
       method: 'POST',
       body: JSON.stringify({ question })
     })
-    // ApiResponse<ChatbotResponseDTO> → desenvuelve el .data
     return response.data || response
   }
 }
- 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Favoritos
+// ─────────────────────────────────────────────────────────────────────────────
+export const favoriteService = {
+  add: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}`, { method: 'POST' }),
+
+  remove: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}`, { method: 'DELETE' }),
+
+  getMy: () =>
+    apiRequest('/news/favorites'),
+
+  getStatus: (newsId) =>
+    apiRequest(`/news/favorites/${newsId}/status`),
+}

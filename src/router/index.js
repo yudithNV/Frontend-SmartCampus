@@ -13,6 +13,8 @@ import AdminDashboard  from '../views/Admin/AdminDashboard.vue'
 import AdminUsers      from '../views/Admin/AdminUsers.vue'
 import AdminSettings   from '../views/Admin/AdminSettings.vue'
 import AdminAccessLogs from '../views/Admin/AdminAccessLogs.vue'
+import AdminComplaints from '../views/Admin/AdminComplaints.vue'
+import AdminComplaintDetail from '../views/Admin/AdminComplaintDetail.vue'
 
 // Estudiante
 import StudentLayout      from '../views/Student/StudentLayout.vue'
@@ -23,6 +25,7 @@ import StudentProfile     from '../views/Student/StudentProfile.vue'
 import StudentSuggestions from '../views/Student/StudentSuggestions.vue'
 import StudentComplaints  from '../views/Student/StudentComplaints.vue'
 import NewsFeed           from '../views/Student/NewsFeed.vue'
+import MyFavorites from '../views/Student/MyFavorites.vue'
 
 // Publicador
 import PublisherLayout      from '../views/Publisher/PublisherLayout.vue'
@@ -58,6 +61,18 @@ const routes = [
     component: ChangePassword,
     meta: { public: true }
   },
+  {
+  path: '/forgot-password',
+  name: 'ForgotPassword',
+  component: () => import('../views/ForgotPassword.vue'),
+  meta: { public: true }
+},
+{
+  path: '/reset-password',
+  name: 'ResetPassword',
+  component: () => import('../views/ResetPassword.vue'),
+  meta: { public: true }
+},
 
   // ── Admin Routes ──────────────────────────────────────────────────────────
   {
@@ -68,7 +83,9 @@ const routes = [
       { path: 'dashboard',     name: 'AdminDashboard',  component: AdminDashboard },
       { path: 'usuarios',      name: 'AdminUsers',      component: AdminUsers },
       { path: 'configuracion', name: 'AdminSettings',   component: AdminSettings },
-      { path: 'accesos',       name: 'AdminAccessLogs', component: AdminAccessLogs }
+      { path: 'accesos',       name: 'AdminAccessLogs', component: AdminAccessLogs },
+      { path: 'reclamos',      name: 'AdminComplaints', component: AdminComplaints },
+      { path: 'reclamos/:id',  name: 'AdminComplaintDetail', component: AdminComplaintDetail, props: true }
     ]
   },
 
@@ -85,6 +102,7 @@ const routes = [
       { path: 'sugerencias',     name: 'StudentSuggestions', component: StudentSuggestions },
       { path: 'reclamos',        name: 'StudentComplaints',  component: StudentComplaints },
       { path: 'noticias',        name: 'StudentNewsFeed',    component: NewsFeed },
+      { path: 'favoritos',      name: 'StudentFavorites',  component: MyFavorites },
       {
         path: 'reservar',
         name: 'StudentReserve',

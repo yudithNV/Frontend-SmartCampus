@@ -112,34 +112,56 @@
     <!-- ── MODAL ELIMINAR USUARIO ─────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="modal-fade">
-        <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+        <div v-if="showStatusModal" class="delete-overlay" @click.self="cancelStatusChange">
           <div class="delete-modal">
-            <div class="delete-modal__icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            <div class="delete-modal__icon"
+                :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'icon-block' : 'icon-unblock'">
+              <!-- Block icon -->
+              <svg v-if="statusTarget?.estadoRaw === 'ACTIVO'"
+                  width="28" height="28" viewBox="0 0 24 24" fill="none"
+                  stroke="#dc2626" stroke-width="2">
+                <rect x="5" y="11" width="14" height="10" rx="2"/>
+                <path d="M8 11V7a4 4 0 018 0v4"/>
+              </svg>
+              <!-- Unlock icon -->
+              <svg v-else width="28" height="28" viewBox="0 0 24 24" fill="none"
+                  stroke="#059669" stroke-width="2">
+                <rect x="5" y="11" width="14" height="10" rx="2"/>
+                <path d="M8 11V7a4 4 0 018 0"/>
               </svg>
             </div>
 
-            <h3 class="delete-modal__title">¿Eliminar usuario?</h3>
+            <h3 class="delete-modal__title">
+              {{ statusTarget?.estadoRaw === 'ACTIVO'
+                ? '¿Bloquear usuario?'
+                : '¿Desbloquear usuario?' }}
+            </h3>
 
             <p class="delete-modal__desc">
-              Estás a punto de eliminar a
-              <strong>{{ userToDelete?.nombre }}</strong>.
-              <br/>
-              <span class="delete-modal__warning">⚠️ Esta acción no se puede deshacer.</span>
+              {{ statusTarget?.estadoRaw === 'ACTIVO'
+                ? `El usuario ${statusTarget?.nombre} no podrá iniciar sesión hasta que sea reactivado.`
+                : `El usuario ${statusTarget?.nombre} volverá a tener acceso al sistema.`
+              }}
             </p>
 
             <div class="delete-modal__actions">
-              <button class="btn-cancel" @click="cancelDelete" :disabled="deleting">
+              <button class="btn-cancel" @click="cancelStatusChange" :disabled="statusChanging">
                 Cancelar
               </button>
-              <button class="btn-delete" @click="confirmDelete" :disabled="deleting">
-                <svg v-if="deleting" class="btn-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <button
+                :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'btn-delete' : 'btn-activate'"
+                @click="confirmStatusChange"
+                :disabled="statusChanging"
+              >
+                <svg v-if="statusChanging" class="btn-spin" width="14" height="14"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round">
                   <path d="M12 2a10 10 0 0110 10"/>
                 </svg>
-                {{ deleting ? 'Eliminando...' : 'Sí, eliminar' }}
+                {{ statusChanging
+                  ? 'Procesando...'
+                  : (statusTarget?.estadoRaw === 'ACTIVO'? 'Sí, bloquear' : 'Sí, desbloquear')
+                }}
               </button>
             </div>
           </div>
@@ -262,24 +284,52 @@
               <td>{{ user.fecha }}</td>
               <td class="actions-cell">
                 <template v-if="user.id !== currentAdminId">
-                  <!-- PA 1: botón editar -->
+
+                  <!-- ── Toggle Bloquear/Activar ── -->
+                  <div class="status-toggle-wrap" :title="user.estado === 'Activo' ? 'Bloquear usuario' : 'Activar usuario'">
+                    <button
+                      class="toggle-status-btn"
+                      :class="{
+                        'toggle-status-btn--active':  user.estadoRaw === 'ACTIVO',
+                        'toggle-status-btn--blocked': user.estadoRaw === 'BLOQUEADO',
+                        'toggle-status-btn--saving':  user._savingStatus
+                      }"
+                      :disabled="user._savingStatus"
+                      @click="openStatusConfirmModal(user)"
+                    >
+                      <span v-if="user._savingStatus" class="btn-spin-xs"></span>
+                      <template v-else>
+                        <svg v-if="user.estadoRaw === 'ACTIVO'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <rect x="5" y="11" width="14" height="10" rx="2"/>
+                          <path d="M8 11V7a4 4 0 018 0v4"/>
+                        </svg>
+                        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <rect x="5" y="11" width="14" height="10" rx="2"/>
+                          <path d="M8 11V7a4 4 0 0 1 8 0"/>
+                          <line x1="15" y1="7" x2="19" y2="7"/>
+                        </svg>
+                      </template>
+                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Desbloquear' }}
+                    </button>
+                  </div>
+
+                  <!-- Edit + Delete (existing buttons) -->
                   <button
                     class="action-btn action-btn--edit"
                     title="Editar usuario"
                     @click="openEditModal(user)"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </button>
-                  <!-- botón eliminar -->
                   <button
                     class="action-btn action-btn--delete"
                     title="Eliminar usuario"
                     @click="openDeleteModal(user)"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polyline points="3,6 5,6 21,6"/>
                       <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
                       <path d="M10,11v6"/><path d="M14,11v6"/>
@@ -346,6 +396,9 @@ const roleFilter = ref('')
 const statusFilter = ref('')
 const careerFilter = ref('')
 const careers = ref([])
+const showStatusModal  = ref(false)
+const statusTarget     = ref(null)
+const statusChanging   = ref(false)
 let searchTimeout
 
 // Paginación
@@ -380,7 +433,46 @@ const toast = ref({ show: false, type: 'success', title: '', message: '' })
 const showToast = (type, title, message) => {
   toast.value = { show: true, type, title, message }
 }
+function openStatusConfirmModal(user) {
+  statusTarget.value = user
+  showStatusModal.value = true
+}
 
+function cancelStatusChange() {
+  if (statusChanging.value) return
+  showStatusModal.value = false
+  statusTarget.value = null
+}
+
+async function confirmStatusChange() {
+  if (!statusTarget.value) return
+  statusChanging.value = true
+
+  const user = statusTarget.value
+  const newStatus = user.estadoRaw === 'ACTIVO' ? 'BLOQUEADO' : 'ACTIVO'
+
+  try {
+    const res = await adminUserService.updateStatus(user.id, newStatus)
+    const updated = res.data ?? res
+
+    const idx = usuarios.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) {
+      usuarios.value[idx] = mapUser(updated)
+    }
+
+    showStatusModal.value = false
+    statusTarget.value = null
+
+    const label = newStatus === 'BLOQUEADO' ? 'bloqueado' : 'activado'
+    showToast('success', `Usuario ${label}`,
+      `${user.nombre} fue ${label} correctamente.`)
+
+  } catch (err) {
+    showToast('error', 'Error', err.message || 'No se pudo cambiar el estado.')
+  } finally {
+    statusChanging.value = false
+  }
+}
 // ─── Abrir modal de edición con datos precargados (PA 4) ──────────────────────
 function openEditModal(user) {
   userToEdit.value = user
@@ -451,12 +543,13 @@ function mapUser(user) {
     iniciales: getInitials(user.fullName),
     rol: user.role === 'ESTUDIANTE' ? 'Estudiante' :
          user.role === 'PUBLICADOR' ? 'Publicador' : 'Administrador',
-    rolRaw: user.role,                         // valor original para el formulario
+    rolRaw: user.role,
     carrera: user.career?.name || 'N/A',
-    careerId: user.career?.id ?? null,         // para precargar select de carrera
+    careerId: user.career?.id ?? null,
     estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
-    estadoRaw: user.status,                    // valor original para el formulario
-    fecha: new Date(user.createdAt).toLocaleDateString('es-ES')
+    estadoRaw: user.status,
+    fecha: new Date(user.createdAt).toLocaleDateString('es-ES'),
+    _savingStatus: false,   // ← add this
   }
 }
 
@@ -897,4 +990,82 @@ onMounted(async () => {
   .pagination-container { flex-direction: column; gap: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
 }
+/* ── Toggle de estado (Bloquear/Activar)  */
+.status-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.toggle-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: all 0.18s;
+  font-family: inherit;
+}
+
+.toggle-status-btn--active {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fff1f2;
+}
+.toggle-status-btn--active:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+.toggle-status-btn--blocked {
+  border-color: #bbf7d0;
+  color: #059669;
+  background: #f0fdf4;
+}
+.toggle-status-btn--blocked:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #059669;
+}
+
+.toggle-status-btn--saving {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-spin-xs {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Activate button (green confirm) */
+.btn-activate {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #059669;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.btn-activate:hover:not(:disabled) { background: #047857; }
+.btn-activate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Icon backgrounds for status modal */
+.delete-modal__icon.icon-block  { background: #fff1f2; }
+.delete-modal__icon.icon-unblock { background: #f0fdf4; }
 </style>

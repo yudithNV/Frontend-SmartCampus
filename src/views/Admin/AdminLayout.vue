@@ -43,6 +43,7 @@ const pageTitle = computed(() => {
     dashboard: 'Dashboard',
     usuarios: 'Usuarios',
     accesos: 'Historial de Accesos',
+    reclamos: 'Reclamos',
     configuracion: 'Configuración'
   }
   return titles[path] || 'Admin'
