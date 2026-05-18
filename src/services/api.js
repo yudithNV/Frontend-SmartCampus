@@ -277,6 +277,53 @@ export const complaintService = {
       body: formData
     })
     return response.data || response
+  },
+
+  getResponses: async (id) => {
+    const response = await apiRequest(`/complaints/${id}/responses`)
+    return response.data || response
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard Admin
+// ─────────────────────────────────────────────────────────────────────────────
+export const dashboardAdminService = {
+  getMetrics: async () => {
+    const response = await apiRequest('/dashboard/admin')
+    return response.data || response
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminComplaintService = {
+  getAll: async () => {
+    const response = await apiRequest('/admin/complaints')
+    return response.data || response
+  },
+
+  getById: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}`)
+    return response.data || response
+  },
+
+  patchStatus: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/status`, {
+      method: 'PATCH'
+    })
+    return response.data || response
+  },
+
+  postResponse: async (id, body) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`, {
+      method: 'POST',
+      body: JSON.stringify({ body })
+    })
+    return response.data || response
+  },
+
+  listResponses: async (id) => {
+    const response = await apiRequest(`/admin/complaints/${id}/responses`)
+    return response.data || response
   }
 }
 
