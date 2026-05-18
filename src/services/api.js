@@ -286,3 +286,25 @@ export const complaintService = {
 export const accessLogService = {
   getAll: () => apiRequest('/access-logs')
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARCHE: Agregar al final de src/services/api.js
+// ─────────────────────────────────────────────────────────────────────────────
+ 
+// Servicios del ChatBot
+export const chatbotService = {
+  /**
+   * Envía una pregunta al bot.
+   * @param {string} question - Pregunta del estudiante
+   * @returns {{ answer: string, escalated: boolean, historyId: number }}
+   */
+  ask: async (question) => {
+    const response = await apiRequest('/chatbot/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question })
+    })
+    // ApiResponse<ChatbotResponseDTO> → desenvuelve el .data
+    return response.data || response
+  }
+}
+ 
