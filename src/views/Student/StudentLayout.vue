@@ -20,6 +20,9 @@
         <router-view />
       </div>
     </main>
+
+    <!-- ── ChatBot flotante ───────────────────────────────────────────── -->
+    <StudentChatbot />
   </div>
 </template>
 
@@ -29,6 +32,7 @@ import { useRoute } from 'vue-router'
 import StudentSidebar from '../../components/Student/StudentSidebar.vue'
 import ChangePasswordModal from '../../components/ChangePasswordModal.vue'
 import PasswordChangedBanner from '../../components/PasswordChangedBanner.vue'
+import StudentChatbot from '../../components/Student/StudentChatbot.vue'
 
 const route = useRoute()
 const activeItem = ref('dashboard')

@@ -355,20 +355,32 @@ export const accessLogService = {
   getAll: () => apiRequest('/access-logs')
 }
 
-export const favoriteService = {
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios del ChatBot
+// ─────────────────────────────────────────────────────────────────────────────
+export const chatbotService = {
+  ask: async (question) => {
+    const response = await apiRequest('/chatbot/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question })
+    })
+    return response.data || response
+  }
+}
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Favoritos
+// ─────────────────────────────────────────────────────────────────────────────
+export const favoriteService = {
   add: (newsId) =>
     apiRequest(`/news/favorites/${newsId}`, { method: 'POST' }),
- 
 
   remove: (newsId) =>
     apiRequest(`/news/favorites/${newsId}`, { method: 'DELETE' }),
- 
-  
+
   getMy: () =>
     apiRequest('/news/favorites'),
- 
- 
+
   getStatus: (newsId) =>
     apiRequest(`/news/favorites/${newsId}/status`),
 }
