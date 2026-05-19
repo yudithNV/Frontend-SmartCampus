@@ -99,11 +99,32 @@
 
                 <!-- Botón de confirmación de escalamiento -->
                 <div v-if="msg.escalated && !msg.escalationConfirmed" class="escalation-actions">
-                  <p class="escalation-prompt">¿Quieres que registremos tu consulta para soporte humano?</p>
+                  <p class="escalation-prompt">¿Necesitas ayuda adicional?</p>
                   <div class="escalation-btns">
-                    <button class="btn-escalate-yes" @click="confirmEscalation(msg)">
-                      Sí, quiero soporte
-                    </button>
+                    <a
+                      href="https://wa.me/59170692270"
+                      target="_blank"
+                      rel="noopener"
+                      class="btn-whatsapp"
+                      @click="msg.escalationConfirmed = true"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15
+                                 -.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463
+                                 -2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606
+                                 .134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371
+                                 -.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51
+                                 -.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016
+                                 -1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487
+                                 .709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719
+                                 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.932-1.42
+                                 A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a7.96 7.96 0
+                                 01-4.065-1.112l-.291-.173-3.025.872.838-3.11-.19-.302A7.96 7.96 0 014 12c0
+                                 -4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/>
+                      </svg>
+                      Contactar por WhatsApp
+                    </a>
                     <button class="btn-escalate-no" @click="msg.escalationConfirmed = true">
                       No, gracias
                     </button>
@@ -181,10 +202,10 @@ let   msgCounter  = 0
 
 // Chips de sugerencia rápida para el mensaje de bienvenida
 const quickSuggestions = [
-  '¿Cuándo son las inscripciones?',
-  '¿Cuáles son los horarios de la biblioteca?',
-  '¿Cómo obtengo mi certificado de notas?',
-  '¿Dónde está Bienestar Estudiantil?'
+  '¿Como puedo editar mis datos?',
+  '¿Explicame el calendario de esta plataforma?',
+  '¿Como funciona la plataforma?',
+  '¿Hoy hay bloqueos en las calles, se suspenderan las clases?'
 ]
 
 // ── Abrir / cerrar ────────────────────────────────────────────────────────────
@@ -557,6 +578,23 @@ watch(() => messages.value.length, () => {
   transition: all 0.2s ease;
 }
 .btn-escalate-no:hover { background: #f1f5f9; }
+
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+.btn-whatsapp:hover { background: #1ebe5d; }
 
 .escalation-confirmed {
   display: flex;
