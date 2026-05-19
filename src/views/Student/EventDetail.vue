@@ -240,6 +240,22 @@
       </div>
     </div>
 
+    <!-- ── POPUP RECORDATORIO ────── -->
+    <div v-if="reminderPopup" class="reminder-popup" :class="reminderPopup">
+      <svg v-if="reminderPopup === 'scheduled'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+      </svg>
+      <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span v-if="reminderPopup === 'scheduled'">
+        Recordatorio programado: te avisaremos un día antes del evento.
+      </span>
+      <span v-else>
+        El evento inicia en menos de 24 horas, no se programará recordatorio.
+      </span>
+    </div>
+
     <!-- ── MODAL DE CONFIRMACIÓN ────── -->
     <div v-if="showConfirmModal" class="modal-overlay" @click="closeConfirmModal">
       <div class="modal-content" @click.stop>
@@ -289,17 +305,18 @@ const loadingRegistration = ref(false)
 const successMessage = ref('')
 const showConfirmModal = ref(false)
 const eventoPasado = ref(false)
+const reminderPopup = ref(null) // null | 'scheduled' | 'not_scheduled'
 
 // Función para verificar si el evento ya pasó
 const verificarEventoPasado = () => {
-  if (!evento.value || !evento.value.startDatetime) {
+  if (!evento.value || !evento.value.endDatetime) {
     eventoPasado.value = false
     return
   }
   
-  const fechaInicio = new Date(evento.value.startDatetime)
+  const fechaFin = new Date(evento.value.endDatetime)
   const ahora = new Date()
-  eventoPasado.value = fechaInicio < ahora
+  eventoPasado.value = fechaFin < ahora
 }
 
 // Obtener detalles del evento
@@ -365,7 +382,16 @@ const proceedWithRegistration = async () => {
     if (eventoActualizado) {
       evento.value = eventoActualizado
     }
-    
+
+    // ── HU: Mostrar popup de recordatorio ───────────────────────────────
+    if (eventoActualizado?.reminderScheduled === true) {
+      reminderPopup.value = 'scheduled'
+    } else if (eventoActualizado?.reminderScheduled === false) {
+      reminderPopup.value = 'not_scheduled'
+    }
+    setTimeout(() => { reminderPopup.value = null }, 5000)
+    // ────────────────────────────────────────────────────────────────────
+
     // Emitir evento para actualizar el calendario
     eventBus.emit('event-registered', eventId)
     
@@ -1029,6 +1055,35 @@ onMounted(() => {
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* ── Reminder Popup ────── */
+.reminder-popup {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  animation: slideDown 0.3s ease;
+  max-width: 340px;
+}
+.reminder-popup.scheduled {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+}
+.reminder-popup.not_scheduled {
+  background: #fefce8;
+  color: #92400e;
+  border: 1px solid #f59e0b;
 }
 
 /* ── Responsive ────── */
