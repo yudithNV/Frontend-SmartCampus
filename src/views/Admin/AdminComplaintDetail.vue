@@ -132,7 +132,7 @@
         </div>
       </div>
 
-      <div v-else class="resolved-message">
+      <div v-if="complaint.status === 'RESUELTO'" class="resolved-message">
         <p>✓ Este reclamo ha sido resuelto. No se pueden realizar más acciones.</p>
       </div>
     </div>
