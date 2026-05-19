@@ -136,7 +136,7 @@
                   <span class="detail-label">Respuesta de administración: </span>
                   <div v-for="r in complaintResponses" :key="r.id" class="respuesta-card">
                     <div class="respuesta-meta">
-                      <span class="respuesta-autor">{{ r.adminName || 'Administración' }}</span>
+                      <span class="respuesta-autor">Respondido por: {{ r.adminName?.trim() || 'Administración' }}</span>
                       <span class="respuesta-fecha">{{ formatFecha(r.createdAt) }}</span>
                     </div>
                     <p class="respuesta-body">{{ r.body }}</p>
