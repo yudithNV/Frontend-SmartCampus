@@ -407,3 +407,11 @@ export const favoriteService = {
   getStatus: (newsId) =>
     apiRequest(`/news/favorites/${newsId}/status`),
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Notificaciones
+// ─────────────────────────────────────────────────────────────────────────────
+export const notificationService = {
+  getAll: () => apiRequest('/notifications'),
+  getUnreadCount: () => apiRequest('/notifications/unread-count'),
+  markAllRead: () => apiRequest('/notifications/mark-read', { method: 'PATCH' })
+}
