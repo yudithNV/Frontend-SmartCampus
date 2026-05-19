@@ -109,13 +109,15 @@
       </Transition>
     </Teleport>
 
-    <!-- ── MODAL ELIMINAR USUARIO ─────────────────────────────────────────── -->
+    <!-- ── MODAL CONFIRMAR BLOQUEO/ACTIVACIÓN ─────────────────────────────────────────── -->
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showStatusModal" class="delete-overlay" @click.self="cancelStatusChange">
           <div class="delete-modal">
+
             <div class="delete-modal__icon"
                 :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'icon-block' : 'icon-unblock'">
+
               <!-- Block icon -->
               <svg v-if="statusTarget?.estadoRaw === 'ACTIVO'"
                   width="28" height="28" viewBox="0 0 24 24" fill="none"
@@ -123,8 +125,10 @@
                 <rect x="5" y="11" width="14" height="10" rx="2"/>
                 <path d="M8 11V7a4 4 0 018 0v4"/>
               </svg>
+
               <!-- Unlock icon -->
-              <svg v-else width="28" height="28" viewBox="0 0 24 24" fill="none"
+              <svg v-else
+                  width="28" height="28" viewBox="0 0 24 24" fill="none"
                   stroke="#059669" stroke-width="2">
                 <rect x="5" y="11" width="14" height="10" rx="2"/>
                 <path d="M8 11V7a4 4 0 018 0"/>
@@ -134,7 +138,8 @@
             <h3 class="delete-modal__title">
               {{ statusTarget?.estadoRaw === 'ACTIVO'
                 ? '¿Bloquear usuario?'
-                : '¿Desbloquear usuario?' }}
+                : '¿Activar usuario?'
+              }}
             </h3>
 
             <p class="delete-modal__desc">
@@ -145,25 +150,35 @@
             </p>
 
             <div class="delete-modal__actions">
-              <button class="btn-cancel" @click="cancelStatusChange" :disabled="statusChanging">
+              <button class="btn-cancel"
+                      @click="cancelStatusChange"
+                      :disabled="statusChanging">
                 Cancelar
               </button>
+
               <button
                 :class="statusTarget?.estadoRaw === 'ACTIVO' ? 'btn-delete' : 'btn-activate'"
                 @click="confirmStatusChange"
                 :disabled="statusChanging"
               >
-                <svg v-if="statusChanging" class="btn-spin" width="14" height="14"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                <svg v-if="statusChanging"
+                    class="btn-spin"
+                    width="14" height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
                     stroke-linecap="round">
                   <path d="M12 2a10 10 0 0110 10"/>
                 </svg>
+
                 {{ statusChanging
                   ? 'Procesando...'
-                  : (statusTarget?.estadoRaw === 'ACTIVO'? 'Sí, bloquear' : 'Sí, desbloquear')
+                  : (statusTarget?.estadoRaw === 'ACTIVO' ? 'Sí, bloquear' : 'Sí, activar')
                 }}
               </button>
             </div>
+
           </div>
         </div>
       </Transition>
@@ -299,17 +314,19 @@
                     >
                       <span v-if="user._savingStatus" class="btn-spin-xs"></span>
                       <template v-else>
+                        <!-- Lock icon when active (clicking will block) -->
                         <svg v-if="user.estadoRaw === 'ACTIVO'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                           <rect x="5" y="11" width="14" height="10" rx="2"/>
                           <path d="M8 11V7a4 4 0 018 0v4"/>
                         </svg>
+                        <!-- Unlock icon when blocked (clicking will activate) -->
                         <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                           <rect x="5" y="11" width="14" height="10" rx="2"/>
                           <path d="M8 11V7a4 4 0 0 1 8 0"/>
                           <line x1="15" y1="7" x2="19" y2="7"/>
                         </svg>
                       </template>
-                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Desbloquear' }}
+                      {{ user.estadoRaw === 'ACTIVO' ? 'Bloquear' : 'Activar' }}
                     </button>
                   </div>
 
@@ -546,7 +563,8 @@ function mapUser(user) {
     rolRaw: user.role,
     carrera: user.career?.name || 'N/A',
     careerId: user.career?.id ?? null,
-    estado: user.status === 'ACTIVO' ? 'Activo' : 'Inactivo',
+    estado: user.status === 'ACTIVO' ? 'Activo' :
+            user.status === 'BLOQUEADO' ? 'Bloqueado' : 'Inactivo',
     estadoRaw: user.status,
     fecha: new Date(user.createdAt).toLocaleDateString('es-ES'),
     _savingStatus: false,   // ← add this

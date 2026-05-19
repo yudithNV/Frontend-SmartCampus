@@ -22,9 +22,32 @@ async function apiRequest(endpoint, options = {}) {
       headers
     })
 
+    // ── SCRUM-57: Si el backend retorna 401, cerrar sesión inmediatamente ──
+    if (response.status === 401) {
+      const errorData = await response.json().catch(() => ({}))
+      const msg =
+        errorData?.message ||
+        'Tu sesión ha expirado o tu cuenta ha sido bloqueada. Contacta al administrador.'
+
+      // Limpiar sesión
+      localStorage.removeItem('ucb_token')
+      localStorage.removeItem('ucb_role')
+      localStorage.removeItem('ucb_email')
+      localStorage.removeItem('ucb_user_id')
+      localStorage.removeItem('must_change_password')
+
+      // Redirigir al login con flag
+      window.location.href = '/?blocked=1'
+
+      throw new Error(msg)
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
-      const errorMessage = errorData?.message || errorData?.error || `Error ${response.status}`
+      const errorMessage =
+        errorData?.message ||
+        errorData?.error ||
+        `Error ${response.status}`
       throw new Error(errorMessage)
     }
 

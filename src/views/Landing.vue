@@ -1,6 +1,20 @@
 <template>
   <div class="landing">
     <Header @go-to-login="$router.push('/login')" />
+
+    <!-- Banner: cuenta bloqueada -->
+    <Transition name="toast">
+      <div v-if="showBlockedBanner" class="blocked-banner">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="5" y="11" width="14" height="10" rx="2"/>
+          <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+        </svg>
+
+        Tu cuenta ha sido bloqueada. Contacta al administrador para recuperar el acceso.
+
+        <button @click="showBlockedBanner = false">✕</button>
+      </div>
+    </Transition>
     <Hero />
     <Features />
 
@@ -172,10 +186,18 @@ const errorNews   = ref(false)
 
 // ── Máximo de tarjetas visibles en la landing ──────────────────────
 const MAX_CARDS = 3
+const showBlockedBanner = ref(false)
 
 // ── Carga de datos al montar el componente ─────────────────────────
-onMounted(async () => {
-  await Promise.allSettled([fetchEvents(), fetchNews()])
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+
+  if (params.get('blocked') === '1') {
+    showBlockedBanner.value = true
+
+    // limpiar URL sin recargar
+    window.history.replaceState({}, '', '/')
+  }
 })
 
 async function fetchEvents() {
@@ -476,5 +498,54 @@ function formatNewsCategory(category) {
   .cards-grid {
     grid-template-columns: 1fr;
   }
+}
+.blocked-banner {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #991b1b;
+  max-width: 520px;
+  width: 90%;
+}
+
+.blocked-banner button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #991b1b;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+}
+
+.toast-enter-active {
+  transition: all 0.3s cubic-bezier(0.34,1.5,0.64,1);
+}
+
+.toast-leave-active {
+  transition: all 0.2s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-16px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
 }
 </style>

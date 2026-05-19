@@ -138,8 +138,43 @@
 
         <!-- Global error -->
         <Transition name="slide-err">
-          <div class="alert-error" v-if="globalError" role="alert">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
+          <div
+            v-if="globalError"
+            class="alert-error"
+            :class="{ 'alert-error--blocked': isBlockedError }"
+            role="alert"
+          >
+            <!-- Ícono candado si está bloqueado -->
+            <svg
+              v-if="isBlockedError"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <rect x="5" y="11" width="14" height="10" rx="2"/>
+              <path d="M8 11V7a4 4 0 018 0v4"/>
+            </svg>
+
+            <!-- Ícono normal -->
+            <svg
+              v-else
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <circle cx="12" cy="16" r="0.6" fill="currentColor"/>
+            </svg>
+
             <span>{{ globalError }}</span>
           </div>
         </Transition>
@@ -199,8 +234,8 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ref, reactive, computed } from 'vue'
 
 const router = useRouter()
 
@@ -210,6 +245,13 @@ const globalError  = ref('')
 const loading      = ref(false)
 const showPassword = ref(false)
 const remember     = ref(false)
+
+
+const isBlockedError = computed(() =>
+  globalError.value?.toLowerCase().includes('bloquead') ||
+  globalError.value?.toLowerCase().includes('inactiv')
+)
+
 
 function clearErrors () {
   errors.email = ''
@@ -232,41 +274,81 @@ function validate () {
 
 async function handleLogin () {
   clearErrors()
+
   if (!validate()) return
+
   loading.value = true
+
   try {
-    const res  = await fetch('http://localhost:8081/api/auth/login', {
+    const res = await fetch('http://localhost:8081/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      mode: 'cors',
       body: JSON.stringify({ email: form.email.trim(), password: form.password })
     })
+
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || data.message || 'Credenciales incorrectas')
-    localStorage.setItem('ucb_token', data.token)
-    localStorage.setItem('ucb_role',  data.role)
-    localStorage.setItem('ucb_email', form.email.trim())
+
     
-    // ── AGREGAR esto ──
+    //  CASO 1: USUARIO BLOQUEADO
+    if (
+      res.status === 403 ||
+      res.status === 423 ||
+      data.error === 'USER_BLOCKED'
+    ) {
+      loading.value = false
+
+      globalError.value =
+        'Usuario bloqueado. Comuníquese con el administrador.'
+
+      // limpieza de seguridad
+      localStorage.removeItem('ucb_token')
+      localStorage.removeItem('ucb_role')
+
+      return
+    }
+
+    // ─────────────────────────────
+    //  CASO 2: ERROR NORMAL LOGIN
+    // ─────────────────────────────
+    if (!res.ok) {
+      loading.value = false
+
+      if (res.status === 403 || res.status === 423) {
+        globalError.value =
+          'Usuario bloqueado. Comuníquese con el administrador.'
+      } else {
+        globalError.value =
+          data.message || data.error || 'Error al iniciar sesión'
+      }
+
+      return
+    }
+    // ─────────────────────────────
+    //  LOGIN OK
+    // ─────────────────────────────
+    localStorage.setItem('ucb_token', data.token)
+    localStorage.setItem('ucb_role', data.role)
+    localStorage.setItem('ucb_email', form.email.trim())
+
     if (data.mustChangePassword) {
       localStorage.setItem('must_change_password', '1')
     }
-    
-    // ── LÓGICA DE REDIRECCIÓN CORREGIDA ──
-    // Interceptamos la URL del backend antes de hacer el push
-    let finalUrl = data.redirectUrl;
+
+    let finalUrl = data.redirectUrl
 
     if (data.role === 'ESTUDIANTE') {
-      finalUrl = '/estudiante/eventos';
+      finalUrl = '/estudiante/eventos'
     }
 
-    // Ahora sí, redirigimos a la ruta que nosotros decidimos
-    router.push(finalUrl);
-    
+    router.push(finalUrl)
+
   } catch (err) {
-    globalError.value = err.name === 'TypeError'
-      ? 'No se pudo conectar con el servidor. Verifica que el backend esté activo.'
-      : (err.message || 'Error al iniciar sesión')
+    loading.value = false
+
+    globalError.value =
+      err.name === 'TypeError'
+        ? 'No se pudo conectar con el servidor. Verifica que el backend esté activo.'
+        : (err.message || 'Error al iniciar sesión')
   } finally {
     loading.value = false
   }
@@ -286,6 +368,15 @@ async function handleLogin () {
   --gold-glow:rgba(255,210,0,0.32);
   --gold-dim: rgba(255,210,0,0.15);
   --danger:   #dc2626;
+}
+
+
+/* ─── bloqueado ─── */
+.alert-error--blocked {
+  background: rgba(220, 38, 38, 0.18);
+  border-color: rgba(239, 68, 68, 0.45);
+  border-left-color: #ef4444;
+  color: #fca5a5;
 }
 
 /* ─── Contenedor ─── */
