@@ -15,6 +15,7 @@ import AdminSettings   from '../views/Admin/AdminSettings.vue'
 import AdminAccessLogs from '../views/Admin/AdminAccessLogs.vue'
 import AdminComplaints from '../views/Admin/AdminComplaints.vue'
 import AdminComplaintDetail from '../views/Admin/AdminComplaintDetail.vue'
+import AdminSuggestions from '../views/Admin/AdminSuggestions.vue'
 
 // Estudiante
 import StudentLayout      from '../views/Student/StudentLayout.vue'
@@ -85,7 +86,8 @@ const routes = [
       { path: 'configuracion', name: 'AdminSettings',   component: AdminSettings },
       { path: 'accesos',       name: 'AdminAccessLogs', component: AdminAccessLogs },
       { path: 'reclamos',      name: 'AdminComplaints', component: AdminComplaints },
-      { path: 'reclamos/:id',  name: 'AdminComplaintDetail', component: AdminComplaintDetail, props: true }
+      { path: 'reclamos/:id',  name: 'AdminComplaintDetail', component: AdminComplaintDetail, props: true },
+      { path: 'sugerencias',   name: 'AdminSuggestions', component: AdminSuggestions }
     ]
   },
 
