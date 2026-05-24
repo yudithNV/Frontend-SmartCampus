@@ -148,12 +148,12 @@ const showToast = (type, title, message) => {
   toast.value = { show: true, type, title, message }
 }
 
-// ── Carga ────────────────────────────────────────────────────────────────────
+// ── Carga (filtro server-side) ──────────────────────────────────────────────
 const loadSuggestions = async () => {
   loading.value = true
   error.value   = ''
   try {
-    const res       = await suggestionService.getAll()
+    const res = await suggestionService.getAll(categoryFilter.value)
     suggestions.value = res.data ?? res
   } catch (err) {
     error.value = 'Error al cargar sugerencias del servidor'
@@ -163,14 +163,14 @@ const loadSuggestions = async () => {
   }
 }
 
-// ── Filtro cliente ────────────────────────────────────────────────────────────
-const suggestionsFiltradas = computed(() => {
-  if (!categoryFilter.value) return suggestions.value
-  return suggestions.value.filter(s => s.category === categoryFilter.value)
-})
+// ── Filtro (ahora es solo un alias de suggestions, el filtro real está en el backend) ──
+const suggestionsFiltradas = computed(() => suggestions.value)
 
-const applyFilter = () => { /* reactivo con computed */ }
-const clearFilter = () => { categoryFilter.value = '' }
+const applyFilter = () => loadSuggestions()
+const clearFilter = () => { 
+  categoryFilter.value = '' 
+  loadSuggestions() 
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const countBy = (cat) => suggestions.value.filter(s => s.category === cat).length
