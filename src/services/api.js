@@ -291,7 +291,8 @@ export const suggestionService = {
   create: (data) => apiRequest('/suggestions', { method: 'POST', body: JSON.stringify(data) }),
   getMy:  () => apiRequest('/suggestions/my'),
   delete: (id) => apiRequest(`/suggestions/${id}`, { method: 'DELETE' }),
-  getAll: (category = '') => apiRequest(`/suggestions/admin${category ? `?category=${category}` : ''}`)
+  getAll: (category = '') => apiRequest(`/suggestions/admin${category ? `?category=${category}` : ''}`),
+  reply:  (id, data) => apiRequest(`/suggestions/${id}/reply`, { method: 'PUT', body: JSON.stringify(data) })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

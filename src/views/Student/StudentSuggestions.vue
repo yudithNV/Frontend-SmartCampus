@@ -115,6 +115,17 @@
           <div class="history-item__left">
             <span class="history-item__cat">{{ formatCategory(item.category) }}</span>
             <p class="history-item__body">{{ truncate(item.body, 120) }}</p>
+            <!-- Respuesta administrativa si existe -->
+            <div v-if="item.adminResponse" class="history-item__reply">
+              <div class="reply-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+                Respuesta de {{ item.respondedByName || 'Administración' }}
+              </div>
+              <p class="reply-body">{{ item.adminResponse }}</p>
+              <small class="reply-date">{{ formatDate(item.respondedAt) }}</small>
+            </div>
           </div>
           <div class="history-item__right">
             <span class="history-item__date">{{ formatDate(item.createdAt) }}</span>
@@ -503,6 +514,41 @@ onMounted(loadHistory)
   color: #374151;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Respuesta administrativa */
+.history-item__reply {
+  margin-top: 0.5rem;
+  background: #f0fdf4;
+  border-left: 3px solid #059669;
+  border-radius: 0 6px 6px 0;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reply-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.reply-body {
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.reply-date {
+  font-size: 0.72rem;
+  color: #94a3b8;
 }
 
 /* Lado derecho: fecha + botón eliminar */
