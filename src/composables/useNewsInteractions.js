@@ -2,8 +2,14 @@ import { ref, reactive } from 'vue'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8081'
 
+// ── Estado GLOBAL (fuera del composable para persistir entre renders) ──
+const reactions      = reactive({})
+const comments       = reactive({})
+const commentCounts  = reactive({})
+
 function getAuthHeaders() {
   const token = localStorage.getItem('ucb_token')
+  if (!token) console.warn('[Auth] Token no encontrado')
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -11,19 +17,32 @@ function getAuthHeaders() {
 }
 
 export function useNewsInteractions() {
-  // ── Reacciones ──────────────────────────────────────────────────────────
-  const reactions = reactive({})       // { [newsId]: { counts, myReaction, total } }
-  const reactionLoading = ref(null)    // newsId que está procesando
+  const reactionLoading = ref(null)
+  const commentLoading  = ref(null)
+  const commentError    = ref('')
 
+  // ────────────────────────────────────────────────────────
+  // REACCIONES
+  // ────────────────────────────────────────────────────────
   async function loadReactions(newsId) {
     try {
       const res = await fetch(`${API_BASE}/api/news/${newsId}/reactions`, {
         headers: getAuthHeaders(), mode: 'cors'
       })
-      const data = await res.json()
-      reactions[newsId] = data.data || data
+      if (!res.ok) { console.error('loadReactions HTTP', res.status); return }
+      const json = await res.json()
+      const data = json.data ?? json
+      reactions[newsId] = {
+        myReaction: data.myReaction ?? null,
+        total:      data.total      ?? 0,
+        counts: {
+          LIKE: data.counts?.LIKE ?? 0,
+          LOVE: data.counts?.LOVE ?? 0,
+          WOW:  data.counts?.WOW  ?? 0,
+        }
+      }
     } catch (err) {
-      console.error('[useNewsInteractions] loadReactions:', err)
+      console.error('[loadReactions]', err)
     }
   }
 
@@ -31,22 +50,19 @@ export function useNewsInteractions() {
     if (reactionLoading.value === newsId) return
     reactionLoading.value = newsId
 
-    // Optimistic update
-    const prev = reactions[newsId] ? { ...reactions[newsId] } : null
+    const prev = reactions[newsId]
+      ? JSON.parse(JSON.stringify(reactions[newsId]))
+      : null
+
     if (reactions[newsId]) {
       const cur = reactions[newsId].myReaction
       if (cur === reactionType) {
-        // Toggle off
         reactions[newsId].counts[reactionType] = Math.max(0, (reactions[newsId].counts[reactionType] || 1) - 1)
         reactions[newsId].total = Math.max(0, (reactions[newsId].total || 1) - 1)
         reactions[newsId].myReaction = null
       } else {
-        // Cambiar reacción
-        if (cur) {
-          reactions[newsId].counts[cur] = Math.max(0, (reactions[newsId].counts[cur] || 1) - 1)
-        } else {
-          reactions[newsId].total = (reactions[newsId].total || 0) + 1
-        }
+        if (cur) reactions[newsId].counts[cur] = Math.max(0, (reactions[newsId].counts[cur] || 1) - 1)
+        else     reactions[newsId].total = (reactions[newsId].total || 0) + 1
         reactions[newsId].counts[reactionType] = (reactions[newsId].counts[reactionType] || 0) + 1
         reactions[newsId].myReaction = reactionType
       }
@@ -54,36 +70,48 @@ export function useNewsInteractions() {
 
     try {
       const res = await fetch(`${API_BASE}/api/news/${newsId}/reactions`, {
-        method: 'POST',
+        method:  'POST',
         headers: getAuthHeaders(),
-        mode: 'cors',
-        body: JSON.stringify({ reactionType })
+        mode:    'cors',
+        body:    JSON.stringify({ reactionType })
       })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      reactions[newsId] = data.data || data
-    } catch {
-      if (prev) reactions[newsId] = prev  // revertir
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      const data = json.data ?? json
+      reactions[newsId] = {
+        myReaction: data.myReaction ?? null,
+        total:      data.total      ?? 0,
+        counts: {
+          LIKE: data.counts?.LIKE ?? 0,
+          LOVE: data.counts?.LOVE ?? 0,
+          WOW:  data.counts?.WOW  ?? 0,
+        }
+      }
+    } catch (err) {
+      console.error('[toggleReaction]', err)
+      if (prev) reactions[newsId] = prev
     } finally {
       reactionLoading.value = null
     }
   }
 
-  // ── Comentarios ─────────────────────────────────────────────────────────
-  const comments = reactive({})        // { [newsId]: CommentResponseDTO[] }
-  const commentLoading = ref(null)
-  const commentError = ref('')
-
+  // ────────────────────────────────────────────────────────
+  // COMENTARIOS
+  // ────────────────────────────────────────────────────────
   async function loadComments(newsId) {
     commentLoading.value = newsId
     try {
       const res = await fetch(`${API_BASE}/api/news/${newsId}/comments`, {
         headers: getAuthHeaders(), mode: 'cors'
       })
-      const data = await res.json()
-      comments[newsId] = data.data || data
+      if (!res.ok) { console.error('loadComments HTTP', res.status); return }
+      const json = await res.json()
+      const data = json.data ?? json
+      const list = Array.isArray(data) ? data : []
+      comments[newsId]      = list
+      commentCounts[newsId] = list.length
     } catch (err) {
-      console.error('[useNewsInteractions] loadComments:', err)
+      console.error('[loadComments]', err)
     } finally {
       commentLoading.value = null
     }
@@ -92,19 +120,19 @@ export function useNewsInteractions() {
   async function postComment(newsId, body) {
     const trimmed = body.trim()
     if (!trimmed) return null
-
     try {
       const res = await fetch(`${API_BASE}/api/news/${newsId}/comments`, {
-        method: 'POST',
+        method:  'POST',
         headers: getAuthHeaders(),
-        mode: 'cors',
-        body: JSON.stringify({ body: trimmed })
+        mode:    'cors',
+        body:    JSON.stringify({ body: trimmed })
       })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      const newComment = data.data || data
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json       = await res.json()
+      const newComment = json.data ?? json
       if (!comments[newsId]) comments[newsId] = []
-      comments[newsId].unshift(newComment)  // más reciente arriba
+      comments[newsId].unshift(newComment)
+      commentCounts[newsId] = comments[newsId].length
       return newComment
     } catch (err) {
       commentError.value = 'No se pudo publicar el comentario.'
@@ -119,9 +147,10 @@ export function useNewsInteractions() {
         `${API_BASE}/api/news/${newsId}/comments/${commentId}`,
         { method: 'DELETE', headers: getAuthHeaders(), mode: 'cors' }
       )
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       if (comments[newsId]) {
-        comments[newsId] = comments[newsId].filter(c => c.id !== commentId)
+        comments[newsId]      = comments[newsId].filter(c => c.id !== commentId)
+        commentCounts[newsId] = comments[newsId].length
       }
     } catch {
       commentError.value = 'No se pudo eliminar el comentario.'
@@ -135,9 +164,9 @@ export function useNewsInteractions() {
         `${API_BASE}/api/news/${newsId}/comments/${commentId}/hide`,
         { method: 'PATCH', headers: getAuthHeaders(), mode: 'cors' }
       )
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      const updated = data.data || data
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json    = await res.json()
+      const updated = json.data ?? json
       if (comments[newsId]) {
         const idx = comments[newsId].findIndex(c => c.id === commentId)
         if (idx !== -1) comments[newsId][idx] = updated
@@ -149,16 +178,8 @@ export function useNewsInteractions() {
   }
 
   return {
-    reactions,
-    reactionLoading,
-    loadReactions,
-    toggleReaction,
-    comments,
-    commentLoading,
-    commentError,
-    loadComments,
-    postComment,
-    deleteComment,
-    toggleHideComment
+    reactions, reactionLoading, loadReactions, toggleReaction,
+    comments, commentCounts, commentLoading, commentError,
+    loadComments, postComment, deleteComment, toggleHideComment
   }
 }

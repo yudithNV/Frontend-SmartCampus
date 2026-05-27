@@ -10,7 +10,7 @@
              stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        {{ commentCount }} comentario{{ commentCount !== 1 ? 's' : '' }}
+        {{ displayCount }} comentario{{ displayCount !== 1 ? 's' : '' }}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.5"
              :style="{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }">
@@ -144,6 +144,11 @@ const emit = defineEmits(['submit', 'delete', 'hide'])
 
 const isOpen  = ref(false)
 const newBody = ref('')
+
+// Usa comments.length si ya cargaron, si no usa la prop commentCount
+const displayCount = computed(() =>
+  props.comments.length > 0 ? props.comments.length : props.commentCount
+)
 
 const visibleComments = computed(() => props.comments)
 

@@ -185,8 +185,34 @@
           <!-- archivo -->
           <div v-if="item.attachmentUrl" class="news-card__footer">
             <a :href="item.attachmentUrl" target="_blank" class="attachment-link">
-               Ver archivo adjunto
+              Ver archivo adjunto
             </a>
+          </div>
+
+          <!-- ── REACCIONES ───────────────────────── -->
+          <div class="news-card__interactions">
+
+            <NewsReactionBar
+              :counts="reactions[item.id]?.counts || { LIKE: 0, LOVE: 0, WOW: 0 }"
+              :my-reaction="reactions[item.id]?.myReaction"
+              :total="reactions[item.id]?.total || 0"
+              :loading="reactionLoading === item.id"
+              @toggle="handleToggleReaction(item.id, $event)"
+            />
+
+            <!-- ── COMENTARIOS ───────────────────── -->
+            <NewsCommentSection
+              :comments="comments[item.id] || []"
+              :comment-count="comments[item.id]?.length ?? 0"
+              :loading="commentLoading === item.id"
+              :error="commentError"
+              :user-initials="currentUserInitials"
+              :submitting="submittingComment === item.id"
+              @submit="handleSubmitComment(item.id, $event)"
+              @delete="handleDeleteComment(item.id, $event)"
+              @hide="handleHideComment(item.id, $event)"
+            />
+
           </div>
 
         </article>
@@ -251,10 +277,64 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { newsService, careerService } from '../../services/api.js'
 import { useFavorites } from '../../composables/useFavorites.js'
 import FavoriteButton from '../../components/FavoriteButton.vue'
+import NewsReactionBar from '../../components/NewsReactionBar.vue'
+import NewsCommentSection from '../../components/NewsCommentSection.vue'
+import { useNewsInteractions } from '../../composables/useNewsInteractions.js'
+
+const {
+  reactions, reactionLoading, loadReactions, toggleReaction,
+  comments, commentLoading, commentError,
+  loadComments, postComment, deleteComment, toggleHideComment
+} = useNewsInteractions()
+// Agregar los ref de "submitting por noticia"
+const submittingComment = ref(null)
+
+// Estado de apertura de comentarios por noticia
+const openComments = reactive({})
+
+async function handleToggleReaction(newsId, type) {
+  await toggleReaction(newsId, type)
+}
+
+async function handleOpenComments(newsId) {
+  if (!comments[newsId]) {
+    await loadComments(newsId)
+  }
+}
+async function handleSubmitComment(newsId, body) {
+  submittingComment.value = newsId
+  await postComment(newsId, body)
+  submittingComment.value = null
+}
+
+async function handleDeleteComment(newsId, commentId) {
+  await deleteComment(newsId, commentId)
+}
+
+async function handleHideComment(newsId, commentId) {
+  await toggleHideComment(newsId, commentId)
+}
+
+// Enriquecer cada noticia con sus reacciones al cargar
+async function enrichNewsReactions(newsList) {
+  await Promise.allSettled(
+    newsList.map(item => loadReactions(item.id))
+  )
+}
+
+// Llamar en fetchNews después de cargar:
+// await enrichNewsReactions(allNews.value)
+
+// Computed: initiales del usuario actual
+const currentUserInitials = computed(() => {
+  const name = localStorage.getItem('ucb_name') || 'U'
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+})
+
 
 // ─── Constantes ───
 const CATEGORIES = [
@@ -389,8 +469,12 @@ async function fetchNews() {
     setTimeout(() => { errorMsg.value = '' }, 4000)
   } finally {
     loading.value = false
+    await Promise.allSettled([
+      ...allNews.value.map(item => loadReactions(item.id)),
+      ...allNews.value.map(item => loadComments(item.id))
+    ])
   }
-}
+  }
 
 // ─── Carga de carreras para el filtro ──────
 async function fetchCareers() {
@@ -987,5 +1071,27 @@ onMounted(() => {
   margin-left: auto;
   flex-shrink: 0;
   margin-top: 0.1rem;
+}
+
+/*reacciones y comentarios*/
+/* Agregar en <style scoped> de NewsFeed.vue */
+
+/* ── Barra de interacciones ─────────────────────────────────────────────── */
+.news-card__interactions {
+  padding: 0.5rem 1.1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.35rem;
+}
+.reaction-icon {
+  font-size: 1rem;
+  width: 16px;
+  height: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
