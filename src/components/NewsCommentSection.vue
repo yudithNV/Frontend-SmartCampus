@@ -96,9 +96,10 @@
 
               <!-- Meta + acciones -->
               <div class="comment-meta">
-                <time class="comment-time">{{ formatRelative(comment.createdAt) }}</time>
+                <time class="comment-time">
+                  {{ formatRelative(comment.createdAt) }}
+                </time>
 
-                <!-- PA: solo el autor puede eliminar el suyo (SCRUM-474/475) -->
                 <button
                   v-if="comment.isOwn"
                   class="comment-action-btn comment-action-btn--delete"
@@ -108,13 +109,38 @@
                   Eliminar
                 </button>
 
-                <!-- PA: solo publicador/admin puede ocultar (SCRUM-448) -->
                 <button
                   v-if="comment.canHide"
                   class="comment-action-btn comment-action-btn--hide"
                   @click="$emit('hide', comment.id)"
                 >
                   {{ comment.hidden ? 'Mostrar' : 'Ocultar' }}
+                </button>
+
+                <button
+                  v-if="!comment.isOwn"
+                  class="comment-action-btn comment-action-btn--report"
+                  :class="{ 'comment-action-btn--reported': isReported(comment.id) }"
+                  :disabled="isReported(comment.id)"
+                  :title="isReported(comment.id)
+                    ? 'Ya reportaste este comentario'
+                    : 'Reportar comentario'"
+                  @click="openReport(comment)"
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+
+                  {{ isReported(comment.id) ? 'Ya reportado' : 'Reportar' }}
                 </button>
               </div>
             </div>
@@ -123,6 +149,32 @@
 
         <!-- Error -->
         <p v-if="error" class="comment-error">{{ error }}</p>
+        <ReportCommentModal
+          :visible="showReportModal"
+          :comment-body="reportingComment?.body || ''"
+          :submitting="submittingReportId === reportingComment?.id"
+          ref="reportModalRef"
+          @close="closeReport"
+          @submit="handleReportSubmit"
+        />
+
+        <Transition name="comment-expand">
+          <div v-if="reportSuccess" class="report-success-toast">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+
+            Reporte enviado. Gracias por contribuir a la comunidad.
+          </div>
+        </Transition>
       </div>
     </Transition>
   </div>
@@ -130,8 +182,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import ReportCommentModal from './ReportCommentModal.vue'
+import { useCommentReports } from '../composables/useCommentReports.js'
 
 const props = defineProps({
+  newsId:       { type: Number,  required: true }, 
   comments:     { type: Array,   default: () => [] },
   commentCount: { type: Number,  default: 0 },
   loading:      { type: Boolean, default: false },
@@ -142,15 +197,53 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'delete', 'hide'])
 
+const { submittingReportId, isReported, submitReport } = useCommentReports()
+
 const isOpen  = ref(false)
 const newBody = ref('')
 
-// Usa comments.length si ya cargaron, si no usa la prop commentCount
+// Estado del modal de reporte
+const showReportModal  = ref(false)
+const reportingComment = ref(null)
+const reportSuccess    = ref(false)
+const reportModalRef   = ref(null)
+
 const displayCount = computed(() =>
   props.comments.length > 0 ? props.comments.length : props.commentCount
 )
 
 const visibleComments = computed(() => props.comments)
+
+function openReport(comment) {
+  reportingComment.value = comment
+  showReportModal.value = true
+}
+
+function closeReport() {
+  showReportModal.value = false
+  reportingComment.value = null
+  reportModalRef.value?.reset()
+}
+
+async function handleReportSubmit(dto) {
+  if (!reportingComment.value) return
+
+  const result = await submitReport(
+    props.newsId,
+    reportingComment.value.id,
+    dto
+  )
+
+  if (result) {
+    closeReport()
+
+    reportSuccess.value = true
+
+    setTimeout(() => {
+      reportSuccess.value = false
+    }, 3500)
+  }
+}
 
 function getInitials(name) {
   if (!name) return '?'
@@ -159,15 +252,21 @@ function getInitials(name) {
 
 function formatRelative(dateStr) {
   if (!dateStr) return ''
+
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
   const h = Math.floor(diff / 3600000)
   const d = Math.floor(diff / 86400000)
+
   if (m < 1)  return 'Ahora'
   if (m < 60) return `Hace ${m} min`
   if (h < 24) return `Hace ${h}h`
   if (d < 7)  return `Hace ${d}d`
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+
+  return new Date(dateStr).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'short'
+  })
 }
 
 function autoResize(e) {
@@ -178,8 +277,11 @@ function autoResize(e) {
 
 async function submitComment() {
   const body = newBody.value.trim()
+
   if (!body) return
+
   emit('submit', body)
+
   newBody.value = ''
 }
 </script>
@@ -357,6 +459,40 @@ async function submitComment() {
   margin-top: 0.25rem;
   padding-left: 0.25rem;
 }
+
+
+.comment-action-btn--report {
+  color: #94a3b8;
+}
+
+.comment-action-btn--report:hover:not(:disabled) {
+  color: #d97706;
+}
+
+.comment-action-btn--reported {
+  color: #d97706 !important;
+  cursor: default;
+  opacity: 0.75;
+}
+
+.report-success-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 3px solid #16a34a;
+
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
 
 .comment-time {
   font-size: 0.72rem;

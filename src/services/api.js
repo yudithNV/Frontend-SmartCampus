@@ -417,3 +417,31 @@ export const notificationService = {
   getUnreadCount: () => apiRequest('/notifications/unread-count'),
   markAllRead: () => apiRequest('/notifications/mark-read', { method: 'PATCH' })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Reportes de Comentarios
+// ─────────────────────────────────────────────────────────────────────────────
+export const commentReportService = {
+  report: (newsId, commentId, dto) =>
+    apiRequest(`/news/${newsId}/comments/${commentId}/report`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    }),
+
+  checkStatus: (newsId, commentId) =>
+    apiRequest(`/news/${newsId}/comments/${commentId}/report/status`),
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Servicios de Moderación (
+// ─────────────────────────────────────────────────────────────────────────────
+export const moderationService = {
+  getPendingReports: () =>
+    apiRequest('/moderation/reports'),
+
+  processReport: (reportId, action) =>
+    apiRequest(`/moderation/reports/${reportId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action }),
+    }),
+}
