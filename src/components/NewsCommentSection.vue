@@ -100,8 +100,9 @@
                   {{ formatRelative(comment.createdAt) }}
                 </time>
 
+                <!-- Eliminar -->
                 <button
-                  v-if="comment.isOwn"
+                  v-if="comment.isOwn === true"
                   class="comment-action-btn comment-action-btn--delete"
                   title="Eliminar comentario"
                   @click="$emit('delete', comment.id)"
@@ -109,6 +110,7 @@
                   Eliminar
                 </button>
 
+                <!-- Ocultar -->
                 <button
                   v-if="comment.canHide"
                   class="comment-action-btn comment-action-btn--hide"
@@ -117,8 +119,9 @@
                   {{ comment.hidden ? 'Mostrar' : 'Ocultar' }}
                 </button>
 
+                <!-- Reportar -->
                 <button
-                  v-if="!comment.isOwn"
+                  v-if="comment.isOwn === false"
                   class="comment-action-btn comment-action-btn--report"
                   :class="{ 'comment-action-btn--reported': isReported(comment.id) }"
                   :disabled="isReported(comment.id)"

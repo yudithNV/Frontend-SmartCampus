@@ -125,19 +125,24 @@ const routes = [
 
   // ── Publicador Routes ─────────────────────────────────────────────────────
   {
-    path: '/publicador',
-    component: PublisherLayout,
-    redirect: '/publicador/dashboard',
-    children: [
-      { path: 'dashboard',          name: 'PublisherDashboard',   component: PublisherDashboard },
-      { path: 'crear-noticia',      name: 'PublisherCreateNews',  component: PublisherCreateNews },
-      { path: 'mis-noticias',       name: 'PublisherMyNews',      component: PublisherMyNews },
-      { path: 'editar-noticia/:id', name: 'PublisherEditNews',    component: PublisherEditNews, props: true },
-      { path: 'crear-evento',       name: 'PublisherCreateEvent', component: PublisherCreateEvent },
-      { path: 'mis-eventos',        name: 'PublisherMyEvents',    component: PublisherMyEvents },
-      { path: 'editar-evento/:id',  name: 'PublisherEditEvent',   component: PublisherEditEvent, props: true }
-    ]
-  },
+  path: '/publicador',
+  component: PublisherLayout,
+  redirect: '/publicador/dashboard',
+  children: [
+    { path: 'dashboard',          name: 'PublisherDashboard',   component: PublisherDashboard },
+    { path: 'crear-noticia',      name: 'PublisherCreateNews',  component: PublisherCreateNews },
+    { path: 'mis-noticias',       name: 'PublisherMyNews',      component: PublisherMyNews },
+    { path: 'editar-noticia/:id', name: 'PublisherEditNews',    component: PublisherEditNews, props: true },
+    {
+      path: 'moderacion',
+      name: 'PublisherModeration',
+      component: () => import('../views/Publisher/ModerationPanel.vue')
+    },
+    { path: 'crear-evento',       name: 'PublisherCreateEvent', component: PublisherCreateEvent },
+    { path: 'mis-eventos',        name: 'PublisherMyEvents',    component: PublisherMyEvents },
+    { path: 'editar-evento/:id',  name: 'PublisherEditEvent',   component: PublisherEditEvent, props: true }
+  ]
+},
 
   // ── Catch-all: redirige a landing ─────────────────────────────────────────
   {

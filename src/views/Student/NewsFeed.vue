@@ -202,6 +202,7 @@
 
             <!-- ── COMENTARIOS ───────────────────── -->
             <NewsCommentSection
+              :news-id="item.id"
               :comments="comments[item.id] || []"
               :comment-count="comments[item.id]?.length ?? 0"
               :loading="commentLoading === item.id"
