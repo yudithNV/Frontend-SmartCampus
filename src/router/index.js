@@ -136,7 +136,7 @@ const routes = [
     {
       path: 'moderacion',
       name: 'PublisherModeration',
-      component: () => import('../views/Publisher/ModerationPanel.vue')
+      component: () => import('../views/Publisher/MisModeración.vue')
     },
     { path: 'crear-evento',       name: 'PublisherCreateEvent', component: PublisherCreateEvent },
     { path: 'mis-eventos',        name: 'PublisherMyEvents',    component: PublisherMyEvents },

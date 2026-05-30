@@ -83,6 +83,10 @@
         </span>
 
         <span>Moderación</span>
+
+        <span v-if="pendingCount > 0" class="mod-badge">
+          {{ pendingCount > 99 ? '99+' : pendingCount }}
+        </span>
       </router-link>
 
       <router-link to="/publicador/crear-evento" class="menu-item" :class="{ active: $route.path.includes('crear-evento') }">
@@ -121,19 +125,35 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { userService } from '../../services/api.js'
+import { userService, moderationService } from '../../services/api.js'
 
 const router = useRouter()
 const userName = ref('Publicador')
 const userEmail = ref('publicador@ucb.edu.bo')
 const showLogoutModal = ref(false)
 const loggingOut = ref(false)
+const pendingCount = ref(0)
+
+let pollingTimer = null
 
 const userInitial = computed(() => {
-  return userName.value ? userName.value.charAt(0).toUpperCase() : 'P'
+  return userName.value
+    ? userName.value.charAt(0).toUpperCase()
+    : 'P'
 })
+
+async function loadPendingCount() {
+  try {
+    const res = await moderationService.getPublisherSummary()
+    const data = res?.data ?? res
+
+    pendingCount.value = data?.totalPending ?? 0
+  } catch (error) {
+    console.error('Error cargando reportes pendientes:', error)
+  }
+}
 
 async function loadProfile() {
   try {
@@ -169,6 +189,15 @@ async function confirmLogout() {
 
 onMounted(() => {
   loadProfile()
+  loadPendingCount()
+
+  pollingTimer = setInterval(() => {
+    loadPendingCount()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  clearInterval(pollingTimer)
 })
 </script>
 
@@ -415,5 +444,26 @@ onMounted(() => {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.mod-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.menu-item.active .mod-badge {
+  background: #1a3a52;
+  color: #FFD200;
 }
 </style>

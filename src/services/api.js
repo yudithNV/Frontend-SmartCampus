@@ -444,4 +444,16 @@ export const moderationService = {
       method: 'PATCH',
       body: JSON.stringify({ action }),
     }),
+
+  getPublisherReports: (status = '') => {
+    const q = status ? `?status=${status}` : ''
+    return apiRequest(`/publisher/reports${q}`)
+  },
+
+  getPublisherSummary: () =>
+    apiRequest('/publisher/reports/summary'),
+
+  deletePublisherComment: (commentId) =>
+    apiRequest(`/publisher/comments/${commentId}`, { method: 'DELETE' }),
+
 }
