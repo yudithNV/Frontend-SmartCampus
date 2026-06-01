@@ -40,7 +40,9 @@ const pageTitle = computed(() => {
     dashboard: 'Dashboard',
     'crear-noticia': 'Crear Noticia',
     'mis-noticias': 'Mis Noticias',
-    eventos: 'Eventos'
+    'crear-evento': 'Crear Evento',
+    'mis-eventos': 'Mis Eventos',
+    inscritos: 'Inscritos por Evento'
   }
   return titles[path] || 'Publicador'
 })

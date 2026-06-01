@@ -37,6 +37,7 @@ import PublisherEditNews    from '../views/Publisher/EditNews.vue'
 import PublisherCreateEvent from '../views/Publisher/CrearEvento.vue'
 import PublisherMyEvents    from '../views/Publisher/MisEventos.vue'
 import PublisherEditEvent   from '../views/Publisher/EditEvento.vue'
+import PublisherEventSubscribers from '../views/Publisher/PublisherEventSubscribers.vue'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rutas
@@ -135,7 +136,8 @@ const routes = [
       { path: 'editar-noticia/:id', name: 'PublisherEditNews',    component: PublisherEditNews, props: true },
       { path: 'crear-evento',       name: 'PublisherCreateEvent', component: PublisherCreateEvent },
       { path: 'mis-eventos',        name: 'PublisherMyEvents',    component: PublisherMyEvents },
-      { path: 'editar-evento/:id',  name: 'PublisherEditEvent',   component: PublisherEditEvent, props: true }
+      { path: 'editar-evento/:id',  name: 'PublisherEditEvent',   component: PublisherEditEvent, props: true },
+      { path: 'inscritos',          name: 'PublisherEventSubscribers', component: PublisherEventSubscribers }
     ]
   },
 
