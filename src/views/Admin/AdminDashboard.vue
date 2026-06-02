@@ -217,19 +217,50 @@ const loading = ref(false)
 const error = ref('')
 const dashboard = ref({
   users: { total: 0, byRole: {}, byCareer: [] },
-  complaints: { total: 0, byStatus: {}, byCategory: [] }, // Asegurado byCategory
+  complaints: { total: 0, byStatus: {}, byCategory: [] },
   accessLogs: { successfulAttempts: 0, failedAttempts: 0, suspiciousEmails: [] },
   totalSuggestions: 0,
-  suggestions: { total: 0, byCategory: [] }, // Estructura mapeada de sugerencias
+  suggestions: { total: 0, byCategory: [] },
   publishedEvents: 0,
   totalEventRegistrations: 0,
-  eventRegistrations: { total: 0, byCategory: [] }, // Estructura mapeada de inscripciones
+  eventRegistrations: { total: 0, byCategory: [] },
   publishedNews: 0,
-  events: { total: 0, byCategory: [] }, // Añadir esta línea
+  events: { total: 0, byCategory: [] },
   news: { total: 0, byCategory: [] }
 })
 
+// ─────────────────────────────────────────────────────────────
+// Helper: genera el bloque toolbar estándar para cada gráfico.
+// Sólo expone PNG y SVG; oculta zoom, pan, reset y selección.
+// ─────────────────────────────────────────────────────────────
+function makeToolbar(filename) {
+  return {
+    show: true,
+    tools: {
+      download: true,   // ✅ botón de descarga habilitado
+      zoom: false,      // ocultamos herramientas que no aplican al dashboard
+      zoomin: false,
+      zoomout: false,
+      pan: false,
+      reset: false,
+      selection: false
+    },
+    export: {
+      // ✅ PNG – nombre personalizado por gráfico
+      png: {
+        filename
+      },
+      // ✅ SVG – mismo nombre personalizado
+      svg: {
+        filename
+      }
+      // CSV se omite deliberadamente: no es un formato pedido en la HU
+    }
+  }
+}
+
 const chartOptions = computed(() => ({
+  // ── 1. Usuarios por Rol ──────────────────────────────────
   usersByRole: {
     series: dashboard.value.users.byRole.ESTUDIANTE && dashboard.value.users.byRole.PUBLICADOR && dashboard.value.users.byRole.ADMINISTRADOR
       ? [
@@ -239,15 +270,22 @@ const chartOptions = computed(() => ({
         ]
       : [0],
     options: {
-      chart: { type: 'donut' },
+      chart: {
+        type: 'donut',
+        toolbar: makeToolbar('dashboard-usuarios-por-rol')
+      },
       labels: ['Estudiante', 'Publicador', 'Administrador'],
       colors: ['#0c4a6e', '#10b981', '#FFD200'],
       plotOptions: { pie: { donut: { size: '65%' } } },
       legend: { position: 'bottom' }
     }
   },
+
+  // ── 2. Reclamos por Estado ───────────────────────────────
   complaintsByStatus: {
-    series: dashboard.value.complaints.byStatus.PENDIENTE !== undefined && dashboard.value.complaints.byStatus.EN_REVISION !== undefined && dashboard.value.complaints.byStatus.RESUELTO !== undefined
+    series: dashboard.value.complaints.byStatus.PENDIENTE !== undefined &&
+            dashboard.value.complaints.byStatus.EN_REVISION !== undefined &&
+            dashboard.value.complaints.byStatus.RESUELTO !== undefined
       ? [
           dashboard.value.complaints.byStatus.PENDIENTE,
           dashboard.value.complaints.byStatus.EN_REVISION,
@@ -255,89 +293,133 @@ const chartOptions = computed(() => ({
         ]
       : [0],
     options: {
-      chart: { type: 'pie' },
+      chart: {
+        type: 'pie',
+        toolbar: makeToolbar('dashboard-reclamos-por-estado')
+      },
       labels: ['Pendiente', 'En Revisión', 'Resuelto'],
       colors: ['#fbbf24', '#60a5fa', '#4ade80'],
       legend: { position: 'bottom' }
     }
   },
-  // NUEVO: Gráfico dinámico de reclamos por categoría
+
+  // ── 3. Reclamos por Categoría ────────────────────────────
   complaintsByCategory: {
-    series: dashboard.value.complaints.byCategory && dashboard.value.complaints.byCategory.length 
-      ? dashboard.value.complaints.byCategory.map(c => c.total) 
+    series: dashboard.value.complaints.byCategory?.length
+      ? dashboard.value.complaints.byCategory.map(c => c.total)
       : [0],
     options: {
-      chart: { type: 'donut' },
-      labels: dashboard.value.complaints.byCategory && dashboard.value.complaints.byCategory.length 
-        ? dashboard.value.complaints.byCategory.map(c => c.category) 
+      chart: {
+        type: 'donut',
+        toolbar: makeToolbar('dashboard-reclamos-por-categoria')
+      },
+      labels: dashboard.value.complaints.byCategory?.length
+        ? dashboard.value.complaints.byCategory.map(c => c.category)
         : ['Sin Datos'],
       colors: ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'],
       plotOptions: { pie: { donut: { size: '65%' } } },
       legend: { position: 'bottom' }
     }
   },
-  // NUEVO: Inscripciones de eventos mapeando "totalRegistrations" y "categoryName"
+
+  // ── 4. Inscripciones a Eventos por Categoría (barras) ────
   eventsByCategory: {
     series: [{
       name: 'Inscripciones',
-      data: dashboard.value.eventRegistrations?.byCategory ? dashboard.value.eventRegistrations.byCategory.map(e => e.totalRegistrations) : []
+      data: dashboard.value.eventRegistrations?.byCategory
+        ? dashboard.value.eventRegistrations.byCategory.map(e => e.totalRegistrations)
+        : []
     }],
     options: {
-      chart: { type: 'bar' },
+      chart: {
+        type: 'bar',
+        toolbar: makeToolbar('dashboard-inscripciones-por-categoria')
+      },
       plotOptions: { bar: { horizontal: true, dataLabels: { position: 'right' } } },
-      xaxis: { categories: dashboard.value.eventRegistrations?.byCategory ? dashboard.value.eventRegistrations.byCategory.map(e => e.categoryName) : [] },
+      xaxis: {
+        categories: dashboard.value.eventRegistrations?.byCategory
+          ? dashboard.value.eventRegistrations.byCategory.map(e => e.categoryName)
+          : []
+      },
       colors: ['#0284c7'],
       legend: { show: false }
     }
   },
-  // NUEVO: Gráfico para sugerencias mapeando "category" y "total"
+
+  // ── 5. Sugerencias por Categoría (barras) ───────────────
   suggestionsByCategory: {
     series: [{
       name: 'Sugerencias',
-      data: dashboard.value.suggestions?.byCategory ? dashboard.value.suggestions.byCategory.map(s => s.total) : []
+      data: dashboard.value.suggestions?.byCategory
+        ? dashboard.value.suggestions.byCategory.map(s => s.total)
+        : []
     }],
     options: {
-      chart: { type: 'bar' },
+      chart: {
+        type: 'bar',
+        toolbar: makeToolbar('dashboard-sugerencias-por-categoria')
+      },
       plotOptions: { bar: { horizontal: true, dataLabels: { position: 'right' } } },
-      xaxis: { categories: dashboard.value.suggestions?.byCategory ? dashboard.value.suggestions.byCategory.map(s => s.category) : [] },
+      xaxis: {
+        categories: dashboard.value.suggestions?.byCategory
+          ? dashboard.value.suggestions.byCategory.map(s => s.category)
+          : []
+      },
       colors: ['#f43f5e'],
       legend: { show: false }
     }
   },
+
+  // ── 6. Usuarios por Carrera (barras) ─────────────────────
   usersByCareer: {
-    series: [
-      {
-        name: 'Usuarios',
-        data: dashboard.value.users.byCareer.map(c => c.total)
-      }
-    ],
+    series: [{
+      name: 'Usuarios',
+      data: dashboard.value.users.byCareer.map(c => c.total)
+    }],
     options: {
-      chart: { type: 'bar' },
+      chart: {
+        type: 'bar',
+        toolbar: makeToolbar('dashboard-usuarios-por-carrera')
+      },
       plotOptions: { bar: { horizontal: true, dataLabels: { position: 'right' } } },
       xaxis: { categories: dashboard.value.users.byCareer.map(c => c.careerName) },
       colors: ['#1a3a52'],
       legend: { show: false }
     }
   },
+
+  // ── 7. Eventos Creados por Categoría (donut) ─────────────
   eventsByCategoryReal: {
-    series: dashboard.value.events?.byCategory?.length 
-      ? dashboard.value.events.byCategory.map(e => e.totalEvents) : [0],
+    series: dashboard.value.events?.byCategory?.length
+      ? dashboard.value.events.byCategory.map(e => e.totalEvents)
+      : [0],
     options: {
-      chart: { type: 'donut' },
-      labels: dashboard.value.events?.byCategory?.length 
-        ? dashboard.value.events.byCategory.map(e => e.categoryName) : ['Sin Datos'],
+      chart: {
+        type: 'donut',
+        toolbar: makeToolbar('dashboard-eventos-por-categoria')
+      },
+      labels: dashboard.value.events?.byCategory?.length
+        ? dashboard.value.events.byCategory.map(e => e.categoryName)
+        : ['Sin Datos'],
       colors: ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'],
       plotOptions: { pie: { donut: { size: '65%' } } },
       legend: { position: 'bottom' }
     }
   },
+
+  // ── 8. Noticias por Categoría (donut) ────────────────────
   newsByCategory: {
-    series: dashboard.value.news?.byCategory?.length 
-      ? dashboard.value.news.byCategory.map(n => n.totalNews) : [0],
+    series: dashboard.value.news?.byCategory?.length
+      ? dashboard.value.news.byCategory.map(n => n.totalNews)
+      : [0],
     options: {
-      chart: { type: 'donut' },
-      labels: dashboard.value.news?.byCategory?.length 
-        ? dashboard.value.news.byCategory.map(n => n.category) : ['Sin Datos'],
+      chart: {
+        type: 'donut',
+        toolbar: makeToolbar('dashboard-noticias-por-categoria')
+      },
+      labels: dashboard.value.news?.byCategory?.length
+        ? dashboard.value.news.byCategory.map(n => n.category)
+        : ['Sin Datos'],
       colors: ['#06b6d4', '#f43f5e', '#eab308', '#10b981', '#64748b', '#a855f7'],
       plotOptions: { pie: { donut: { size: '65%' } } },
       legend: { position: 'bottom' }
@@ -365,7 +447,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Tu CSS se mantiene idéntico y adaptará los nuevos charts perfectamente */
 .admin-dashboard { width: 100%; }
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #1a3a52; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
@@ -377,33 +458,30 @@ onMounted(() => {
 .btn-retry { padding: 0.6rem 1.5rem; background: #1a3a52; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
 .btn-retry:hover { background: #FFD200; color: #1a3a52; }
 .dashboard-content { display: flex; flex-direction: column; gap: 2rem; }
-.kpi-grid { 
-  display: grid; 
+.kpi-grid {
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem; 
+  gap: 1.5rem;
 }
-
 .kpi-card { background: #ffffff; border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); transition: all 0.3s ease; }
 .kpi-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
 .kpi-icon { width: 60px; height: 60px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .kpi-content { flex: 1; }
 .kpi-label { margin: 0; color: #64748b; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .kpi-value { margin: 0.5rem 0 0 0; color: #1a3a52; font-size: 2rem; font-weight: 700; }
-.charts-grid { 
-  display: grid; 
-  grid-template-columns: repeat(2, 1fr); 
-  gap: 1.5rem; 
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
 }
 .chart-card {
   background: #ffffff;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  min-height: 380px; /* altura mínima garantizada */
+  min-height: 380px;
 }
-.chart-card.full-width {
-  grid-column: 1 / -1;
-}
+.chart-card.full-width { grid-column: 1 / -1; }
 .chart-card h3 { margin: 0 0 1.5rem 0; color: #1a3a52; font-size: 1.1rem; font-weight: 600; }
 .suspicious-table-card { background: #ffffff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .suspicious-table-card h3 { margin: 0 0 1.5rem 0; color: #1a3a52; font-size: 1.1rem; font-weight: 600; }
@@ -416,11 +494,11 @@ onMounted(() => {
 .email-cell { font-weight: 500; }
 .attempts-cell { text-align: center; }
 .attempts-badge { display: inline-block; padding: 0.35rem 0.75rem; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
-@media (max-width: 1200px) { 
+@media (max-width: 1200px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .charts-grid { grid-template-columns: 1fr; } 
+  .charts-grid { grid-template-columns: 1fr; }
 }
-@media (max-width: 768px) { 
-  .kpi-grid { grid-template-columns: 1fr; } 
+@media (max-width: 768px) {
+  .kpi-grid { grid-template-columns: 1fr; }
 }
 </style>
