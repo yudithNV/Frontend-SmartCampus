@@ -1,6 +1,65 @@
 <template>
   <div class="mod-page">
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div
+          v-if="deleteModal.show"
+          class="del-overlay"
+          @click.self="deleteModal.show = false"
+        >
+          <div class="del-modal">
 
+            <div class="del-modal__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="#dc2626" stroke-width="1.8" stroke-linecap="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+            </div>
+
+            <h3>¿Eliminar comentario?</h3>
+
+            <blockquote class="del-modal__quote">
+              {{ deleteModal.commentBody }}
+            </blockquote>
+
+            <p class="del-modal__warn">
+              Esta acción no se puede deshacer.
+            </p>
+
+            <div class="del-modal__actions">
+
+              <button
+                class="del-btn-cancel"
+                @click="deleteModal.show = false"
+                :disabled="deleteModal.loading"
+              >
+                Cancelar
+              </button>
+
+              <button
+                class="del-btn-confirm"
+                @click="confirmDeleteComment"
+                :disabled="deleteModal.loading"
+              >
+                <span
+                  v-if="deleteModal.loading"
+                  class="mod-spinner"
+                ></span>
+
+                <template v-else>
+                  Eliminar definitivamente
+                </template>
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
     <!-- Header -->
     <div class="mod-header">
       <div class="mod-header__left">
@@ -183,7 +242,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { moderationService } from '../../services/api.js'
 
 const reports      = ref([])
@@ -275,31 +334,49 @@ async function processReport(reportId, action) {
   }
 }
 
-// SCRUM-456/464: Eliminar comentario permanentemente
-const deleteTarget = ref(null)
+const deleteModal = reactive({
+  show: false,
+  reportId: null,
+  commentId: null,
+  commentBody: '',
+  loading: false,
+})
 
 function askDeleteComment(report) {
-  deleteTarget.value = report
-  if (confirm(`¿Eliminar permanentemente el comentario "${report.commentBody.slice(0, 60)}..."?\nEsta acción no se puede deshacer.`)) {
-    confirmDeleteComment()
-  } else {
-    deleteTarget.value = null
-  }
+  Object.assign(deleteModal, {
+    show: true,
+    reportId: report.id,
+    commentId: report.commentId,
+    commentBody: report.commentBody,
+    loading: false,
+  })
 }
 
 async function confirmDeleteComment() {
-  const report = deleteTarget.value
-  if (!report) return
-  processingId.value = report.id
+  deleteModal.loading = true
+  processingId.value = deleteModal.reportId
+
   try {
-    await moderationService.deletePublisherComment(report.commentId)
-    reports.value = reports.value.filter(r => r.commentId !== report.commentId)
-    showToast('success', 'Comentario eliminado permanentemente.')
+    await moderationService.deletePublisherComment(deleteModal.commentId)
+
+    reports.value = reports.value.filter(
+      r => r.commentId !== deleteModal.commentId
+    )
+
+    deleteModal.show = false
+
+    showToast(
+      'success',
+      'Comentario eliminado permanentemente.'
+    )
   } catch {
-    showToast('error', 'No se pudo eliminar el comentario.')
+    showToast(
+      'error',
+      'No se pudo eliminar el comentario.'
+    )
   } finally {
+    deleteModal.loading = false
     processingId.value = null
-    deleteTarget.value = null
   }
 }
 
@@ -413,4 +490,125 @@ onMounted(fetchReports)
 .toast-enter-active { transition: all 0.3s cubic-bezier(0.34,1.5,0.64,1); }
 .toast-leave-active { transition: all 0.2s ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(16px); }
+
+.del-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.del-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem 1.75rem;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+}
+
+.del-modal__icon {
+  width: 60px;
+  height: 60px;
+  background: #fff1f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.del-modal h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.75rem;
+}
+
+.del-modal__quote {
+  background: #f8fafc;
+  border-left: 3px solid #e2e8f0;
+  border-radius: 0 8px 8px 0;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.83rem;
+  color: #374151;
+  margin: 0 0 0.75rem;
+  text-align: left;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.del-modal__warn {
+  font-size: 0.78rem;
+  color: #dc2626;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+}
+
+.del-modal__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.del-btn-cancel {
+  flex: 1;
+  padding: 0.65rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.del-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.del-btn-confirm {
+  flex: 1.5;
+  padding: 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.del-btn-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.del-btn-confirm:disabled,
+.del-btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.22s;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
 </style>

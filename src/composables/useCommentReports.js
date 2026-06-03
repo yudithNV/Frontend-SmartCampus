@@ -1,14 +1,17 @@
 import { ref, reactive } from 'vue'
 import { commentReportService } from '../services/api.js'
 
-const reportedCommentIds = reactive(new Set())
-
 export function useCommentReports() {
+  const reportedCommentIds = reactive(new Set())
   const submittingReportId = ref(null)
   const error = ref('')
 
-  function markAsReported(commentId) {
-    reportedCommentIds.add(commentId)
+  function initFromComments(comments) {
+    comments.forEach(c => {
+      if (c.reportedByCurrentUser) {
+        reportedCommentIds.add(c.id)
+      }
+    })
   }
 
   function isReported(commentId) {
@@ -18,7 +21,6 @@ export function useCommentReports() {
   async function submitReport(newsId, commentId, dto) {
     if (submittingReportId.value === commentId) return false
     submittingReportId.value = commentId
-
     try {
       const res = await commentReportService.report(newsId, commentId, dto)
       const data = res?.data ?? res
@@ -37,7 +39,7 @@ export function useCommentReports() {
     submittingReportId,
     error,
     isReported,
-    markAsReported,
+    initFromComments,   
     submitReport,
   }
 }
