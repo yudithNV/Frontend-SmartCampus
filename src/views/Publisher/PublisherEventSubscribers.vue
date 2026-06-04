@@ -23,13 +23,25 @@
       
       <!-- VISTA DE LISTA -->
       <div v-if="currentView === 'list'">
-        <div class="filter-section" style="margin-bottom: 20px;">
-          <input v-model="eventSearchQuery" type="text" placeholder="Buscar evento por nombre..." class="search-input">
+        <div v-if="loading" class="state-box">
+          <div class="state-spinner"></div>
+          <p>Cargando eventos...</p>
         </div>
-        <div class="events-grid">
-          <div v-for="event in filteredEvents" :key="event.id" class="event-card" @click="goToEvent(event)">
-            <h3>{{ event.name }}</h3>
-            <p>{{ event.subscriberCount }} inscritos</p>
+        <div v-else-if="error" class="state-box state-error">
+          <p>{{ error }}</p>
+        </div>
+        <div v-else>
+          <div class="filter-section" style="margin-bottom: 20px;">
+            <input v-model="eventSearchQuery" type="text" placeholder="Buscar evento por nombre..." class="search-input">
+          </div>
+          <div v-if="filteredEvents.length === 0" class="empty-state">
+            <p>No tienes eventos creados o publicados.</p>
+          </div>
+          <div v-else class="events-grid">
+            <div v-for="event in filteredEvents" :key="event.id" class="event-card" @click="goToEvent(event)">
+              <h3>{{ event.name }}</h3>
+              <p>{{ event.registeredCount ?? 0 }} inscritos</p>
+            </div>
           </div>
         </div>
       </div>
@@ -51,7 +63,14 @@
 
     <!-- Tabla (Solo visible en detalle) -->
     <div v-if="currentView === 'detail'" class="table-section">
-      <div class="table-wrapper">
+      <div v-if="loadingSubscribers" class="state-box" style="border: none; box-shadow: none;">
+        <div class="state-spinner"></div>
+        <p>Cargando inscritos...</p>
+      </div>
+      <div v-else-if="subscribersError" class="state-box state-error" style="border: none; box-shadow: none;">
+        <p>{{ subscribersError }}</p>
+      </div>
+      <div v-else class="table-wrapper">
         <table class="subscribers-table">
           <thead>
             <tr>
@@ -135,7 +154,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { eventService } from '../../services/api.js'
 
 const currentView = ref('list') // 'list' o 'detail'
 const selectedEvent = ref(null) // Para guardar el objeto evento completo
@@ -144,119 +164,137 @@ const showSubscriberModal = ref(false)
 const selectedSubscriber = ref(null)
 const eventSearchQuery = ref('')
 
-// Nueva función para navegar
-function goToEvent(event) {
+const events = ref([])
+const subscribers = ref([])
+const loading = ref(false)
+const error = ref('')
+const loadingSubscribers = ref(false)
+const subscribersError = ref('')
+
+// Nueva función para navegar y cargar inscritos
+async function goToEvent(event) {
   selectedEvent.value = event // Guarda el evento clickeado
   currentView.value = 'detail' // Cambia la vista para mostrar la tabla
   searchQuery.value = ''       // Limpia el buscador al entrar
+  await loadSubscribers(event.id)
 }
 
-// Datos mock de eventos
-const mockEvents = [
-  {
-    id: 1,
-    name: 'Charla: Inteligencia Artificial en Educación',
-    subscriberCount: 45
-  },
-  {
-    id: 2,
-    name: 'Taller: Desarrollo Web Moderno',
-    subscriberCount: 62
-  },
-  {
-    id: 3,
-    name: 'Seminario: Transformación Digital',
-    subscriberCount: 38
-  },
-  {
-    id: 4,
-    name: 'Workshop: Cloud Computing',
-    subscriberCount: 52
-  },
-  {
-    id: 5,
-    name: 'Conferencia: Ciberseguridad',
-    subscriberCount: 28
+// Cargar eventos del publicador
+async function loadEvents() {
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await eventService.getMy(0, 100, 'createdAt', 'DESC')
+    let list = []
+    if (response && response.content && Array.isArray(response.content)) {
+      list = response.content
+    } else if (Array.isArray(response)) {
+      list = response
+    } else if (response && response.data && Array.isArray(response.data)) {
+      list = response.data
+    }
+    events.value = list
+  } catch (err) {
+    console.error('Error al cargar eventos:', err)
+    error.value = 'No se pudieron cargar tus eventos.'
+  } finally {
+    loading.value = false
   }
-]
+}
 
-// Datos mock de inscritos (combinados para diferentes eventos)
-const mockSubscribersByEvent = {
-  1: [
-    { id: 101, name: 'Juan Carlos Mendoza', email: 'juan.mendoza@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7123456', enrollmentDate: new Date('2026-05-20'), status: 'confirmado', notes: 'Interesado en IA' },
-    { id: 102, name: 'María García López', email: 'maria.garcia@ucb.edu.bo', career: 'Ingeniería en Informática', phone: '+591 7234567', enrollmentDate: new Date('2026-05-21'), status: 'confirmado', notes: '' },
-    { id: 103, name: 'Roberto Silva Fernández', email: 'roberto.silva@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7345678', enrollmentDate: new Date('2026-05-19'), status: 'pendiente', notes: '' },
-    { id: 104, name: 'Ana Martínez Ruiz', email: 'ana.martinez@ucb.edu.bo', career: 'Administración de Sistemas', phone: '+591 7456789', enrollmentDate: new Date('2026-05-22'), status: 'confirmado', notes: '' },
-    { id: 105, name: 'Carlos Eduardo Ochoa', email: 'carlos.ochoa@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7567890', enrollmentDate: new Date('2026-05-18'), status: 'confirmado', notes: '' },
-    { id: 106, name: 'Patricia Álvarez Torres', email: 'patricia.alvarez@ucb.edu.bo', career: 'Ciencias de la Computación', phone: '+591 7678901', enrollmentDate: new Date('2026-05-21'), status: 'cancelado', notes: 'Cambio de horario' },
-    { id: 107, name: 'David Rojas Gómez', email: 'david.rojas@ucb.edu.bo', career: 'Ingeniería en Informática', phone: '+591 7789012', enrollmentDate: new Date('2026-05-20'), status: 'confirmado', notes: '' },
-  ],
-  2: [
-    { id: 201, name: 'Sofía Valenzuela Quispe', email: 'sofia.valenzuela@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7890123', enrollmentDate: new Date('2026-05-15'), status: 'confirmado', notes: 'Frontend developer' },
-    { id: 202, name: 'Miguel Ángel Ramírez', email: 'miguel.ramirez@ucb.edu.bo', career: 'Ingeniería en Informática', phone: '+591 7901234', enrollmentDate: new Date('2026-05-16'), status: 'confirmado', notes: '' },
-    { id: 203, name: 'Laura Sánchez Morales', email: 'laura.sanchez@ucb.edu.bo', career: 'Administración de Sistemas', phone: '+591 7012345', enrollmentDate: new Date('2026-05-17'), status: 'pendiente', notes: '' },
-    { id: 204, name: 'Andrés Felipe Córdoba', email: 'andres.cordoba@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7123401', enrollmentDate: new Date('2026-05-16'), status: 'confirmado', notes: '' },
-    { id: 205, name: 'Catalina Vera Gómez', email: 'catalina.vera@ucb.edu.bo', career: 'Ciencias de la Computación', phone: '+591 7234502', enrollmentDate: new Date('2026-05-18'), status: 'confirmado', notes: '' },
-  ],
-  3: [
-    { id: 301, name: 'Fernando López Chávez', email: 'fernando.lopez@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7345603', enrollmentDate: new Date('2026-05-14'), status: 'confirmado', notes: '' },
-    { id: 302, name: 'Valeria Ortiz Peña', email: 'valeria.ortiz@ucb.edu.bo', career: 'Administración de Sistemas', phone: '+591 7456704', enrollmentDate: new Date('2026-05-15'), status: 'confirmado', notes: '' },
-    { id: 303, name: 'Gustavo Herrera Rodríguez', email: 'gustavo.herrera@ucb.edu.bo', career: 'Ingeniería en Informática', phone: '+591 7567805', enrollmentDate: new Date('2026-05-16'), status: 'pendiente', notes: '' },
-  ],
-  4: [
-    { id: 401, name: 'Elena Castillo Vargas', email: 'elena.castillo@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7678906', enrollmentDate: new Date('2026-05-12'), status: 'confirmado', notes: 'Interesada en DevOps' },
-    { id: 402, name: 'Lucas Fuentes Medina', email: 'lucas.fuentes@ucb.edu.bo', career: 'Ciencias de la Computación', phone: '+591 7789007', enrollmentDate: new Date('2026-05-13'), status: 'confirmado', notes: '' },
-  ],
-  5: [
-    { id: 501, name: 'Stephanie Guzmán Cortés', email: 'stephanie.guzman@ucb.edu.bo', career: 'Ingeniería en Sistemas', phone: '+591 7890108', enrollmentDate: new Date('2026-05-10'), status: 'confirmado', notes: '' },
-    { id: 502, name: 'Óscar Vega Soto', email: 'oscar.vega@ucb.edu.bo', career: 'Administración de Sistemas', phone: '+591 7901209', enrollmentDate: new Date('2026-05-11'), status: 'pendiente', notes: '' },
-  ]
+// Cargar inscritos a un evento específico
+async function loadSubscribers(eventId) {
+  loadingSubscribers.value = true
+  subscribersError.value = ''
+  subscribers.value = []
+  try {
+    const response = await eventService.getAttendees(eventId, 0, 100)
+    let list = []
+    if (response && response.content && Array.isArray(response.content)) {
+      list = response.content
+    } else if (Array.isArray(response)) {
+      list = response
+    } else if (response && response.data && Array.isArray(response.data)) {
+      list = response.data
+    }
+    subscribers.value = list
+  } catch (err) {
+    console.error('Error al cargar inscritos:', err)
+    subscribersError.value = 'No se pudieron cargar los inscritos de este evento.'
+  } finally {
+    loadingSubscribers.value = false
+  }
 }
 
 // Computed para filtrar inscritos según el evento seleccionado y la búsqueda
 const filteredSubscribers = computed(() => {
-  // Si no hay evento, retornamos vacío
   if (!selectedEvent.value) return []
   
-  // Usamos el ID del evento seleccionado para buscar en el objeto mock
-  const subscribers = mockSubscribersByEvent[selectedEvent.value.id] || []
-  
-  return subscribers.filter(sub => 
-    sub.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    sub.email.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  return subscribers.value
+    .map(sub => ({
+      id: sub.id,
+      name: sub.nombreCompleto || sub.name || 'Sin nombre',
+      email: sub.correo || sub.email || 'Sin correo',
+      career: sub.carreraArea || sub.career || 'No registrada',
+      enrollmentDate: sub.fechaInscripcion || sub.enrollmentDate,
+      status: (sub.estado || sub.status || 'pendiente').toLowerCase(),
+      phone: sub.telefono || sub.phone || 'No registrado',
+      notes: sub.notas || sub.notes || ''
+    }))
+    .filter(sub => 
+      sub.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      sub.email.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
 })
 
 const filteredEvents = computed(() => {
-  return mockEvents.filter(event => 
+  return events.value.filter(event => 
     event.name.toLowerCase().includes(eventSearchQuery.value.toLowerCase())
   )
 })
 
-// Formatear fecha
-function formatDate(date) {
-  return new Intl.DateTimeFormat('es-BO', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(date)
+// Formatear fecha (soporta cadenas ISO devueltas por el JSON)
+function formatDate(dateValue) {
+  if (!dateValue) return 'Por confirmar'
+  try {
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) return dateValue
+    return new Intl.DateTimeFormat('es-BO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date)
+  } catch (e) {
+    return dateValue
+  }
 }
 
 // Formatear estado
 function formatStatus(status) {
+  if (!status) return 'Pendiente'
+  const cleanStatus = status.toLowerCase()
   const statuses = {
     confirmado: 'Confirmado',
     pendiente: 'Pendiente',
     cancelado: 'Cancelado'
   }
-  return statuses[status] || status
+  return statuses[cleanStatus] || status
 }
 
 // Ver detalles del inscrito
 function viewSubscriber(subscriber) {
-  selectedSubscriber.value = subscriber
+  selectedSubscriber.value = {
+    name: subscriber.nombreCompleto || subscriber.name,
+    email: subscriber.correo || subscriber.email,
+    career: subscriber.carreraArea || subscriber.career,
+    phone: subscriber.telefono || subscriber.phone || 'No registrado',
+    status: subscriber.estado || subscriber.status || 'pendiente',
+    notes: subscriber.notas || subscriber.notes || ''
+  }
   showSubscriberModal.value = true
 }
+
+onMounted(loadEvents)
 </script>
 
 <style scoped>
@@ -770,5 +808,38 @@ function viewSubscriber(subscriber) {
   .subscribers-table td {
     padding: 0.5rem;
   }
+}
+
+/* States and Spinners */
+.state-box {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 4rem 2rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.5rem 0;
+}
+.state-spinner {
+  width: 34px;
+  height: 34px;
+  border: 2.5px solid #f1f5f9;
+  border-top-color: #FFD200;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.state-box p {
+  font-size: 0.86rem;
+  color: #64748b;
+  margin: 0;
+}
+.state-error p {
+  color: #dc2626;
 }
 </style>

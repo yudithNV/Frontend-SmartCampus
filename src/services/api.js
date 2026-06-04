@@ -255,7 +255,11 @@ export const eventService = {
   update: (id, data) => apiRequest(`/events/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id) => apiRequest(`/events/${id}`, { method: 'DELETE' }),
   register: (eventId) => apiRequest(`/events/${eventId}/register`, { method: 'POST' }),
-  unregister: (eventId) => apiRequest(`/events/${eventId}/register`, { method: 'DELETE' })
+  unregister: (eventId) => apiRequest(`/events/${eventId}/register`, { method: 'DELETE' }),
+  getAttendees: (eventId, page = 0, size = 100) => {
+    const params = new URLSearchParams({ page, size })
+    return apiRequest(`/events/${eventId}/inscritos?${params}`)
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
