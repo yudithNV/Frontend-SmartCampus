@@ -1,36 +1,56 @@
 <template>
   <div class="subscribers-container">
-    <div class="header-section">
-      <h2>Inscritos por Evento</h2>
-      <div class="filter-section">
-        <select v-model="selectedEventId" class="filter-select">
-          <option value="" disabled>Seleccionar evento...</option>
-          <option v-for="event in mockEvents" :key="event.id" :value="event.id">
-            {{ event.name }} ({{ event.subscriberCount }} inscritos)
-          </option>
-        </select>
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Buscar por nombre o correo..." 
-          class="search-input"
-        >
-        <span v-if="selectedEventId" class="event-info">
-          Total: {{ filteredSubscribers.length }} inscritos
-        </span>
+    
+    <!-- HEADER UNIFICADO -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <!-- Icono ajustado para coincidir con tu estilo -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a3a52" stroke-width="2.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div>
+          <!-- Cambiamos el título dinámicamente -->
+          <h1>{{ currentView === 'list' ? 'Gestión de Inscripciones' : 'Detalle de Inscritos' }}</h1>
+          <p>{{ currentView === 'list' ? 'Selecciona un evento para revisar la información de los asistentes' : 'Consulta y gestiona los datos de los inscritos para este evento'}}</p>
+        </div>
       </div>
     </div>
 
-    <div v-if="!selectedEventId" class="empty-state">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <p>Selecciona un evento para ver sus inscritos</p>
+    <!-- CONTENIDO DINÁMICO -->
+    <div class="header-section" style="margin-top: 20px;">
+      
+      <!-- VISTA DE LISTA -->
+      <div v-if="currentView === 'list'">
+        <div class="filter-section" style="margin-bottom: 20px;">
+          <input v-model="eventSearchQuery" type="text" placeholder="Buscar evento por nombre..." class="search-input">
+        </div>
+        <div class="events-grid">
+          <div v-for="event in filteredEvents" :key="event.id" class="event-card" @click="goToEvent(event)">
+            <h3>{{ event.name }}</h3>
+            <p>{{ event.subscriberCount }} inscritos</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA DE DETALLE: Botón volver + Buscador de Inscritos -->
+      <div v-else>
+        <button @click="currentView = 'list'" class="btn-back">← Volver a eventos</button>
+        <h2>Inscritos: {{ selectedEvent?.name }}</h2>
+        <div class="filter-section" style="margin-top: 15px;">
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Buscar por nombre o correo..." 
+            class="search-input"
+          >
+        </div>
+      </div>
     </div>
 
-    <div v-else class="table-section">
+    <!-- Tabla (Solo visible en detalle) -->
+    <div v-if="currentView === 'detail'" class="table-section">
       <div class="table-wrapper">
         <table class="subscribers-table">
           <thead>
@@ -48,9 +68,7 @@
               <td colspan="6" class="no-data">No se encontraron inscritos</td>
             </tr>
             <tr v-for="subscriber in filteredSubscribers" :key="subscriber.id">
-              <td class="name-cell">
-                <span class="subscriber-name">{{ subscriber.name }}</span>
-              </td>
+              <td class="name-cell"><span class="subscriber-name">{{ subscriber.name }}</span></td>
               <td class="email-cell">{{ subscriber.email }}</td>
               <td class="career-cell">{{ subscriber.career }}</td>
               <td class="date-cell">{{ formatDate(subscriber.enrollmentDate) }}</td>
@@ -62,8 +80,7 @@
               <td class="actions-cell">
                 <button class="btn-icon" @click="viewSubscriber(subscriber)" title="Ver perfil">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
                 </button>
               </td>
@@ -73,44 +90,41 @@
       </div>
     </div>
 
-    <!-- Modal de detalles del inscrito -->
+    <!-- Modal -->
     <Transition name="modal-fade">
       <div v-if="showSubscriberModal" class="modal-overlay" @click.self="showSubscriberModal = false">
-        <div class="modal-content">
+        <div class="modal-content" v-if="selectedSubscriber">
           <button class="modal-close" @click="showSubscriberModal = false">×</button>
+          
           <div class="modal-header">
-            <div class="subscriber-avatar">{{ selectedSubscriber?.name?.charAt(0).toUpperCase() }}</div>
+            <div class="subscriber-avatar">
+              {{ selectedSubscriber.name.charAt(0) }}
+            </div>
             <div>
-              <h3>{{ selectedSubscriber?.name }}</h3>
-              <p class="modal-subtitle">{{ selectedSubscriber?.email }}</p>
+              <h3>{{ selectedSubscriber.name }}</h3>
+              <p class="modal-subtitle">{{ selectedSubscriber.email }}</p>
             </div>
           </div>
+
           <div class="modal-body">
             <div class="info-row">
-              <span class="info-label">Carrera / Área:</span>
-              <span class="info-value">{{ selectedSubscriber?.career }}</span>
+              <span class="info-label">Carrera:</span>
+              <span class="info-value">{{ selectedSubscriber.career }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Teléfono:</span>
-              <span class="info-value">{{ selectedSubscriber?.phone }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Fecha de Inscripción:</span>
-              <span class="info-value">{{ formatDate(selectedSubscriber?.enrollmentDate) }}</span>
+              <span class="info-value">{{ selectedSubscriber.phone }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Estado:</span>
-              <span class="info-value">
-                <span class="status-badge" :class="`status-${selectedSubscriber?.status}`">
-                  {{ formatStatus(selectedSubscriber?.status) }}
-                </span>
-              </span>
+              <span class="info-value">{{ formatStatus(selectedSubscriber.status) }}</span>
             </div>
-            <div v-if="selectedSubscriber?.notes" class="info-row">
+            <div class="info-row">
               <span class="info-label">Notas:</span>
-              <span class="info-value">{{ selectedSubscriber?.notes }}</span>
+              <span class="info-value">{{ selectedSubscriber.notes || 'Sin notas' }}</span>
             </div>
           </div>
+
           <div class="modal-actions">
             <button class="btn-close-modal" @click="showSubscriberModal = false">Cerrar</button>
           </div>
@@ -123,10 +137,19 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const selectedEventId = ref('')
+const currentView = ref('list') // 'list' o 'detail'
+const selectedEvent = ref(null) // Para guardar el objeto evento completo
 const searchQuery = ref('')
 const showSubscriberModal = ref(false)
 const selectedSubscriber = ref(null)
+const eventSearchQuery = ref('')
+
+// Nueva función para navegar
+function goToEvent(event) {
+  selectedEvent.value = event // Guarda el evento clickeado
+  currentView.value = 'detail' // Cambia la vista para mostrar la tabla
+  searchQuery.value = ''       // Limpia el buscador al entrar
+}
 
 // Datos mock de eventos
 const mockEvents = [
@@ -190,14 +213,23 @@ const mockSubscribersByEvent = {
   ]
 }
 
-// Obtener inscritos filtrados
+// Computed para filtrar inscritos según el evento seleccionado y la búsqueda
 const filteredSubscribers = computed(() => {
-  if (!selectedEventId.value) return []
+  // Si no hay evento, retornamos vacío
+  if (!selectedEvent.value) return []
   
-  const subscribers = mockSubscribersByEvent[selectedEventId.value] || []
+  // Usamos el ID del evento seleccionado para buscar en el objeto mock
+  const subscribers = mockSubscribersByEvent[selectedEvent.value.id] || []
+  
   return subscribers.filter(sub => 
     sub.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     sub.email.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+const filteredEvents = computed(() => {
+  return mockEvents.filter(event => 
+    event.name.toLowerCase().includes(eventSearchQuery.value.toLowerCase())
   )
 })
 
@@ -228,6 +260,80 @@ function viewSubscriber(subscriber) {
 </script>
 
 <style scoped>
+
+/*page-header*/
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.header-left { display:flex; align-items:center; gap:0.9rem; }
+.header-icon {
+  width:46px; height:46px; background:#FFD200; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  box-shadow:0 2px 8px rgba(255,210,0,0.3);
+}
+
+.header-left h1 {
+  font-size: 1.5rem;
+  color: #1a3a52;
+  margin: 0;
+}
+
+.header-left p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.event-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.event-card:hover {
+  transform: translateY(-5px);
+  border-color: #FFD200;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.event-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #1a3a52;
+  font-size: 1.2rem;
+}
+
+.event-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.btn-back {
+  background: #f1f5f9;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  color: #1a3a52;
+  font-weight: 600;
+}
 .subscribers-container {
   width: 100%;
   max-width: 1400px;
