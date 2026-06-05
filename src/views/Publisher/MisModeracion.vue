@@ -386,13 +386,25 @@ function askDeleteComment(report) {
 async function confirmDeleteComment() {
   deleteModal.loading = true
   processingId.value = deleteModal.reportId
+
   try {
-    await moderationService.deletePublisherComment(deleteModal.commentId)
-    reports.value = reports.value.filter(r => r.commentId !== deleteModal.commentId)
+    await moderationService.deletePublisherComment(
+      deleteModal.commentId
+    )
+
+    await fetchReports()
+
     deleteModal.show = false
-    showToast('success', 'Comentario eliminado permanentemente.')
+
+    showToast(
+      'success',
+      'Comentario eliminado permanentemente.'
+    )
   } catch {
-    showToast('error', 'No se pudo eliminar el comentario.')
+    showToast(
+      'error',
+      'No se pudo eliminar el comentario.'
+    )
   } finally {
     deleteModal.loading = false
     processingId.value = null
