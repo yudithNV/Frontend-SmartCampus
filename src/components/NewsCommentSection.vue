@@ -116,7 +116,7 @@
 
                 <!-- 3. REPORTAR: solo si NO es mío Y NO soy publicador/admin -->
                 <button
-                  v-if="!comment.isOwn && !comment.canHide"
+                    v-if="comment.isOwn !== true && !comment.canHide"
                   class="comment-action-btn comment-action-btn--report"
                   :class="{ 'comment-action-btn--reported': comment.reportedByCurrentUser || isReported(comment.id) }"
                   :disabled="comment.reportedByCurrentUser || isReported(comment.id)"
