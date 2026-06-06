@@ -1,13 +1,15 @@
 <template>
   <div class="reports-container">
     <div class="header-section">
-      <h2>Reportes</h2>
+      <h2>Reportes del Sistema</h2>
       <div class="filter-section">
         <select v-model="selectedReportType" class="filter-select">
-          <option value="all">Todos los Reportes</option>
+          <option value="all">Todos los Módulos</option>
           <option value="usuarios">Usuarios</option>
-          <option value="accesos">Accesos</option>
-          <option value="reclamos">Reclamos</option>
+          <option value="eventos">Eventos</option>
+          <option value="quejas">Quejas y Reclamos</option>
+          <option value="publicaciones">Publicaciones</option>
+          <option value="sugerencias">Sugerencias</option>
         </select>
         <input 
           v-model="searchQuery" 
@@ -27,61 +29,52 @@
               <circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
             </svg>
-            <svg v-else-if="report.type === 'accesos'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="21 8 21 21 3 21 3 8"></polyline>
-              <rect x="1" y="3" width="22" height="5"></rect>
-              <path d="M10 12v4"></path>
-              <path d="M14 12v4"></path>
+            <svg v-else-if="report.type === 'eventos'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg v-else-if="report.type === 'quejas'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+            <svg v-else-if="report.type === 'publicaciones'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <path d="M16 8h2"></path>
+              <path d="M16 12h2"></path>
+              <path d="M16 16h2"></path>
+              <path d="M6 8h6v8H6z"></path>
+            </svg>
+            <svg v-else-if="report.type === 'sugerencias'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21h6v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"></path>
             </svg>
           </span>
           <div class="report-title">
             <h3>{{ report.title }}</h3>
-            <p class="report-date">{{ formatDate(report.date) }}</p>
+            <p class="report-status-tag">Módulo del Sistema</p>
           </div>
         </div>
         <div class="report-content">
           <p>{{ report.description }}</p>
         </div>
-        <div class="report-stats">
+        <div class="report-stats" style="margin-bottom: 1.5rem;">
           <div class="stat">
             <span class="stat-label">Registros:</span>
-            <span class="stat-value">{{ report.records }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Estado:</span>
-            <span class="stat-value" :class="`status-${report.status}`">{{ report.status }}</span>
+            <span class="stat-value" style="font-size: 1rem; color: #475569;">{{ report.records }}</span>
           </div>
         </div>
         <div class="report-actions">
-          <button class="btn-view" @click="viewReport(report.id)">Ver Detalles</button>
-          <button class="btn-download" @click="downloadReport(report.id)">Descargar</button>
+          <button class="btn-download-excel" @click="downloadReportFile(report.type, 'excel')" :disabled="downloading[`${report.type}-excel`]">
+            <span v-if="downloading[`${report.type}-excel`]" class="spinner-xs"></span>
+            <span v-else>Generar Excel</span>
+          </button>
+          <button class="btn-download-pdf" @click="downloadReportFile(report.type, 'pdf')" :disabled="downloading[`${report.type}-pdf`]">
+            <span v-if="downloading[`${report.type}-pdf`]" class="spinner-xs"></span>
+            <span v-else>Generar PDF</span>
+          </button>
         </div>
       </div>
     </div>
-
-    <!-- Modal de detalles -->
-    <Transition name="modal-fade">
-      <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
-        <div class="modal-content">
-          <button class="modal-close" @click="showDetailModal = false">×</button>
-          <h3>{{ selectedReport?.title }}</h3>
-          <div class="modal-body">
-            <p><strong>Tipo:</strong> {{ selectedReport?.type }}</p>
-            <p><strong>Fecha:</strong> {{ formatDate(selectedReport?.date) }}</p>
-            <p><strong>Descripción:</strong> {{ selectedReport?.description }}</p>
-            <p><strong>Total de Registros:</strong> {{ selectedReport?.records }}</p>
-            <p><strong>Estado:</strong> <span :class="`status-${selectedReport?.status}`">{{ selectedReport?.status }}</span></p>
-          </div>
-          <div class="modal-actions">
-            <button class="btn-download-modal" @click="downloadReport(selectedReport.id)">Descargar Reporte</button>
-            <button class="btn-close-modal" @click="showDetailModal = false">Cerrar</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -90,70 +83,50 @@ import { ref, computed } from 'vue'
 
 const selectedReportType = ref('all')
 const searchQuery = ref('')
-const showDetailModal = ref(false)
-const selectedReport = ref(null)
+const downloading = ref({})
 
-// Datos mock de reportes
-const mockReports = [
+// Configuración de los reportes por módulo disponibles
+const reportsList = [
   {
     id: 1,
     type: 'usuarios',
-    title: 'Reporte de Usuarios Activos',
-    description: 'Resumen de usuarios activos en el sistema durante el mes actual',
-    date: new Date('2026-05-15'),
-    records: 1250,
-    status: 'completado'
+    title: 'Reporte de Usuarios',
+    description: 'Resumen completo de todos los usuarios registrados, incluyendo nombres, correos, roles, estados y carreras.',
+    records: 'Todos los registros (Base de Datos)'
   },
   {
     id: 2,
-    type: 'accesos',
-    title: 'Historial de Accesos - Semana 1',
-    description: 'Registro completo de accesos de usuarios durante la primera semana de mayo',
-    date: new Date('2026-05-07'),
-    records: 5420,
-    status: 'completado'
+    type: 'eventos',
+    title: 'Reporte de Eventos',
+    description: 'Listado detallado de los eventos del campus creados, sus fechas de realización, ubicaciones asignadas y tipos.',
+    records: 'Todos los registros (Base de Datos)'
   },
   {
     id: 3,
-    type: 'reclamos',
-    title: 'Reporte de Reclamos Pendientes',
-    description: 'Análisis de reclamos que requieren seguimiento',
-    date: new Date('2026-05-20'),
-    records: 45,
-    status: 'pendiente'
+    type: 'quejas',
+    title: 'Reporte de Quejas y Reclamos',
+    description: 'Consolidado de reclamos enviados por los estudiantes con detalle de categorías, cuerpo del mensaje y estados de atención.',
+    records: 'Todos los registros (Base de Datos)'
   },
   {
     id: 4,
-    type: 'usuarios',
-    title: 'Nuevos Registros de Usuarios',
-    description: 'Usuarios registrados en la última semana',
-    date: new Date('2026-05-25'),
-    records: 87,
-    status: 'completado'
+    type: 'publicaciones',
+    title: 'Reporte de Publicaciones',
+    description: 'Registro de noticias y comunicados del campus publicados por los organizadores autorizados.',
+    records: 'Todos los registros (Base de Datos)'
   },
   {
     id: 5,
-    type: 'accesos',
-    title: 'Análisis de Picos de Acceso',
-    description: 'Identificación de horas de mayor acceso al sistema',
-    date: new Date('2026-05-18'),
-    records: 8900,
-    status: 'completado'
-  },
-  {
-    id: 6,
-    type: 'reclamos',
-    title: 'Categorización de Reclamos',
-    description: 'Reporte de reclamos por categoría y prioridad',
-    date: new Date('2026-05-22'),
-    records: 156,
-    status: 'completado'
+    type: 'sugerencias',
+    title: 'Reporte de Sugerencias',
+    description: 'Historial de propuestas y sugerencias de mejora emitidas por los estudiantes de la comunidad universitaria.',
+    records: 'Todos los registros (Base de Datos)'
   }
 ]
 
-// Filtro de reportes
+// Filtrar reportes según selección e input
 const filteredReports = computed(() => {
-  return mockReports.filter(report => {
+  return reportsList.filter(report => {
     const matchesType = selectedReportType.value === 'all' || report.type === selectedReportType.value
     const matchesSearch = 
       report.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -162,34 +135,43 @@ const filteredReports = computed(() => {
   })
 })
 
-// Formatear fecha
-function formatDate(date) {
-  return new Intl.DateTimeFormat('es-BO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }).format(date)
-}
-
-// Ver detalles del reporte
-function viewReport(reportId) {
-  selectedReport.value = mockReports.find(r => r.id === reportId)
-  showDetailModal.value = true
-}
-
-// Descargar reporte (simulado)
-function downloadReport(reportId) {
-  const report = mockReports.find(r => r.id === reportId)
-  if (report) {
-    // Simular descarga
-    const content = `REPORTE: ${report.title}\n\nFecha: ${formatDate(report.date)}\nTipo: ${report.type}\nRegistros: ${report.records}\n\n${report.description}`
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
+// Función para descargar reporte real desde backend
+async function downloadReportFile(modulo, formato) {
+  const key = `${modulo}-${formato}`
+  if (downloading.value[key]) return
+  downloading.value[key] = true
+  
+  try {
+    const token = localStorage.getItem('ucb_token')
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+    
+    const response = await fetch(`http://localhost:8081/api/reportes/${modulo}/${formato}`, {
+      method: 'GET',
+      headers
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`)
+    }
+    
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `reporte-${reportId}.txt`
+    
+    const extension = formato === 'excel' ? 'xlsx' : 'pdf'
+    const dateStr = new Date().toISOString().split('T')[0]
+    link.download = `reporte-${modulo}-${dateStr}.${extension}`
+    
+    document.body.appendChild(link)
     link.click()
-    URL.revokeObjectURL(url)
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error al descargar el reporte:', error)
+    alert('Ocurrió un error al generar o descargar el reporte. Verifique que el servidor backend esté en ejecución y tenga los privilegios necesarios.')
+  } finally {
+    downloading.value[key] = false
   }
 }
 </script>
@@ -297,14 +279,25 @@ function downloadReport(reportId) {
   color: #3b82f6;
 }
 
-.icon-accesos {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
+.icon-eventos {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
 }
 
-.icon-reclamos {
+.icon-reclamos,
+.icon-quejas {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+.icon-publicaciones {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.icon-sugerencias {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
 }
 
 .report-title h3 {
@@ -373,38 +366,71 @@ function downloadReport(reportId) {
   gap: 0.75rem;
 }
 
-.btn-view,
-.btn-download {
+.btn-download-excel,
+.btn-download-pdf {
   flex: 1;
-  padding: 0.7rem 1rem;
-  border: none;
+  padding: 0.7rem 0.5rem;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
+  gap: 0.35rem;
 }
 
-.btn-view {
-  background: #FFD200;
-  color: #1a3a52;
+.btn-download-excel {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
 }
 
-.btn-view:hover {
-  background: #ffed4e;
-  transform: scale(1.02);
+.btn-download-excel:hover:not(:disabled) {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+  transform: translateY(-1px);
 }
 
-.btn-download {
-  background: #f8fafc;
-  color: #1a3a52;
-  border: 1px solid #e2e8f0;
+.btn-download-pdf {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
-.btn-download:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
+.btn-download-pdf:hover:not(:disabled) {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-download-excel:disabled,
+.btn-download-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.report-status-tag {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.spinner-xs {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Modal */
