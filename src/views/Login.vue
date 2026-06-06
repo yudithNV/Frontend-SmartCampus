@@ -326,20 +326,38 @@ async function handleLogin () {
     // ─────────────────────────────
     //  LOGIN OK
     // ─────────────────────────────
+    // LOGIN OK
     localStorage.setItem('ucb_token', data.token)
-    localStorage.setItem('ucb_role', data.role)
+    localStorage.setItem('ucb_role',  data.role)
     localStorage.setItem('ucb_email', form.email.trim())
 
     if (data.mustChangePassword) {
       localStorage.setItem('must_change_password', '1')
     }
 
-    let finalUrl = data.redirectUrl
+    // ── AGREGAR: obtener id y nombre del usuario ──
+    try {
+      const meRes = await fetch('http://localhost:8081/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${data.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (meRes.ok) {
+        const meData = await meRes.json()
+        const me = meData.data ?? meData
+        localStorage.setItem('ucb_user_id', me.id)
+        localStorage.setItem('ucb_name',    me.fullName)
+      }
+    } catch (e) {
+      console.warn('No se pudo obtener perfil:', e)
+    }
+    // ─────────────────────────────────────────────
 
+    let finalUrl = data.redirectUrl
     if (data.role === 'ESTUDIANTE') {
       finalUrl = '/estudiante/eventos'
     }
-
     router.push(finalUrl)
 
   } catch (err) {

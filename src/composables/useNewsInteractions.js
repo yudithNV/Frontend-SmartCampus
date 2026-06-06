@@ -15,12 +15,45 @@ function getAuthHeaders() {
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   }
 }
+// Agrega esta función helper arriba, antes de useNewsInteractions()
+function getCurrentUserId() {
+  return localStorage.getItem('ucb_user_id') || null
+}
 
+function getCurrentUserName() {
+  return localStorage.getItem('ucb_name') || null
+}
+
+function enrichComments(list) {
+  const userId   = getCurrentUserId()
+  const userName = getCurrentUserName()
+  return list.map(c => ({
+    ...c,
+    isOwn: c.own === true                                           // ← c.own, no c.isOwn
+      || (userId   && String(c.userId) === String(userId))
+      || (userName && c.userFullName   === userName)
+  }))
+}
 export function useNewsInteractions() {
   const reactionLoading = ref(null)
   const commentLoading  = ref(null)
   const commentError    = ref('')
 
+
+  function reEnrichAll() {
+    Object.keys(comments).forEach(newsId => {
+      if (comments[newsId]?.length) {
+        comments[newsId] = enrichComments(comments[newsId])
+      }
+    })
+  }
+
+  return {
+    reactions, reactionLoading, loadReactions, toggleReaction,
+    comments, commentCounts, commentLoading, commentError,
+    loadComments, postComment, deleteComment, toggleHideComment,
+    reEnrichAll  
+  }
   // ────────────────────────────────────────────────────────
   // REACCIONES
   // ────────────────────────────────────────────────────────
@@ -108,7 +141,7 @@ export function useNewsInteractions() {
       const json = await res.json()
       const data = json.data ?? json
       const list = Array.isArray(data) ? data : []
-      comments[newsId]      = list
+      comments[newsId]      = enrichComments(list)
       commentCounts[newsId] = list.length
     } catch (err) {
       console.error('[loadComments]', err)
@@ -131,7 +164,8 @@ export function useNewsInteractions() {
       const json       = await res.json()
       const newComment = json.data ?? json
       if (!comments[newsId]) comments[newsId] = []
-      comments[newsId].unshift(newComment)
+      const [enriched] = enrichComments([newComment])
+      comments[newsId].unshift(enriched)
       commentCounts[newsId] = comments[newsId].length
       return newComment
     } catch (err) {

@@ -286,11 +286,7 @@ import NewsReactionBar from '../../components/NewsReactionBar.vue'
 import NewsCommentSection from '../../components/NewsCommentSection.vue'
 import { useNewsInteractions } from '../../composables/useNewsInteractions.js'
 
-const {
-  reactions, reactionLoading, loadReactions, toggleReaction,
-  comments, commentLoading, commentError,
-  loadComments, postComment, deleteComment, toggleHideComment
-} = useNewsInteractions()
+
 // Agregar los ref de "submitting por noticia"
 const submittingComment = ref(null)
 
@@ -504,11 +500,18 @@ function getInitials(name) {
 function getCategoryLabel(val) { return CATEGORY_MAP[val]?.label ?? val }
 function getCategoryColor(val) { return CATEGORY_MAP[val]?.color ?? '#64748b' }
 
-
+const {
+  reactions, reactionLoading, loadReactions, toggleReaction,
+  comments, commentLoading, commentError,
+  loadComments, postComment, deleteComment, toggleHideComment,
+  reEnrichAll  // ← agregar
+} = useNewsInteractions()
 onMounted(() => {
   fetchCareers()
   fetchNews()
   loadFavorites()
+  reEnrichAll()
+
 })
 </script>
 

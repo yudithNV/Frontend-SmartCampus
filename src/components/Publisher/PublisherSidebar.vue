@@ -146,10 +146,13 @@ const userInitial = computed(() => {
 
 async function loadPendingCount() {
   try {
-    const res = await moderationService.getPublisherSummary()
+    const res = await moderationService.getPublisherReports()  // sin filtro de status
     const data = res?.data ?? res
+    const list = Array.isArray(data) ? data : []
+    
+    // Contar solo los PENDIENTE del array completo
+    pendingCount.value = list.filter(r => r.status === 'PENDIENTE').length
 
-    pendingCount.value = data?.totalPending ?? 0
   } catch (error) {
     console.error('Error cargando reportes pendientes:', error)
   }

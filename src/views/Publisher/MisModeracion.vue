@@ -173,10 +173,6 @@
         <span>{{ summary.hidden ?? hiddenCount }}</span>
         <small>Ocultados</small>
       </div>
-      <div class="stat-card">
-        <span>{{ summary.deleted ?? deletedCount }}</span>
-        <small>Eliminados</small>
-      </div>
     </div>
 
     <!-- Filtros -->
@@ -381,7 +377,6 @@ const STATUS_TABS = [
   { value: 'PENDIENTE', label: 'Pendientes' },
   { value: 'IGNORADO',  label: 'Ignorados'  },
   { value: 'OCULTO',    label: 'Ocultos'    },
-  { value: 'ELIMINADO', label: 'Eliminados' },
   { value: '',          label: 'Todos'      },
 ]
 
@@ -493,10 +488,10 @@ async function processReport(reportId, action, group) {
     await moderationService.processReport(reportId, action)
 
     // Actualizar estado local del grupo
-    const idx = groups.value.findIndex(g => g.commentId === group.commentId)
-    if (idx !== -1) {
-      groups.value[idx] = { ...groups.value[idx], status: action }
-    }
+    const idx = groups.value.findIndex(g => g.commentId === deleteModal.commentId)
+      if (idx !== -1) {
+        groups.value.splice(idx, 1)  // ← eliminar del array en vez de marcar ELIMINADO
+      }
 
     // Si ignoramos un auto-ocultado (5+), pasarlo a IGNORADO
     const msg = {
@@ -551,7 +546,6 @@ async function confirmDeleteComment() {
     showToast('success', 'Comentario eliminado permanentemente.')
 
     // Cambiar a pestaña Eliminados para que el usuario vea el resultado
-    activeStatus.value = 'ELIMINADO'
   } catch {
     showToast('error', 'No se pudo eliminar el comentario.')
   } finally {
@@ -697,7 +691,7 @@ onUnmounted(() => clearInterval(pollTimer))
 /* ─── Stats ───────────────────────────────────────────── */
 .stats-grid {
   max-width: 760px; margin: 0 auto 1rem; padding: 0 1rem;
-  display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem;
+  display: grid; grid-template-columns: repeat(2,1fr); gap: .75rem;
 }
 .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; text-align: center; }
 .stat-card span { display: block; font-size: 1.6rem; font-weight: 700; color: #1a3a52; }

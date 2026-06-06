@@ -100,7 +100,7 @@
                   v-if="comment.isOwn === true"
                   class="comment-action-btn comment-action-btn--delete"
                   title="Eliminar comentario"
-                  @click="$emit('delete', comment.id)"
+                  @click="openDeleteModal(comment.id)"
                 >
                   Eliminar
                 </button>
@@ -116,7 +116,7 @@
 
                 <!-- 3. REPORTAR: solo si NO es mío Y NO soy publicador/admin -->
                 <button
-                    v-if="comment.isOwn !== true && !comment.canHide"
+                    v-if="!comment.isOwn && !comment.canHide"
                   class="comment-action-btn comment-action-btn--report"
                   :class="{ 'comment-action-btn--reported': comment.reportedByCurrentUser || isReported(comment.id) }"
                   :disabled="comment.reportedByCurrentUser || isReported(comment.id)"
@@ -164,6 +164,28 @@
       </div>
     </Transition>
   </div>
+  <!-- Modal confirmar eliminar -->
+<Teleport to="body">
+  <Transition name="modal-fade">
+    <div v-if="showDeleteModal" class="delete-modal-overlay" @click.self="showDeleteModal = false">
+      <div class="delete-modal-box">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="#ef4444" stroke-width="1.8" stroke-linecap="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+        <h3>¿Eliminar comentario?</h3>
+        <p>Esta acción no se puede deshacer.</p>
+        <div class="delete-modal-actions">
+          <button class="delete-btn-cancel" @click="showDeleteModal = false">Cancelar</button>
+          <button class="delete-btn-confirm" @click="confirmDelete">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
 </template>
 
 <script setup>
@@ -198,7 +220,22 @@ const displayCount = computed(() =>
 )
 
 const visibleComments = computed(() => props.comments)
+// Agregar estos refs
+const showDeleteModal   = ref(false)
+const pendingDeleteId   = ref(null)
 
+function openDeleteModal(commentId) {
+  pendingDeleteId.value = commentId
+  showDeleteModal.value = true
+}
+
+function confirmDelete() {
+  if (pendingDeleteId.value) {
+    emit('delete', pendingDeleteId.value)
+  }
+  showDeleteModal.value = false
+  pendingDeleteId.value = null
+}
 // Inicializar estado "ya reportado" desde el backend
 watch(() => props.comments, (newComments) => {
   if (newComments?.length) {
@@ -309,4 +346,40 @@ async function submitComment() {
 .comment-list-enter-from    { opacity: 0; transform: translateY(-8px); }
 .comment-list-leave-to      { opacity: 0; transform: translateX(-10px); }
 .comment-list-move          { transition: transform 0.2s ease; }
+.delete-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+}
+.delete-modal-box {
+  background: #fff; border-radius: 16px; padding: 2rem;
+  max-width: 360px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: popIn 0.25s cubic-bezier(0.34,1.5,0.64,1);
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.delete-modal-box h3 { font-size: 1.1rem; font-weight: 700; color: #1a3a52; margin: 0; }
+.delete-modal-box p  { font-size: 0.85rem; color: #64748b; margin: 0; }
+.delete-modal-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; width: 100%; }
+.delete-btn-cancel {
+  flex: 1; padding: 0.6rem; border: 1.5px solid #e2e8f0;
+  border-radius: 8px; background: #f8fafc; color: #475569;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: background 0.15s;
+}
+.delete-btn-cancel:hover { background: #e2e8f0; }
+.delete-btn-confirm {
+  flex: 1; padding: 0.6rem; border: none;
+  border-radius: 8px; background: #ef4444; color: #fff;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: background 0.15s;
+}
+.delete-btn-confirm:hover { background: #dc2626; }
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 </style>
