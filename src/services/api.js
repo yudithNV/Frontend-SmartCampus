@@ -168,7 +168,9 @@ export const adminUserService = {
     apiRequest(`/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   delete: (id) =>
-    apiRequest(`/users/${id}`, { method: 'DELETE' })
+    apiRequest(`/users/${id}`, { method: 'DELETE' }),
+
+  getPublicProfile: (id) => apiRequest(`/users/${id}/public`)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

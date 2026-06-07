@@ -31,32 +31,98 @@
           <p>{{ error }}</p>
         </div>
         <div v-else>
-          <div class="filter-section" style="margin-bottom: 20px;">
-            <input v-model="eventSearchQuery" type="text" placeholder="Buscar evento por nombre..." class="search-input">
-          </div>
+          <div class="filters-bar" style="margin-bottom: 20px;">
+  <div class="search-wrap">
+    <svg class="search-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input v-model="eventSearchQuery" type="text" class="search-input-filter" placeholder="Buscar evento por nombre o ubicación..."/>
+  </div>
+  <div class="select-wrap">
+    <select v-model="categoryFilter" class="filter-select-inline">
+      <option value="all">Todas las categorías</option>
+      <option v-for="cat in availableCategories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+    </select>
+  </div>
+  <div class="select-wrap">
+    <select v-model="sortEventFilter" class="filter-select-inline">
+      <option value="newest">Más recientes</option>
+      <option value="oldest">Más antiguos</option>
+      <option value="most">Más inscritos</option>
+    </select>
+  </div>
+</div>
           <div v-if="filteredEvents.length === 0" class="empty-state">
             <p>No tienes eventos creados o publicados.</p>
           </div>
-          <div v-else class="events-grid">
+          <div v-else>
+          <div class="events-grid">
             <div v-for="event in filteredEvents" :key="event.id" class="event-card" @click="goToEvent(event)">
-              <h3>{{ event.name }}</h3>
-              <p>{{ event.registeredCount ?? 0 }} inscritos</p>
+              <!-- Poster -->
+              <div class="card-poster">
+                <img v-if="event.posterUrl" :src="event.posterUrl" alt="poster" class="poster-img"/>
+                <div v-else class="poster-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <span class="card-badge" :style="{ background: event.category?.colorHex || '#007bff' }">
+                  {{ event.category?.name || event.eventType }}
+                </span>
+              </div>
+              <!-- Info -->
+              <div class="card-body">
+                <!-- Ejemplo con un icono para la fecha -->
+                <p class="card-date">
+                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  {{ formatDateRange(event.startDatetime, event.endDatetime) }}
+                </p>
+
+                <h3 class="card-title">{{ event.name }}</h3>
+                <p class="card-desc">{{ event.description }}</p>
+
+                <!-- Aquí está tu icono de ubicación -->
+                <p class="card-location">
+                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  {{ event.location?.name }}
+                </p>
+
+                <div class="card-footer">
+                  <span class="card-count">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    </svg>
+                    
+                    {{ event.registeredCount ?? 0 }} / {{ event.maxCapacity }} inscritos
+                  </span>
+                  <span class="card-active" :class="event.isActive ? 'active' : 'inactive'">
+                    {{ event.isActive ? '● Publicado' : '● Inactivo' }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- PAGINACIÓN -->
+          <div class="pagination">
+            <span class="pagination-info">Mostrando {{ events.length }} de {{ totalElements }} eventos (página {{ currentPage + 1 }} de {{ totalPages }})</span>
+            <div class="pagination-controls">
+              <button :disabled="currentPage === 0" @click="changePage(currentPage - 1)" class="btn-page">‹ Anterior</button>
+              <span class="page-indicator">Página <strong>{{ currentPage + 1 }}</strong> de {{ totalPages }}</span>
+              <button :disabled="currentPage >= totalPages - 1" @click="changePage(currentPage + 1)" class="btn-page">Siguiente ›</button>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
 
       <!-- VISTA DE DETALLE: Botón volver + Buscador de Inscritos -->
       <div v-else>
         <button @click="currentView = 'list'" class="btn-back">← Volver a eventos</button>
-        <h2>Inscritos: {{ selectedEvent?.name }}</h2>
+        <h2>Inscritos: {{ selectedEvent?.name }} <span class="total-badge">{{ subscribersTotalElements }} inscritos</span></h2>
         <div class="filter-section" style="margin-top: 15px;">
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Buscar por nombre o correo..." 
-            class="search-input"
-          >
+          <input v-model="searchQuery" type="text" placeholder="Buscar por nombre o correo..." class="search-input"/>
         </div>
       </div>
     </div>
@@ -78,24 +144,20 @@
               <th>Correo</th>
               <th>Carrera / Área</th>
               <th>Fecha de Inscripción</th>
-              <th>Estado</th>
+          
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="filteredSubscribers.length === 0">
-              <td colspan="6" class="no-data">No se encontraron inscritos</td>
+              <td colspan="4" class="no-data">No se encontraron inscritos</td>
             </tr>
             <tr v-for="subscriber in filteredSubscribers" :key="subscriber.id">
               <td class="name-cell"><span class="subscriber-name">{{ subscriber.name }}</span></td>
               <td class="email-cell">{{ subscriber.email }}</td>
               <td class="career-cell">{{ subscriber.career }}</td>
               <td class="date-cell">{{ formatDate(subscriber.enrollmentDate) }}</td>
-              <td class="status-cell">
-                <span class="status-badge" :class="`status-${subscriber.status}`">
-                  {{ formatStatus(subscriber.status) }}
-                </span>
-              </td>
+              
               <td class="actions-cell">
                 <button class="btn-icon" @click="viewSubscriber(subscriber)" title="Ver perfil">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,6 +168,14 @@
             </tr>
           </tbody>
         </table>
+        <div class="pagination">
+          <span class="pagination-info">Mostrando {{ subscribers.length }} de {{ subscribersTotalElements }} inscritos (página {{ subscribersPage + 1 }} de {{ subscribersTotalPages }})</span>
+          <div class="pagination-controls">
+            <button :disabled="subscribersPage === 0" @click="changeSubscribersPage(subscribersPage - 1)" class="btn-page">‹ Anterior</button>
+            <span class="page-indicator">Página <strong>{{ subscribersPage + 1 }}</strong> de {{ subscribersTotalPages }}</span>
+            <button :disabled="subscribersPage >= subscribersTotalPages - 1" @click="changeSubscribersPage(subscribersPage + 1)" class="btn-page">Siguiente ›</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -132,16 +202,19 @@
             </div>
             <div class="info-row">
               <span class="info-label">Teléfono:</span>
-              <span class="info-value">{{ selectedSubscriber.phone }}</span>
+              <span class="info-value">{{ selectedSubscriber.phone || 'Sin teléfono aún' }}</span>
             </div>
+            
             <div class="info-row">
-              <span class="info-label">Estado:</span>
-              <span class="info-value">{{ formatStatus(selectedSubscriber.status) }}</span>
+              <span class="info-label">Bio:</span>
+              <span class="info-value">{{ selectedSubscriber.bio || 'Sin bio aún' }}</span>
             </div>
-            <div class="info-row">
-              <span class="info-label">Notas:</span>
-              <span class="info-value">{{ selectedSubscriber.notes || 'Sin notas' }}</span>
-            </div>
+            <div class="info-row" v-if="selectedSubscriber.status">
+            <span class="info-label">Estado cuenta:</span>
+            <span class="info-value" :style="{ color: selectedSubscriber.status === 'ACTIVO' ? '#16a34a' : '#dc2626' }">
+              {{ selectedSubscriber.status }}
+            </span>
+          </div>
           </div>
 
           <div class="modal-actions">
@@ -155,8 +228,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { eventService } from '../../services/api.js'
+import { eventService, adminUserService, categoryService } from '../../services/api.js'
 
+const categories = ref([])
 const currentView = ref('list') // 'list' o 'detail'
 const selectedEvent = ref(null) // Para guardar el objeto evento completo
 const searchQuery = ref('')
@@ -164,12 +238,27 @@ const showSubscriberModal = ref(false)
 const selectedSubscriber = ref(null)
 const eventSearchQuery = ref('')
 
+const categoryFilter = ref('all')
+const sortEventFilter = ref('newest')
+
+const currentPage = ref(0)
+const totalPages = ref(1)
+const totalElements = ref(0)
+const pageSize = 10
+
 const events = ref([])
 const subscribers = ref([])
 const loading = ref(false)
 const error = ref('')
 const loadingSubscribers = ref(false)
 const subscribersError = ref('')
+
+const subscribersPage = ref(0)
+const subscribersTotalPages = ref(1)
+const subscribersTotalElements = ref(0)
+const subscribersPageSize = 10
+
+const availableCategories = computed(() => categories.value)
 
 // Nueva función para navegar y cargar inscritos
 async function goToEvent(event) {
@@ -180,50 +269,58 @@ async function goToEvent(event) {
 }
 
 // Cargar eventos del publicador
-async function loadEvents() {
+async function loadEvents(page = 0) {
   loading.value = true
   error.value = ''
+  const catResponse = await categoryService.getAll()
+  categories.value = catResponse.data || catResponse || []
   try {
-    const response = await eventService.getMy(0, 100, 'createdAt', 'DESC')
-    let list = []
-    if (response && response.content && Array.isArray(response.content)) {
-      list = response.content
+    const response = await eventService.getMy(page, pageSize, 'createdAt', 'DESC')
+    if (response && response.content) {
+      events.value = response.content
+      totalPages.value = response.totalPages ?? 1
+      totalElements.value = response.totalElements ?? 0
+      currentPage.value = response.number ?? page
     } else if (Array.isArray(response)) {
-      list = response
-    } else if (response && response.data && Array.isArray(response.data)) {
-      list = response.data
+      events.value = response
     }
-    events.value = list
   } catch (err) {
-    console.error('Error al cargar eventos:', err)
     error.value = 'No se pudieron cargar tus eventos.'
   } finally {
     loading.value = false
   }
 }
 
+function changePage(page) {
+  currentPage.value = page
+  loadEvents(page)
+}
+
 // Cargar inscritos a un evento específico
-async function loadSubscribers(eventId) {
+async function loadSubscribers(eventId, page = 0) {
   loadingSubscribers.value = true
   subscribersError.value = ''
   subscribers.value = []
   try {
-    const response = await eventService.getAttendees(eventId, 0, 100)
-    let list = []
-    if (response && response.content && Array.isArray(response.content)) {
-      list = response.content
+    const response = await eventService.getAttendees(eventId, page, subscribersPageSize)
+    if (response && response.content) {
+      subscribers.value = response.content
+      subscribersTotalPages.value = response.totalPages ?? 1
+      subscribersTotalElements.value = response.totalElements ?? 0
+      subscribersPage.value = response.number ?? page
     } else if (Array.isArray(response)) {
-      list = response
-    } else if (response && response.data && Array.isArray(response.data)) {
-      list = response.data
+      subscribers.value = response
     }
-    subscribers.value = list
   } catch (err) {
-    console.error('Error al cargar inscritos:', err)
     subscribersError.value = 'No se pudieron cargar los inscritos de este evento.'
   } finally {
     loadingSubscribers.value = false
   }
+}
+
+function changeSubscribersPage(page) {
+  subscribersPage.value = page
+  loadSubscribers(selectedEvent.value.id, page)
 }
 
 // Computed para filtrar inscritos según el evento seleccionado y la búsqueda
@@ -248,9 +345,19 @@ const filteredSubscribers = computed(() => {
 })
 
 const filteredEvents = computed(() => {
-  return events.value.filter(event => 
-    event.name.toLowerCase().includes(eventSearchQuery.value.toLowerCase())
+  let list = [...events.value]
+  const q = eventSearchQuery.value.toLowerCase()
+  if (q) list = list.filter(e =>
+    e.name?.toLowerCase().includes(q) ||
+    e.location?.name?.toLowerCase().includes(q)
   )
+  if (categoryFilter.value !== 'all')
+    list = list.filter(e => e.category?.name === categoryFilter.value)
+  if (sortEventFilter.value === 'oldest')
+    list = list.sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime))
+  else if (sortEventFilter.value === 'most')
+    list = list.sort((a, b) => (b.registeredCount ?? 0) - (a.registeredCount ?? 0))
+  return list
 })
 
 // Formatear fecha (soporta cadenas ISO devueltas por el JSON)
@@ -282,16 +389,41 @@ function formatStatus(status) {
 }
 
 // Ver detalles del inscrito
-function viewSubscriber(subscriber) {
+async function viewSubscriber(subscriber) {
   selectedSubscriber.value = {
-    name: subscriber.nombreCompleto || subscriber.name,
-    email: subscriber.correo || subscriber.email,
-    career: subscriber.carreraArea || subscriber.career,
-    phone: subscriber.telefono || subscriber.phone || 'No registrado',
-    status: subscriber.estado || subscriber.status || 'pendiente',
-    notes: subscriber.notas || subscriber.notes || ''
+    name: subscriber.name,
+    email: subscriber.email,
+    career: subscriber.career,
+    enrollmentDate: subscriber.enrollmentDate,
+    phone: 'Cargando...',
+    bio: null,
+    status: null
   }
   showSubscriberModal.value = true
+
+  try {
+    const response = await adminUserService.getPublicProfile(subscriber.id)
+    const data = response.data || response
+    selectedSubscriber.value = {
+      name: subscriber.name,
+      email: subscriber.email,
+      career: subscriber.career,
+      enrollmentDate: subscriber.enrollmentDate,
+      phone: data.phone || 'No registrado',
+      bio: data.bio || null,
+      status: data.status || null
+    }
+  } catch (err) {
+    selectedSubscriber.value.phone = 'No disponible'
+  }
+}
+
+function formatDateRange(start, end) {
+  if (!start) return 'Sin fecha'
+  const fmt = (d) => new Intl.DateTimeFormat('es-BO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(d))
+  const startStr = fmt(start)
+  const endTime = end ? new Intl.DateTimeFormat('es-BO', { hour: '2-digit', minute: '2-digit' }).format(new Date(end)) : ''
+  return endTime ? `${startStr} - ${endTime}` : startStr
 }
 
 onMounted(loadEvents)
@@ -337,10 +469,11 @@ onMounted(loadEvents)
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 0;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .event-card:hover {
@@ -842,4 +975,97 @@ onMounted(loadEvents)
 .state-error p {
   color: #dc2626;
 }
+
+.total-badge {
+  font-size: 0.85rem;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.card-poster {
+  position: relative;
+  height: 160px;
+  background: #f1f5f9;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+.poster-img { width: 100%; height: 100%; object-fit: cover; }
+.poster-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-badge {
+  position: absolute; top: 10px; right: 10px;
+  color: white; font-size: 0.75rem; font-weight: 600;
+  padding: 0.3rem 0.7rem; border-radius: 20px;
+}
+.card-body { padding: 1rem; }
+.card-date { font-size: 0.82rem; color: #64748b; margin: 0 0 0.4rem 0; }
+.card-title { font-size: 1.05rem; font-weight: 700; color: #1a3a52; margin: 0 0 0.4rem 0; }
+.card-desc {
+  font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.5rem 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-location { font-size: 0.85rem; color: #475569; margin: 0 0 0.75rem 0; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; }
+.card-count { font-size: 0.82rem; color: #64748b; }
+.card-active { font-size: 0.8rem; font-weight: 600; }
+.card-active.active { color: #16a34a; }
+.card-active.inactive { color: #94a3b8; }
+
+.pagination {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1.5rem; padding: 1rem; flex-wrap: wrap; gap: 0.5rem;
+}
+.pagination-info { font-size: 0.85rem; color: #64748b; }
+.pagination-controls { display: flex; align-items: center; gap: 0.75rem; }
+.btn-page {
+  padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: white; cursor: pointer; font-weight: 600; color: #1a3a52;
+  transition: all 0.2s;
+}
+.btn-page:hover:not(:disabled) { border-color: #FFD200; background: #fffbeb; }
+.btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-indicator { font-size: 0.9rem; color: #475569; }
+
+.card-body p {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Espacio entre el icono y el texto */
+}
+.icon {
+  flex-shrink: 0; /* Evita que el icono se deforme */
+}
+.card-count {
+  display: inline-flex; /* Para alinear icono y texto */
+  align-items: center;
+  gap: 6px; /* Espacio entre el icono y el texto */
+}
+
+.filters-bar {
+  display: flex; align-items: center; gap: 0.8rem;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.search-wrap {
+  position: relative; display: flex; align-items: center; flex: 1; min-width: 200px;
+}
+.search-ico { position: absolute; left: 0.85rem; pointer-events: none; }
+.search-input-filter {
+  width: 100%; padding: 0.62rem 1rem 0.62rem 2.3rem;
+  border: 1.5px solid #e2e8f0; border-radius: 9px;
+  font-size: 0.85rem; font-family: 'Inter', sans-serif;
+  color: #1e293b; background: #fff; outline: none; transition: border-color 0.18s;
+}
+.search-input-filter:focus { border-color: #FFD200; box-shadow: 0 0 0 3px rgba(255,210,0,0.08); }
+.filter-select-inline {
+  padding: 0.58rem 1rem; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 0.82rem; font-family: 'Inter', sans-serif;
+  color: #475569; background: #fff; outline: none; cursor: pointer;
+  transition: border-color 0.18s;
+}
+.filter-select-inline:focus { border-color: #FFD200; }
 </style>
