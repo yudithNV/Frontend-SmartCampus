@@ -8,8 +8,9 @@
           <option value="usuarios">Usuarios</option>
           <option value="eventos">Eventos</option>
           <option value="quejas">Quejas y Reclamos</option>
-          <option value="publicaciones">Publicaciones</option>
+          <option value="publicaciones">Noticias</option>
           <option value="sugerencias">Sugerencias</option>
+          <option value="accesos">Accesos / Logs</option>
         </select>
         <input 
           v-model="searchQuery" 
@@ -48,6 +49,10 @@
             <svg v-else-if="report.type === 'sugerencias'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21h6v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"></path>
             </svg>
+            <svg v-else-if="report.type === 'accesos'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
           </span>
           <div class="report-title">
             <h3>{{ report.title }}</h3>
@@ -64,26 +69,237 @@
           </div>
         </div>
         <div class="report-actions">
-          <button class="btn-download-excel" @click="downloadReportFile(report.type, 'excel')" :disabled="downloading[`${report.type}-excel`]">
+          <button class="btn-download-excel" @click="openFilterModal(report.type, 'excel')" :disabled="downloading[`${report.type}-excel`]">
             <span v-if="downloading[`${report.type}-excel`]" class="spinner-xs"></span>
             <span v-else>Generar Excel</span>
           </button>
-          <button class="btn-download-pdf" @click="downloadReportFile(report.type, 'pdf')" :disabled="downloading[`${report.type}-pdf`]">
+          <button class="btn-download-pdf" @click="openFilterModal(report.type, 'pdf')" :disabled="downloading[`${report.type}-pdf`]">
             <span v-if="downloading[`${report.type}-pdf`]" class="spinner-xs"></span>
             <span v-else>Generar PDF</span>
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Modal de Filtros -->
+    <transition name="modal-fade">
+      <div v-if="showFilterModal" class="modal-overlay" @click.self="closeFilterModal">
+        <div class="modal-content">
+          <button class="modal-close" @click="closeFilterModal">&times;</button>
+          
+          <h3>Filtros de Reporte: {{ getReportTitle(selectedModuleForFilter) }}</h3>
+          
+          <div class="modal-body">
+            <!-- Filtros para EVENTOS -->
+            <div v-if="selectedModuleForFilter === 'eventos'" class="filter-group-container">
+              <div class="form-group">
+                <label>Estado del Evento</label>
+                <select v-model="filters.isActive" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option :value="true">Activo / Publicado</option>
+                  <option :value="false">Inactivo / Borrador</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Categoría del Evento</label>
+                <select v-model="filters.categoryId" class="form-select-modal">
+                  <option value="">Todas</option>
+                  <option v-for="cat in eventCategories" :key="cat.id" :value="cat.id">
+                    {{ cat.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group-dates">
+                <div class="form-group">
+                  <label>Fecha Desde</label>
+                  <input type="date" v-model="filters.fechaInicio" class="form-input-modal">
+                </div>
+                <div class="form-group">
+                  <label>Fecha Hasta</label>
+                  <input type="date" v-model="filters.fechaFin" class="form-input-modal">
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtros para USUARIOS -->
+            <div v-if="selectedModuleForFilter === 'usuarios'" class="filter-group-container">
+              <div class="form-group">
+                <label>Rol de Usuario</label>
+                <select v-model="filters.role" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option value="ESTUDIANTE">Estudiante</option>
+                  <option value="PUBLICADOR">Publicador</option>
+                  <option value="ADMINISTRADOR">Administrador</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Estado de Cuenta</label>
+                <select v-model="filters.status" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option value="ACTIVO">Activo</option>
+                  <option value="INACTIVO">Inactivo</option>
+                  <option value="BLOQUEADO">Bloqueado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Carrera</label>
+                <select v-model="filters.careerId" class="form-select-modal">
+                  <option value="">Todas</option>
+                  <option v-for="car in careers" :key="car.id" :value="car.id">
+                    {{ car.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Filtros para QUEJAS -->
+            <div v-if="selectedModuleForFilter === 'quejas'" class="filter-group-container">
+              <div class="form-group">
+                <label>Estado del Reclamo</label>
+                <select v-model="filters.status" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="EN_REVISION">En Revisión</option>
+                  <option value="RESUELTO">Resuelto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Categoría (Texto)</label>
+                <input type="text" v-model="filters.category" placeholder="Ej. Académico, Infraestructura..." class="form-input-modal">
+              </div>
+              <div class="form-group-dates">
+                <div class="form-group">
+                  <label>Fecha Desde</label>
+                  <input type="date" v-model="filters.fechaInicio" class="form-input-modal">
+                </div>
+                <div class="form-group">
+                  <label>Fecha Hasta</label>
+                  <input type="date" v-model="filters.fechaFin" class="form-input-modal">
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtros para PUBLICACIONES -->
+            <div v-if="selectedModuleForFilter === 'publicaciones'" class="filter-group-container">
+              <div class="form-group">
+                <label>Categoría de la Publicación</label>
+                <select v-model="filters.category" class="form-select-modal">
+                  <option value="">Todas</option>
+                  <option value="ACADEMICO">Académico</option>
+                  <option value="EVENTOS">Eventos</option>
+                  <option value="AVISOS">Avisos</option>
+                  <option value="DEPORTES">Deportes</option>
+                  <option value="CULTURA">Cultura</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Estado de Publicación</label>
+                <select v-model="filters.published" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option :value="true">Publicado</option>
+                  <option :value="false">Borrador</option>
+                </select>
+              </div>
+              <div class="form-group-dates">
+                <div class="form-group">
+                  <label>Fecha Desde</label>
+                  <input type="date" v-model="filters.fechaInicio" class="form-input-modal">
+                </div>
+                <div class="form-group">
+                  <label>Fecha Hasta</label>
+                  <input type="date" v-model="filters.fechaFin" class="form-input-modal">
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtros para SUGERENCIAS -->
+            <div v-if="selectedModuleForFilter === 'sugerencias'" class="filter-group-container">
+              <div class="form-group">
+                <label>Categoría de Sugerencia</label>
+                <select v-model="filters.category" class="form-select-modal">
+                  <option value="">Todas</option>
+                  <option value="INFRAESTRUCTURA">Infraestructura</option>
+                  <option value="TRAMITES">Trámites</option>
+                  <option value="CLASES">Clases</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+              <div class="form-group-dates">
+                <div class="form-group">
+                  <label>Fecha Desde</label>
+                  <input type="date" v-model="filters.fechaInicio" class="form-input-modal">
+                </div>
+                <div class="form-group">
+                  <label>Fecha Hasta</label>
+                  <input type="date" v-model="filters.fechaFin" class="form-input-modal">
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtros para ACCESOS -->
+            <div v-if="selectedModuleForFilter === 'accesos'" class="filter-group-container">
+              <div class="form-group">
+                <label>Resultado del Intento</label>
+                <select v-model="filters.success" class="form-select-modal">
+                  <option value="">Todos</option>
+                  <option :value="true">Exitoso</option>
+                  <option :value="false">Fallido</option>
+                </select>
+              </div>
+              <div class="form-group-dates">
+                <div class="form-group">
+                  <label>Fecha Desde</label>
+                  <input type="date" v-model="filters.fechaInicio" class="form-input-modal">
+                </div>
+                <div class="form-group">
+                  <label>Fecha Hasta</label>
+                  <input type="date" v-model="filters.fechaFin" class="form-input-modal">
+                </div>
+              </div>
+            </div>
+          </div>
+          <p v-if="dateError" class="date-error-msg">{{ dateError }}</p>
+          <div class="modal-actions">
+            <button class="btn-download-modal" @click="confirmDownload" :disabled="downloading[`${selectedModuleForFilter}-${selectedFormatForFilter}`]">
+              <span v-if="downloading[`${selectedModuleForFilter}-${selectedFormatForFilter}`]" class="spinner-xs"></span>
+              <span v-else>Confirmar y Descargar</span>
+            </button>
+            <button class="btn-close-modal" @click="closeFilterModal">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const selectedReportType = ref('all')
 const searchQuery = ref('')
 const downloading = ref({})
+
+// Modal and filters state
+const showFilterModal = ref(false)
+const selectedModuleForFilter = ref(null)
+const selectedFormatForFilter = ref(null)
+
+const filters = ref({
+  isActive: '',
+  categoryId: '',
+  fechaInicio: '',
+  fechaFin: '',
+  role: '',
+  status: '',
+  careerId: '',
+  category: '',
+  published: '',
+  success: ''
+})
+
+const careers = ref([])
+const eventCategories = ref([])
 
 // Configuración de los reportes por módulo disponibles
 const reportsList = [
@@ -111,7 +327,7 @@ const reportsList = [
   {
     id: 4,
     type: 'publicaciones',
-    title: 'Reporte de Publicaciones',
+    title: 'Reporte de Noticias',
     description: 'Registro de noticias y comunicados del campus publicados por los organizadores autorizados.',
     records: 'Todos los registros (Base de Datos)'
   },
@@ -121,8 +337,115 @@ const reportsList = [
     title: 'Reporte de Sugerencias',
     description: 'Historial de propuestas y sugerencias de mejora emitidas por los estudiantes de la comunidad universitaria.',
     records: 'Todos los registros (Base de Datos)'
+  },
+  {
+    id: 6,
+    type: 'accesos',
+    title: 'Reporte de Accesos / Logs',
+    description: 'Registro de todos los intentos de acceso al sistema: email, dirección IP, resultado (exitoso o fallido), user agent y fecha.',
+    records: 'Todos los registros (Base de Datos)'
   }
 ]
+const dateError = ref('')
+
+// Fetch dependencies on mount
+onMounted(() => {
+  fetchCareers()
+  fetchEventCategories()
+})
+
+async function fetchCareers() {
+  try {
+    const response = await fetch('http://localhost:8081/api/careers')
+    if (response.ok) {
+      careers.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Error al obtener carreras:', error)
+  }
+}
+
+async function fetchEventCategories() {
+  try {
+    const response = await fetch('http://localhost:8081/api/categories')
+    if (response.ok) {
+      eventCategories.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Error al obtener categorías de eventos:', error)
+  }
+}
+
+function getReportTitle(modulo) {
+  const report = reportsList.find(r => r.type === modulo)
+  return report ? report.title : modulo
+}
+
+function openFilterModal(modulo, formato) {
+  if (modulo === 'reservas') {
+    downloadReportFile(modulo, formato)
+    return
+  }
+  
+  selectedModuleForFilter.value = modulo
+  selectedFormatForFilter.value = formato
+  dateError.value = ''
+  
+  // Reset filters
+  filters.value = {
+    isActive: '',
+    categoryId: '',
+    fechaInicio: '',
+    fechaFin: '',
+    role: '',
+    status: '',
+    careerId: '',
+    category: '',
+    published: '',
+    success: ''
+  }
+  
+  showFilterModal.value = true
+}
+
+function closeFilterModal() {
+  showFilterModal.value = false
+  selectedModuleForFilter.value = null
+  selectedFormatForFilter.value = null
+}
+
+function confirmDownload() {
+  dateError.value = ''
+  
+  if (filters.value.fechaInicio || filters.value.fechaFin) {
+    const hoy = new Date()
+    const minFecha = new Date('2020-01-01')
+    
+    if (filters.value.fechaInicio) {
+      const desde = new Date(filters.value.fechaInicio)
+      if (desde < minFecha || desde > hoy) {
+        dateError.value = 'La fecha "Desde" no es válida. Debe estar entre 2020 y hoy.'
+        return
+      }
+    }
+    
+    if (filters.value.fechaFin) {
+      const hasta = new Date(filters.value.fechaFin)
+      if (hasta < minFecha || hasta > hoy) {
+        dateError.value = 'La fecha "Hasta" no es válida. Debe estar entre 2020 y hoy.'
+        return
+      }
+    }
+
+    if (filters.value.fechaInicio && filters.value.fechaFin && filters.value.fechaFin < filters.value.fechaInicio) {
+      dateError.value = 'La fecha "Hasta" no puede ser menor que "Desde".'
+      return
+    }
+  }
+
+  downloadReportFile(selectedModuleForFilter.value, selectedFormatForFilter.value)
+  closeFilterModal()
+}
 
 // Filtrar reportes según selección e input
 const filteredReports = computed(() => {
@@ -135,7 +458,7 @@ const filteredReports = computed(() => {
   })
 })
 
-// Función para descargar reporte real desde backend
+// Función para descargar reporte real desde backend con parámetros
 async function downloadReportFile(modulo, formato) {
   const key = `${modulo}-${formato}`
   if (downloading.value[key]) return
@@ -145,7 +468,41 @@ async function downloadReportFile(modulo, formato) {
     const token = localStorage.getItem('ucb_token')
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
     
-    const response = await fetch(`http://localhost:8081/api/reportes/${modulo}/${formato}`, {
+    // Build query params
+    const queryParams = new URLSearchParams()
+    if (modulo === 'eventos') {
+      if (filters.value.isActive !== '') queryParams.append('isActive', filters.value.isActive)
+      if (filters.value.categoryId !== '') queryParams.append('categoryId', filters.value.categoryId)
+      if (filters.value.fechaInicio) queryParams.append('fechaInicio', filters.value.fechaInicio)
+      if (filters.value.fechaFin) queryParams.append('fechaFin', filters.value.fechaFin)
+    } else if (modulo === 'usuarios') {
+      if (filters.value.role !== '') queryParams.append('role', filters.value.role)
+      if (filters.value.status !== '') queryParams.append('status', filters.value.status)
+      if (filters.value.careerId !== '') queryParams.append('careerId', filters.value.careerId)
+    } else if (modulo === 'quejas') {
+      if (filters.value.status !== '') queryParams.append('status', filters.value.status)
+      if (filters.value.category !== '') queryParams.append('category', filters.value.category)
+      if (filters.value.fechaInicio) queryParams.append('fechaInicio', filters.value.fechaInicio)
+      if (filters.value.fechaFin) queryParams.append('fechaFin', filters.value.fechaFin)
+    } else if (modulo === 'publicaciones') {
+      if (filters.value.category !== '') queryParams.append('category', filters.value.category)
+      if (filters.value.published !== '') queryParams.append('published', filters.value.published)
+      if (filters.value.fechaInicio) queryParams.append('fechaInicio', filters.value.fechaInicio)
+      if (filters.value.fechaFin) queryParams.append('fechaFin', filters.value.fechaFin)
+    } else if (modulo === 'sugerencias') {
+      if (filters.value.category !== '') queryParams.append('category', filters.value.category)
+      if (filters.value.fechaInicio) queryParams.append('fechaInicio', filters.value.fechaInicio)
+      if (filters.value.fechaFin) queryParams.append('fechaFin', filters.value.fechaFin)
+    } else if (modulo === 'accesos') {
+      if (filters.value.success !== '') queryParams.append('success', filters.value.success)
+      if (filters.value.fechaInicio) queryParams.append('fechaInicio', filters.value.fechaInicio)
+      if (filters.value.fechaFin) queryParams.append('fechaFin', filters.value.fechaFin)
+    }
+    
+    const queryString = queryParams.toString()
+    const endpoint = `http://localhost:8081/api/reportes/${modulo}/${formato}${queryString ? '?' + queryString : ''}`
+    
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers
     })
@@ -177,6 +534,12 @@ async function downloadReportFile(modulo, formato) {
 </script>
 
 <style scoped>
+.date-error-msg {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
 .reports-container {
   width: 100%;
   max-width: 1200px;
@@ -298,6 +661,11 @@ async function downloadReportFile(modulo, formato) {
 .icon-sugerencias {
   background: rgba(34, 197, 94, 0.1);
   color: #22c55e;
+}
+
+.icon-accesos {
+  background: rgba(6, 182, 212, 0.1);
+  color: #06b6d4;
 }
 
 .report-title h3 {
@@ -581,4 +949,50 @@ async function downloadReportFile(modulo, formato) {
     padding: 1.5rem;
   }
 }
+
+/* Nuevos estilos para los filtros del modal */
+.filter-group-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.form-select-modal,
+.form-input-modal {
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.form-select-modal:focus,
+.form-input-modal:focus {
+  outline: none;
+  border-color: #ffd200;
+  box-shadow: 0 0 0 3px rgba(255, 210, 0, 0.1);
+}
+
+.form-group-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
 </style>
+
