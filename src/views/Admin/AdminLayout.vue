@@ -45,6 +45,7 @@ const pageTitle = computed(() => {
     accesos: 'Historial de Accesos',
     reclamos: 'Reclamos',
     sugerencias: 'Sugerencias',
+    reportes: 'Reportes',
     configuracion: 'Configuración'
   }
   return titles[path] || 'Admin'
