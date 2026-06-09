@@ -1,265 +1,267 @@
 <template>
-  <Transition name="modal-fade">
-    <div v-if="visible" class="report-overlay" @click.self="$emit('close')">
-      <div
-        class="report-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="report-title"
-      >
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="visible" class="report-overlay" @click.self="$emit('close')">
+        <div
+          class="report-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-title"
+        >
 
-        <!-- Header -->
-        <div class="report-modal__header">
-          <div class="report-modal__icon">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-              <line x1="4" y1="22" x2="4" y2="15"/>
-            </svg>
-          </div>
+          <!-- Header -->
+          <div class="report-modal__header">
+            <div class="report-modal__icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+            </div>
 
-          <h3 id="report-title" class="report-modal__title">
-            Reportar comentario
-          </h3>
-
-          <button
-            class="report-modal__close"
-            @click="$emit('close')"
-            aria-label="Cerrar"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Comentario citado -->
-        <div class="report-modal__quote">
-          <p class="report-modal__quote-text">
-            {{ commentBody }}
-          </p>
-        </div>
-
-        <!-- Body -->
-        <div class="report-modal__body">
-
-          <p class="report-modal__label">
-            ¿Por qué reportas este comentario?
-            <span class="report-required">*</span>
-          </p>
-
-          <!-- Reasons -->
-          <div class="report-reasons">
+            <h3 id="report-title" class="report-modal__title">
+              Reportar comentario
+            </h3>
 
             <button
-              v-for="reason in REASONS"
-              :key="reason.value"
-              class="reason-btn"
-              :class="{ 'reason-btn--selected': selectedReason === reason.value }"
-              @click="selectedReason = reason.value"
+              class="report-modal__close"
+              @click="$emit('close')"
+              aria-label="Cerrar"
             >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
 
-              <!-- ICONOS -->
-              <span class="reason-btn__icon">
+          <!-- Comentario citado -->
+          <div class="report-modal__quote">
+            <p class="report-modal__quote-text">
+              {{ commentBody }}
+            </p>
+          </div>
 
-                <!-- Lenguaje ofensivo -->
-                <svg
-                  v-if="reason.icon === 'offensive'"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+          <!-- Body -->
+          <div class="report-modal__body">
+
+            <p class="report-modal__label">
+              ¿Por qué reportas este comentario?
+              <span class="report-required">*</span>
+            </p>
+
+            <!-- Reasons -->
+            <div class="report-reasons">
+
+              <button
+                v-for="reason in REASONS"
+                :key="reason.value"
+                class="reason-btn"
+                :class="{ 'reason-btn--selected': selectedReason === reason.value }"
+                @click="selectedReason = reason.value"
+              >
+
+                <!-- ICONOS -->
+                <span class="reason-btn__icon">
+
+                  <!-- Lenguaje ofensivo -->
+                  <svg
+                    v-if="reason.icon === 'offensive'"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                  </svg>
+
+                  <!-- Acoso -->
+                  <svg
+                    v-else-if="reason.icon === 'warning'"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+
+                  <!-- Spam -->
+                  <svg
+                    v-else-if="reason.icon === 'megaphone'"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 11v2"/>
+                    <path d="M6 10v4"/>
+                    <path d="M9 9v6"/>
+                    <path d="M13 8l8-4v16l-8-4H9V9h4z"/>
+                  </svg>
+
+                  <!-- Desinformación -->
+                  <svg
+                    v-else-if="reason.icon === 'alert'"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+
+                  <!-- Otro -->
+                  <svg
+                    v-else-if="reason.icon === 'edit'"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                  </svg>
+
+                </span>
+
+                <span class="reason-btn__label">
+                  {{ reason.label }}
+                </span>
+
+                <span
+                  v-if="selectedReason === reason.value"
+                  class="reason-btn__check"
                 >
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                </svg>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                  >
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </span>
 
-                <!-- Acoso -->
-                <svg
-                  v-else-if="reason.icon === 'warning'"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+              </button>
 
-                <!-- Spam -->
-                <svg
-                  v-else-if="reason.icon === 'megaphone'"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M3 11v2"/>
-                  <path d="M6 10v4"/>
-                  <path d="M9 9v6"/>
-                  <path d="M13 8l8-4v16l-8-4H9V9h4z"/>
-                </svg>
+            </div>
 
-                <!-- Desinformación -->
-                <svg
-                  v-else-if="reason.icon === 'alert'"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
+            <!-- Description -->
+            <div class="report-desc-wrap">
 
-                <!-- Otro -->
-                <svg
-                  v-else-if="reason.icon === 'edit'"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 20h9"/>
-                  <path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                </svg>
+              <label class="report-modal__label report-modal__label--sm">
+                Descripción adicional
+                <span class="report-optional">(opcional)</span>
+              </label>
 
-              </span>
-
-              <span class="reason-btn__label">
-                {{ reason.label }}
-              </span>
+              <textarea
+                v-model="description"
+                class="report-desc"
+                placeholder="Describe brevemente el problema..."
+                maxlength="300"
+                rows="3"
+              ></textarea>
 
               <span
-                v-if="selectedReason === reason.value"
-                class="reason-btn__check"
+                v-if="description.length > 240"
+                class="report-char-count"
               >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                >
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                {{ description.length }}/300
               </span>
+
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="report-modal__footer">
+
+            <button
+              class="report-cancel-btn"
+              @click="$emit('close')"
+            >
+              Cancelar
+            </button>
+
+            <button
+              class="report-submit-btn"
+              :disabled="!selectedReason || submitting"
+              @click="handleSubmit"
+            >
+
+              <span
+                v-if="submitting"
+                class="report-spinner"
+              ></span>
+
+              <svg
+                v-else
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+
+              {{ submitting ? 'Enviando...' : 'Enviar reporte' }}
 
             </button>
 
           </div>
 
-          <!-- Description -->
-          <div class="report-desc-wrap">
-
-            <label class="report-modal__label report-modal__label--sm">
-              Descripción adicional
-              <span class="report-optional">(opcional)</span>
-            </label>
-
-            <textarea
-              v-model="description"
-              class="report-desc"
-              placeholder="Describe brevemente el problema..."
-              maxlength="300"
-              rows="3"
-            ></textarea>
-
-            <span
-              v-if="description.length > 240"
-              class="report-char-count"
-            >
-              {{ description.length }}/300
-            </span>
-
-          </div>
-
         </div>
-
-        <!-- Footer -->
-        <div class="report-modal__footer">
-
-          <button
-            class="report-cancel-btn"
-            @click="$emit('close')"
-          >
-            Cancelar
-          </button>
-
-          <button
-            class="report-submit-btn"
-            :disabled="!selectedReason || submitting"
-            @click="handleSubmit"
-          >
-
-            <span
-              v-if="submitting"
-              class="report-spinner"
-            ></span>
-
-            <svg
-              v-else
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-              <line x1="4" y1="22" x2="4" y2="15"/>
-            </svg>
-
-            {{ submitting ? 'Enviando...' : 'Enviar reporte' }}
-
-          </button>
-
-        </div>
-
       </div>
-    </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -329,7 +331,7 @@ defineExpose({ reset })
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 9999;
   padding: 1rem;
 }
 
