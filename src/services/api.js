@@ -346,6 +346,12 @@ export const dashboardAdminService = {
   getMetrics: async () => {
     const response = await apiRequest('/dashboard/admin')
     return response.data || response
+  },
+
+  getTemporalMetrics: async (fromYear, fromMonth, toYear, toMonth) => {
+    const params = new URLSearchParams({ fromYear, fromMonth, toYear, toMonth })
+    const response = await apiRequest(`/dashboard/admin/temporal?${params}`)
+    return response.data || response
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
